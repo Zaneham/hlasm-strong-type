@@ -68,7 +68,7 @@ Then install the `.vsix` via **Extensions > Install from VSIX**.
 
 ## Macro database
 
-The extension ships with 270+ macros from the [Bixoft eXtended Assembly Language](http://www.bixoft.nl/english/bxa.htm) library, sourced from the [CBT Tape](http://www.cbttape.org/). These include:
+The extension ships with 270+ macros from the [Bixoft eXtended Assembly Language](https://github.com/abekornelis/BXAlib) library, sourced from the [CBT Tape](http://www.cbttape.org/). These include:
 
 - **Structured programming**: `IF`/`ELSE`/`ENDIF`, `DO`/`ENDDO`, `CASE`/`WHEN`/`ENDCASE`
 - **Type checking**: `EQUREG`, `CHKREG`, `CHKNUM`, `CHKLIT`
