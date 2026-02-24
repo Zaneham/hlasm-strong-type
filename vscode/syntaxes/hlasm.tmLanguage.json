@@ -1,0 +1,73 @@
+{
+  "scopeName": "source.hlasm",
+  "name": "HLASM",
+  "patterns": [
+    { "include": "#comment-line" },
+    { "include": "#strings" },
+    { "include": "#macro-variable" },
+    { "include": "#label" },
+    { "include": "#directives" },
+    { "include": "#instructions" },
+    { "include": "#registers" },
+    { "include": "#numbers" },
+    { "include": "#continuation" }
+  ],
+  "repository": {
+    "comment-line": {
+      "name": "comment.line.hlasm",
+      "match": "^\\*.*$"
+    },
+    "strings": {
+      "name": "string.quoted.single.hlasm",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.hlasm",
+          "match": "''"
+        }
+      ]
+    },
+    "label": {
+      "match": "^([A-Za-z@#$][A-Za-z0-9@#$_]*)",
+      "captures": {
+        "1": { "name": "entity.name.label.hlasm" }
+      }
+    },
+    "macro-variable": {
+      "match": "&[A-Za-z@#$][A-Za-z0-9@#$_]*",
+      "name": "variable.other.macro.hlasm"
+    },
+    "registers": {
+      "match": "(?<=[\\s,(])([RF])(1[0-5]|[0-9])(?=[\\s,)\\n]|$)",
+      "name": "variable.language.register.hlasm"
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.hex.hlasm",
+          "match": "(?<=['\",])([0-9A-Fa-f]+)(?=')"
+        },
+        {
+          "name": "constant.numeric.decimal.hlasm",
+          "match": "(?<=[\\s,(=])([0-9]+)(?=[\\s,)\\n(]|$)"
+        }
+      ]
+    },
+    "continuation": {
+      "match": "^(.{71})(.)(.{0,8})$",
+      "captures": {
+        "2": { "name": "keyword.operator.continuation.hlasm" },
+        "3": { "name": "comment.line.sequence.hlasm" }
+      }
+    },
+    "directives": {
+      "match": "(?<=\\s)(CSECT|DSECT|RSECT|COM|DC|DS|EQU|USING|DROP|ENTRY|EXTRN|WXTRN|LTORG|ORG|END|COPY|PRINT|TITLE|SPACE|EJECT|MACRO|MEND|MEXIT|MNOTE|ANOP|ACTR|AGO|AIF|GBLA|GBLB|GBLC|LCLA|LCLB|LCLC|SETA|SETB|SETC|AMODE|RMODE|OPSYN|PUSH|POP|CCW|CCW0|CCW1|CNOP|CXD|DXD|LOCTR|AREAD|REPRO)(?=\\s|$)",
+      "name": "keyword.control.directive.hlasm"
+    },
+    "instructions": {
+      "match": "(?<=\\s)(A|AH|AL|ALR|AP|AR|BAL|BALR|BAS|BASR|BASSM|BC|BCR|BCT|BCTR|BSM|BXH|BXLE|B|BE|BNE|BH|BNH|BL|BNL|BZ|BNZ|BP|BM|BO|BNO|C|CH|CL|CLC|CLCL|CLI|CLM|CLR|CP|CR|CS|CDS|CVB|CVD|D|DP|DR|ED|EDMK|EX|IC|ICM|IPM|L|LA|LAE|LAM|LCR|LH|LM|LNR|LPR|LR|LTR|M|MH|MP|MR|MVC|MVCL|MVCK|MVCIN|MVI|MVN|MVO|MVZ|N|NC|NI|NR|O|OC|OI|OR|PACK|S|SH|SL|SLA|SLDA|SLDL|SLL|SLR|SP|SR|SRA|SRDA|SRDL|SRL|SRP|ST|STC|STCM|STH|STM|SVC|TM|TR|TRT|TS|UNPK|X|XC|XI|XR|ZAP|LE|LER|LD|LDR|STE|STD|AE|AER|AD|ADR|SE|SER|SD|SDR|ME|MER|MD|MDR|DE|DER|DD|DDR|CE|CER|CD|CDR|AW|AWR|SW|SWR|HDR|HER|LCER|LCDR|LNER|LNDR|LPER|LPDR|LTER|LTDR|SQER|SQDR|STCK|SPM|LPSW|SSM|SIO|TIO|HIO|DIAGNOSE)(?=\\s|,|$)",
+      "name": "support.function.instruction.hlasm"
+    }
+  }
+}

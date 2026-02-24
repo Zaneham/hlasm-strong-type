@@ -2,7 +2,7 @@
   "name": "hlasm-strong-type",
   "displayName": "HLASM Strong Type Toolkit",
   "description": "Strong type checking, macro browser, and control block reference for HLASM/assembler development",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "ZaneHam",
   "license": "GPL-2.0-or-later",
   "icon": "icon.png",
@@ -57,6 +57,13 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "hlasm",
+        "scopeName": "source.hlasm",
+        "path": "./syntaxes/hlasm.tmLanguage.json"
+      }
+    ],
     "commands": [
       {
         "command": "hlasm.showMacroBrowser",
@@ -80,6 +87,19 @@
           "group": "navigation"
         }
       ]
+    },
+    "configurationDefaults": {
+      "[hlasm]": {
+        "editor.rulers": [
+          { "column": 1, "color": "#333333" },
+          { "column": 9, "color": "#333333" },
+          { "column": 15, "color": "#333333" },
+          { "column": 71, "color": "#555555" },
+          { "column": 72, "color": "#555555" }
+        ],
+        "editor.tabSize": 1,
+        "editor.insertSpaces": true
+      }
     },
     "configuration": {
       "title": "HLASM Strong Type",
