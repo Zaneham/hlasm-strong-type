@@ -1,0 +1,110 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates OPSYNs for a list of opcodes
+.*
+         OPSYNS ,                      * Arguments in &SYSLIST
+.*
+.* &SYSLIST - each entry specifies an opcode or directive which will
+.*            be replaced by its underscore-prefixed equivalent
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC OPSYNS                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &SP_SHOWALL             * SHOWALL option from SYSPARM
+         LCLA  &I                      * Index for SYSLIST
+         LCLC  &ARG                    * Argument from SYSLIST
+         LCLC  &_PROPT                 * NOPRINT option for PUSH/POP
+         LCLC  &_PRINT                 * NOPRINT option for PRINT
+.*
+.* Set NOPRINT options
+&_PRINT  SETC  'ON'                    * SHOWALL: show PRINT lines
+         AIF   (&SP_SHOWALL).PRINTOK   * SHOWALL: show PUSH/POP lines
+&_PRINT  SETC  'OFF,NOPRINT'           * Not ALL: omit PRINT lines
+&_PROPT  SETC  ',NOPRINT'              * Not ALL: omit PUSH/POP lines
+.PRINTOK ANOP
+.*
+.* Change print options
+         PUSH  PRINT&_PROPT
+         PRINT &_PRINT
+.*
+.* Loop thru SYSLIST to generate OPSYNs
+&I       SETA  0                       * I indexes SYSLIST
+.LOOP1   ANOP  ,
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK
+&ARG     SETC  '&SYSLIST(&I)'          * Extract opcode
+         AIF   ('&ARG'(1,1) EQ '_').RESET
+.SET     ANOP  ,                       * Replace opcode by macro
+         AIF   (K'&ARG EQ 0).LOOP1     * Skip omitted opcode
+_&ARG    OPSYN &ARG                    * Create underscore version
+&ARG     OPSYN ,                       * Delete original opcode
+         AGO   .LOOP1                  * Go process next entry
+.RESET   ANOP  ,                       * Replace macro by org. opcode
+&ARG     SETC  '&ARG'(2,*)             * Extract original opcode
+&ARG     OPSYN _&ARG                   * Re-enable original opcode
+_&ARG    OPSYN ,                       * Disable replacement macro
+         AGO   .LOOP1                  * Go process next entry
+.LOOP1OK ANOP  ,
+.*
+.* Restore printing options
+         POP   PRINT&_PROPT
+.*
+.MEND    MEND

@@ -1,0 +1,219 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the RTM1 Work Area
+.*
+&LABEL   MAPRT1W &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPRT1W                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPRT1W        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'RTMW').EMBED
+         AIF   ('&CB' EQ 'RT1TRACK').EMBED
+         AIF   ('&CB' EQ 'RT1TRECC').EMBED
+         AIF   ('&CB' EQ 'RT1W').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPRT1W).MEND
+&BXA_MAC_MAPRT1W SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_RTMW
+         GBLC  &BXA_CB_RT1TRACK
+         GBLC  &BXA_CB_RT1TRECC
+         GBLC  &BXA_CB_RT1W
+&BXA_CB_RTMW SETC 'RT1W'
+&BXA_CB_RT1TRACK SETC 'RT1W'
+&BXA_CB_RT1TRECC SETC 'RT1W'
+&BXA_CB_RT1W SETC 'RT1W'
+.*
+.* RT1WCOVR - PRESERVED CARRY OVER INFORMATION ON VALID RECURSIONS
+RT1WRCDR EQUOVR ,,b,RT1WCOVR
+RT1WRTM  EQUOVR ,,b,RT1WCOVR
+RT1WFAIL EQUOVR ,,b,RT1WCOVR
+RT1WRMGR EQUOVR ,,b,RT1WCOVR
+RT1WEREX EQUOVR ,,b,RT1WCOVR
+RT1WGFAI EQUOVR ,,b,RT1WCOVR
+RT1WRCRD EQUOVR ,,b,RT1WCOVR
+.*
+.* RT1WCOV2 - PRESERVED CARRY OVER INFORMATION ON VALID RECURSIONS
+RT1NODMP EQUOVR ,,b,RT1WCOV2
+RT1WNOSP EQUOVR ,,b,RT1WCOV2
+RT1WNOSV EQUOVR ,,b,RT1WCOV2
+RT1WNOSA EQUOVR ,,b,RT1WCOV2
+RT1WNOSM EQUOVR ,,b,RT1WCOV2
+RT1WNOSU EQUOVR ,,b,RT1WCOV2
+.*
+.* RT1WCOV3 - FLAGS
+RT1WSKIP EQUOVR ,,b,RT1WCOV3
+RT1WSLST EQUOVR ,,b,RT1WCOV3
+RT1WCPOB EQUOVR ,,b,RT1WCOV3
+.*
+.* RT1WCOV4 - FLAGS
+RT1WRSTW EQUOVR ,,b,RT1WCOV4
+RT1WNCNL EQUOVR ,,b,RT1WCOV4
+RT1WCLUP EQUOVR ,,b,RT1WCOV4
+.*
+.* RT1WCMPF - FLAG BITS IN COMPLETION CODE.
+RT1WREQ  EQUOVR ,,b,RT1WCMPF
+RT1WSTEP EQUOVR ,,b,RT1WCMPF
+RT1WRCF  EQUOVR ,,b,RT1WCMPF
+.*
+.* RT1TACQR - RESOURCES ACQUIRED BY RTM1
+RT1TDISP EQUOVR ,,b,RT1TACQR
+RT1TLLCK EQUOVR ,,b,RT1TACQR
+RT1TRETY EQUOVR ,,b,RT1TACQR
+RT1TCINV EQUOVR ,,b,RT1TACQR
+RT1TSERP EQUOVR ,,b,RT1TACQR
+RT1TTRTS EQUOVR ,,b,RT1TACQR
+RT1TNSS  EQUOVR ,,b,RT1TACQR
+RT1TBINV EQUOVR ,,b,RT1TACQR
+.*
+.* LOGICAL PHASE NUMBERS USED WITH THE RT1TLPN FIELD.
+VALIDREC EQUOVR ,,v,RT1TLPN
+FRRRECUR EQUOVR ,,v,RT1TLPN
+RMGRCML  EQUOVR ,,v,RT1TLPN
+RCRDREC  EQUOVR ,,v,RT1TLPN
+RT1MGRLO EQUOVR ,,v,RT1TLPN
+MGRINIT  EQUOVR ,,v,RT1TLPN
+POSTRTS  EQUOVR ,,v,RT1TLPN
+NORTS    EQUOVR ,,v,RT1TLPN
+CPURSTRT EQUOVR ,,v,RT1TLPN
+NORSTRT  EQUOVR ,,v,RT1TLPN
+RT1MGRHI EQUOVR ,,v,RT1TLPN
+RT1MCHLO EQUOVR ,,v,RT1TLPN
+RTHEEDS  EQUOVR ,,v,RT1TLPN
+RTHTIMER EQUOVR ,,v,RT1TLPN
+RTHSTRG1 EQUOVR ,,v,RT1TLPN
+RTHPARMS EQUOVR ,,v,RT1TLPN
+RTHSTRG2 EQUOVR ,,v,RT1TLPN
+RTHRECRD EQUOVR ,,v,RT1TLPN
+RTHSOFTW EQUOVR ,,v,RT1TLPN
+RTHEXIT  EQUOVR ,,v,RT1TLPN
+RT1MCHHI EQUOVR ,,v,RT1TLPN
+RT1SRMLO EQUOVR ,,v,RT1TLPN
+RT1SRMHI EQUOVR ,,v,RT1TLPN
+RT1RESLO EQUOVR ,,v,RT1TLPN
+RESRTYLO EQUOVR ,,v,RT1TLPN
+SRBEED   EQUOVR ,,v,RT1TLPN
+XMEEDS   EQUOVR ,,v,RT1TLPN
+RT2EEDS  EQUOVR ,,v,RT1TLPN
+RT1EEDS  EQUOVR ,,v,RT1TLPN
+RETRYRS1 EQUOVR ,,v,RT1TLPN
+RESRTYHI EQUOVR ,,v,RT1TLPN
+RESCHED  EQUOVR ,,v,RT1TLPN
+FREESRB  EQUOVR ,,v,RT1TLPN
+SRBCOMP  EQUOVR ,,v,RT1TLPN
+RESRTM2  EQUOVR ,,v,RT1TLPN
+TCBTERM  EQUOVR ,,v,RT1TLPN
+RESRTM1  EQUOVR ,,v,RT1TLPN
+MEMTERM  EQUOVR ,,v,RT1TLPN
+MEMTCOMP EQUOVR ,,v,RT1TLPN
+RT1RESHI EQUOVR ,,v,RT1TLPN
+RT1EXTLO EQUOVR ,,v,RT1TLPN
+EEDFREE  EQUOVR ,,v,RT1TLPN
+FREERTCA EQUOVR ,,v,RT1TLPN
+EEDFREE2 EQUOVR ,,v,RT1TLPN
+EEDFREE3 EQUOVR ,,v,RT1TLPN
+EEDFREE4 EQUOVR ,,v,RT1TLPN
+MEMSLIP  EQUOVR ,,v,RT1TLPN
+RT1EXTHI EQUOVR ,,v,RT1TLPN
+.*
+         MNOTE *,'Including IHART1W mapping macro'
+         IHART1W ,                     *
+         EQUOVR *END
+*
+RT1W     DSECT ,                       * Restart RT1W DSECT
+         ORG   ,                       *
+RT1W_LEN EQU   *-RT1W                  * Length of RT1W
+*
+RT1TRECC DSECT ,                       * Restart recursion control data
+         ORG   ,                       *                          area
+RT1TRECC_LEN EQU *-RT1TRECC            * Length of RT1TRECC
+*
+RT1TRACK DSECT ,                       * Restart Tracking area
+         ORG   ,                       *
+RT1TRACK_LEN EQU *-RT1TRACK            * Length of RT1TRACK
+*
+RTMW     DSECT ,                       * Restart RTM save/work area
+         ORG   ,                       *
+RTMW_LEN EQU   *-RTMW                  * Length of RTMW
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

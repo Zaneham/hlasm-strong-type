@@ -1,0 +1,198 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro contains the Dynamic Output Text Unit Mappings
+.*
+&LABEL   MAPDOTU &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDOTU                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDOTU        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DOCNTFLD').EMBED
+         AIF   ('&CB' EQ 'DOCNTLST').EMBED
+         AIF   ('&CB' EQ 'DOCNUNIT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDOTU).MEND
+&BXA_MAC_MAPDOTU SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DOCNTFLD
+         GBLC  &BXA_CB_DOCNTLST
+         GBLC  &BXA_CB_DOCNUNIT
+&BXA_CB_DOCNTFLD SETC 'DOTU'
+&BXA_CB_DOCNTLST SETC 'DOTU'
+&BXA_CB_DOCNUNIT SETC 'DOTU'
+.*
+.* DOCNTPTR - Text unit pointer
+DOCNTLT   EQUOVR ,,b,DOCNTPTR
+.*
+         MNOTE *,'Including IEFDOTUM mapping macro'
+         IEFDOTUM ,                    *
+         EQUOVR *END
+.*
+.* DOCNTKEY - Key
+DOADDRES EQUOVR ,,b,DOCNTKEY
+DOBUILD  EQUOVR ,,b,DOCNTKEY
+DOBURST  EQUOVR ,,b,DOCNTKEY
+DOCHARS  EQUOVR ,,b,DOCNTKEY
+DOCKPTLI EQUOVR ,,b,DOCNTKEY
+DOCKPTPA EQUOVR ,,b,DOCNTKEY
+DOCKPTSE EQUOVR ,,b,DOCNTKEY
+DOCLASS  EQUOVR ,,b,DOCNTKEY
+DOCOLORM EQUOVR ,,b,DOCNTKEY
+DOCOMPAC EQUOVR ,,b,DOCNTKEY
+DOCOMSET EQUOVR ,,b,DOCNTKEY
+DOCONTRO EQUOVR ,,b,DOCNTKEY
+DOCOPIE9 EQUOVR ,,b,DOCNTKEY
+DOCOPIEA EQUOVR ,,b,DOCNTKEY
+DODATACK EQUOVR ,,b,DOCNTKEY
+DODEFAUL EQUOVR ,,b,DOCNTKEY
+DODEPT   EQUOVR ,,b,DOCNTKEY
+DODEST   EQUOVR ,,b,DOCNTKEY
+DODPAGEL EQUOVR ,,b,DOCNTKEY
+DODUPLEX EQUOVR ,,b,DOCNTKEY
+DOFCB    EQUOVR ,,b,DOCNTKEY
+DOFLASE  EQUOVR ,,b,DOCNTKEY
+DOFLASF  EQUOVR ,,b,DOCNTKEY
+DOFORMD  EQUOVR ,,b,DOCNTKEY
+DOFORMLN EQUOVR ,,b,DOCNTKEY
+DOFORMS  EQUOVR ,,b,DOCNTKEY
+DOFSSDAT EQUOVR ,,b,DOCNTKEY
+DOGROUPI EQUOVR ,,b,DOCNTKEY
+DOINDEX  EQUOVR ,,b,DOCNTKEY
+DOINTRAY EQUOVR ,,b,DOCNTKEY
+DOLINDEX EQUOVR ,,b,DOCNTKEY
+DOLINECT EQUOVR ,,b,DOCNTKEY
+DOMODIF6 EQUOVR ,,b,DOCNTKEY
+DOMODIF7 EQUOVR ,,b,DOCNTKEY
+DONAME   EQUOVR ,,b,DOCNTKEY
+DONOTIFY EQUOVR ,,b,DOCNTKEY
+DOXOFSTB EQUOVR ,,b,DOCNTKEY
+DOXOFSTF EQUOVR ,,b,DOCNTKEY
+DOYOFSTB EQUOVR ,,b,DOCNTKEY
+DOYOFSTF EQUOVR ,,b,DOCNTKEY
+DOOUTBIN EQUOVR ,,b,DOCNTKEY
+DOOUTDB  EQUOVR ,,b,DOCNTKEY
+DOOUTDC  EQUOVR ,,b,DOCNTKEY
+DOOVFL   EQUOVR ,,b,DOCNTKEY
+DOOVRLYB EQUOVR ,,b,DOCNTKEY
+DOOVRLYF EQUOVR ,,b,DOCNTKEY
+DOPAGEDE EQUOVR ,,b,DOCNTKEY
+DOPIMSG  EQUOVR ,,b,DOCNTKEY
+DOPORTNO EQUOVR ,,b,DOCNTKEY
+DOPRMODE EQUOVR ,,b,DOCNTKEY
+DOPROPTN EQUOVR ,,b,DOCNTKEY
+DOPRTERR EQUOVR ,,b,DOCNTKEY
+DOPRTQUE EQUOVR ,,b,DOCNTKEY
+DOPRTY   EQUOVR ,,b,DOCNTKEY
+DORESFMT EQUOVR ,,b,DOCNTKEY
+DORETANF EQUOVR ,,b,DOCNTKEY
+DORETANS EQUOVR ,,b,DOCNTKEY
+DORETRYT EQUOVR ,,b,DOCNTKEY
+DORETRYL EQUOVR ,,b,DOCNTKEY
+DOROOM   EQUOVR ,,b,DOCNTKEY
+DOSYSARE EQUOVR ,,b,DOCNTKEY
+DOTHRESH EQUOVR ,,b,DOCNTKEY
+DOTITLE  EQUOVR ,,b,DOCNTKEY
+DOTRC    EQUOVR ,,b,DOCNTKEY
+DOUCS    EQUOVR ,,b,DOCNTKEY
+DOUSERDA EQUOVR ,,b,DOCNTKEY
+DOUSERLI EQUOVR ,,b,DOCNTKEY
+DOWRITER EQUOVR ,,b,DOCNTKEY
+.*
+DOCNUNIT DSECT ,                       * Resume text unit mapping
+         MNOTE *,'Including IEFDOKEY mapping macro'
+         IEFDOKEY ,                    *
+         EQUOVR *END
+.*
+DOCNTFLD DSECT ,                       * Resume DOCNTFLD DSECT
+         ORG
+DOCNTFLD_LEN EQU *-DOCNTFLD            * Length of DOCNTFLD
+.*
+DOCNTLST DSECT ,                       * Resume DOCNTLST DSECT
+         ORG
+DOCNTLST_LEN EQU *-DOCNTLST            * Length of DOCNTLST
+.*
+DOCNUNIT DSECT ,                       * Resume DOCNUNIT DSECT
+         ORG
+DOCNUNIT_LEN EQU *-DOCNUNIT            * Length of DOCNUNIT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

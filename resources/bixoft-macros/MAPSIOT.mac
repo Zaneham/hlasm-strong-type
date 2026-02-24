@@ -1,0 +1,264 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Step Input/Output Table
+.*
+&LABEL   MAPSIOT &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSIOT                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSIOT        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SIOT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSIOT).MEND
+&BXA_MAC_MAPSIOT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SIOT
+&BXA_CB_SIOT SETC 'SIOT'
+.*
+.* SIOTTYPE - TABLE ID OF SIOT =3
+SIOTID   EQUOVR ,,v,SIOTTYPE
+DSNID    EQUOVR ,,v,SIOTTYPE
+.*
+.* SIOTBYT1 - MVM INDICATORS
+SIOTOCKP EQUOVR ,,b,SIOTBYT1
+SIOTHOLD EQUOVR ,,b,SIOTBYT1
+SIOVAMDS EQUOVR ,,b,SIOTBYT1
+SIODUNAL EQUOVR ,,b,SIOTBYT1
+SIOTDADR EQUOVR ,,b,SIOTBYT1
+SIODADSM EQUOVR ,,b,SIOTBYT1
+SIOTALCD EQUOVR ,,b,SIOTBYT1
+SIOTDDNT EQUOVR ,,b,SIOTBYT1
+.*
+.* SIOTBYT3 - ALLOCATION INDICATOR BYTE
+SIOALIAS EQUOVR ,,b,SIOTBYT3
+SIOCDEVT EQUOVR ,,b,SIOTBYT3
+SIOTJES3 EQUOVR ,,b,SIOTBYT3
+S3400OFF EQUOVR ,,b,SIOTBYT3
+SIOTDSID EQUOVR ,,b,SIOTBYT3
+SIOUCVTD EQUOVR ,,b,SIOTBYT3
+SIOTDSOP EQUOVR ,,b,SIOTBYT3
+SIOTHLD  EQUOVR ,,b,SIOTBYT3
+.*
+.* SIOTTSTC - INDICATORS FOR TIME SHARING AND TCAM
+SIOTINFC EQUOVR ,,b,SIOTTSTC
+SIOTTERM EQUOVR ,,b,SIOTTSTC
+SIOTSSGP EQUOVR ,,b,SIOTTSTC
+SIOTSSMG EQUOVR ,,b,SIOTTSTC
+SIOTTRKM EQUOVR ,,b,SIOTTSTC
+SIOTDSNM EQUOVR ,,b,SIOTTSTC
+SIOTQNAM EQUOVR ,,b,SIOTTSTC
+.*
+.* SIOTBYT0 - EXTENDED ALLOCATION INDICATORS
+SIOTSSDS EQUOVR ,,b,SIOTBYT0
+SIOTDYAL EQUOVR ,,b,SIOTBYT0
+SIOTNOPV EQUOVR ,,b,SIOTBYT0
+SIOTPUPV EQUOVR ,,b,SIOTBYT0
+.*
+.* SCTSDISP - SCHEDULER DISPOSITION OF THE DATA SET INDICATORS
+SIOTRETN EQUOVR ,,b,SCTSDISP
+S3400DSP EQUOVR ,,b,SCTSDISP
+PRIVATE  EQUOVR ,,b,SCTSDISP
+SIOTPRIV EQUOVR ,,b,SCTSDISP
+SIOTPASS EQUOVR ,,b,SCTSDISP
+SIOTKEEP EQUOVR ,,b,SCTSDISP
+SIOTDLET EQUOVR ,,b,SCTSDISP
+SIOTCTLG EQUOVR ,,b,SCTSDISP
+SIOTUNCT EQUOVR ,,b,SCTSDISP
+.*
+.* SCTSBYT1 - INDICATOR BYTE NUMBER 1
+SCTDUMMY EQUOVR ,,b,SCTSBYT1
+SCTSYSIN EQUOVR ,,b,SCTSBYT1
+SIOTCCAT EQUOVR ,,b,SCTSBYT1
+SIOTGDSN EQUOVR ,,b,SCTSBYT1
+SIOTQDSN EQUOVR ,,b,SCTSBYT1
+SCTPARLM EQUOVR ,,b,SCTSBYT1
+SCTUNAFF EQUOVR ,,b,SCTSBYT1
+SIOTJSCT EQUOVR ,,b,SCTSBYT1
+.*
+.* SCTSBYT2 - INDICATOR BYTE NUMBER 2
+SIOCLUNL EQUOVR ,,b,SCTSBYT2
+SIOTCATL EQUOVR ,,b,SCTSBYT2
+SCTVOLAF EQUOVR ,,b,SCTSBYT2
+SCTJOBLB EQUOVR ,,b,SCTSBYT2
+SCTUNLBD EQUOVR ,,b,SCTSBYT2
+SCTLABEL EQUOVR ,,b,SCTSBYT2
+SCTDEFER EQUOVR ,,b,SCTSBYT2
+SCTRECVD EQUOVR ,,b,SCTSBYT2
+.*
+.* SCTSBYT3 - INDICATOR BYTE NUMBER 3
+SCTDSNRF EQUOVR ,,b,SCTSBYT3
+SCTSYSNE EQUOVR ,,b,SCTSBYT3
+SCTALCHK EQUOVR ,,b,SCTSBYT3
+SCTVREF  EQUOVR ,,b,SCTSBYT3
+SCTSYSOU EQUOVR ,,b,SCTSBYT3
+SCTSNEW  EQUOVR ,,b,SCTSBYT3
+SCTSMOD  EQUOVR ,,b,SCTSBYT3
+SCTSOLD  EQUOVR ,,b,SCTSBYT3
+.*
+.* SCTSBYT4 DS    CL1    INDICATOR BYTE NUMBER 4
+SCTSGDGS EQUOVR ,,b,SCTSBYT4
+SIOTGDGA EQUOVR ,,b,SCTSBYT4
+SIOTAFF  EQUOVR ,,b,SCTSBYT4
+SIOTASCI EQUOVR ,,b,SCTSBYT4
+SIOTSTEP EQUOVR ,,b,SCTSBYT4
+SIOTVAFF EQUOVR ,,b,SCTSBYT4
+SIOTIPDI EQUOVR ,,b,SCTSBYT4
+SIOTOMN  EQUOVR ,,b,SCTSBYT4
+.*
+.* SIOUBYT3 - DEVICE CLASS
+SIO3TAPE EQUOVR ,,b,SIOUBYT3
+SIO3COMM EQUOVR ,,b,SIOUBYT3
+SIO3DACC EQUOVR ,,b,SIOUBYT3
+SIO3DISP EQUOVR ,,b,SIOUBYT3
+SIO3UREC EQUOVR ,,b,SIOUBYT3
+.*
+.* SIOTBYT4 - SIOT INDICATORS BYTE 4
+SIOTPROT EQUOVR ,,b,SIOTBYT4
+SIOTRACD EQUOVR ,,b,SIOTBYT4
+SIOTRACT EQUOVR ,,b,SIOTBYT4
+SIOTGPRV EQUOVR ,,b,SIOTBYT4
+SIOTHIER EQUOVR ,,b,SIOTBYT4
+SIOTDSQU EQUOVR ,,b,SIOTBYT4
+SIOTUCNT EQUOVR ,,b,SIOTBYT4
+SIOTVCNT EQUOVR ,,b,SIOTBYT4
+.*
+.* SIOTSMS - STORAGE MANAGEMENT SUBSYSTEM INDICATORS
+SIOTSMSM EQUOVR ,,b,SIOTSMS
+SIOTSMS1 EQUOVR ,,b,SIOTSMS
+SIOTSMS2 EQUOVR ,,b,SIOTSMS
+SIOTSMS3 EQUOVR ,,b,SIOTSMS
+SIOTSMS4 EQUOVR ,,b,SIOTSMS
+SIOTSMS5 EQUOVR ,,b,SIOTSMS
+SIOTSMS6 EQUOVR ,,b,SIOTSMS
+SIOTSMS7 EQUOVR ,,b,SIOTSMS
+.*
+.* SIOTALTD - CONDITIONAL DISPOSITION
+SIOTREDT EQUOVR ,,b,SIOTALTD
+SIOTOPEN EQUOVR ,,b,SIOTALTD
+SIOJCATS EQUOVR ,,b,SIOTALTD
+SIOTNPRV EQUOVR ,,b,SIOTALTD
+SIOTAKEP EQUOVR ,,b,SIOTALTD
+SIOTADEL EQUOVR ,,b,SIOTALTD
+SIOTACAT EQUOVR ,,b,SIOTALTD
+SIOTAUNC EQUOVR ,,b,SIOTALTD
+.*
+.* SIOTBYT5 - SIOT INDICATOR BYTE 5
+SIOTDEFC EQUOVR ,,b,SIOTBYT5
+SIOTDCLA EQUOVR ,,b,SIOTBYT5
+SIOTDDST EQUOVR ,,b,SIOTBYT5
+SIOTADUN EQUOVR ,,b,SIOTBYT5
+SIOTDYNU EQUOVR ,,b,SIOTBYT5
+SIOTOVES EQUOVR ,,b,SIOTBYT5
+SIOTBLKD EQUOVR ,,b,SIOTBYT5
+SIOTWTRN EQUOVR ,,b,SIOTBYT5
+.*
+.* SIOTSMSF - STORAGE MANAGEMENT SUBSYSTEM INDICATORS
+SIOTUSEQ EQUOVR ,,b,SIOTSMSF
+SIOTULAB EQUOVR ,,b,SIOTSMSF
+SIOTUTRT EQUOVR ,,b,SIOTSMSF
+SIOTTRTD EQUOVR ,,b,SIOTSMSF
+SIOTKEYD EQUOVR ,,b,SIOTSMSF
+SIOTRESL EQUOVR ,,b,SIOTSMSF
+.*
+.* SIOTBYT2 - MVM INDICATOR BYTE
+SIOTDMND EQUOVR ,,b,SIOTBYT2
+SIOTDSPD EQUOVR ,,b,SIOTBYT2
+SIOTGALL EQUOVR ,,b,SIOTBYT2
+SIOTCALC EQUOVR ,,b,SIOTBYT2
+SIOTCNEW EQUOVR ,,b,SIOTBYT2
+SIOTCVOL EQUOVR ,,b,SIOTBYT2
+SIOTSACP EQUOVR ,,b,SIOTBYT2
+SIOTPTTS EQUOVR ,,b,SIOTBYT2
+.*
+.* Macro IEFASIOT does not generate a DSECT statement
+SIOT     DSECT ,
+.*
+         MNOTE *,'Including IEFASIOT mapping macro'
+         IEFASIOT ,
+         EQUOVR *END
+*
+SIOT     DSECT ,                       * Resume SIOT DSECT
+         ORG
+SIOT_LEN EQU   *-SIOT                  * Length of SIOT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

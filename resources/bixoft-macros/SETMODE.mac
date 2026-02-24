@@ -1,0 +1,287 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Turn off a bit in a bit-field
+.*
+&LABEL   SETMODE &MODE,                * Mode indicator                *
+               &OPTION,                * Option indicator              *
+               &KEY=,                  * Desired storage key           *
+               &SAVE=                  * (reg) to save current PSW key
+.*
+.* &MODE   specifies the desired mode. Valid values are:
+.*       - SUP    to switch to supervisor mode
+.*       - PROB   to switch to problem program mode
+.*       - AR     to switch to access register mode
+.*       - PRIM   to switch to primary mode
+.*       - PSWKEY to change the current PSW key
+.*       - SMC    to switch to step-must-complete status
+.*       - NOSMC  to cancel step-must-complete status
+.* &OPTION specifies an option for the specified MODE. Valid are:
+.*       - PSWKEY,SAVE to save the PSW key in R2
+.*       - PSWKEY,RESET to reset the PSW key to its former value
+.* &KEY    specifies the desired storage key. Used with SUP/PROB/PSWKEY
+.*         For SUP the default is ZERO, for PROB the default is NZERO.
+.*         For PSWKEY there is no default.
+.* &SAVE   Specifies a (reg) which must contain the current PSW key
+.*         Used with PSWKEY and SUP
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC SETMODE                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declarations
+         GBLC  &BXA_SETMODE_SAVE       * Register with saved PSW key
+         GBLB  &BXA_SETMODE            * On if SETMODE expanded before
+         GBLB  &BXA_SVCMODE            * On when in supervisor mode
+         GBLC  &SYSASCE                * Used by SYSSTATE
+.*
+         LCLC  &_KEY
+         LCLC  &_SAVE
+         LCLC  &_MODE
+         LCLC  &_ASCE                  * Local copy of &SYSASCE
+.*
+.* Check the MODE parameter
+         AIF   (K'&MODE EQ 0 AND K'&KEY NE 0).ERR1DFT
+&_MODE   SETC  '&MODE'                 * Copy supplied MODE value
+         AIF   (K'&MODE EQ 0).ERR1A
+         AIF   ('&MODE' EQ 'SUP').NOERR1
+         AIF   ('&MODE' EQ 'PROB').NOERR1
+         AIF   ('&MODE' EQ 'AR').NOERR1
+         AIF   ('&MODE' EQ 'PRIM').NOERR1
+         AIF   ('&MODE' EQ 'PSWKEY').NOERR1
+         AIF   ('&MODE' EQ 'SMC').NOERR1
+         AIF   ('&MODE' EQ 'NOSMC').NOERR1
+         AGO   .ERR1B
+.ERR1A   MNOTE 8,'First positional parameter must specify desired mode'
+         MEXIT
+.ERR1B   MNOTE 8,'Unknown mode specified on first positional parameter'
+         MEXIT
+.ERR1DFT ANOP
+&_MODE   SETC  'PSWKEY'                * Supply default for KEY=
+.NOERR1  ANOP
+.*
+.* Check the KEY parameter
+         AIF   (K'&KEY EQ 0 AND '&_MODE' EQ 'PSWKEY' AND '&OPTION' NE '*
+               RESET').ERR2B
+         AIF   (K'&KEY EQ 0).NOERR2
+         AIF   ('&_MODE' NE 'SUP' AND '&_MODE' NE 'PROB' AND '&_MODE' N*
+               E 'PSWKEY').ERR2A
+&_KEY    SETC  '&KEY'
+         AGO   .NOERR2
+.ERR2A   MNOTE 4,'KEY parameter ignored: valid only with SUP, PROB, or *
+               PSWKEY'
+         AGO   .NOERR2
+.ERR2B   MNOTE 8,'Key parameter missing: required with PSWKEY'
+.NOERR2  ANOP
+.*
+.* Check the SAVE parameter
+         AIF   (K'&SAVE EQ 0).NOERR3
+         AIF   ('&_MODE' NE 'PSWKEY' AND '&_MODE' NE 'SUP').ERR3A
+         AIF   ('&SAVE'(1,1) NE '(').ERR3B
+&_SAVE   SETC  '&SAVE(1)'
+         AGO   .NOERR3
+.ERR3A   MNOTE 4,'SAVE parameter ignored: valid only with PSWKEY/SUP'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'SAVE parameter must specify a (register)'
+.NOERR3  ANOP
+.*
+.* Check the OPTION parameter
+         AIF   (K'&OPTION EQ 0).NOERR4
+         AIF   ('&OPTION' NE 'RESET' AND '&OPTION' NE 'SAVE').ERR4A
+         AIF   ('&OPTION' EQ 'RESET' AND '&_MODE' NE 'PSWKEY').ERR4B
+         AIF   ('&OPTION' EQ 'SAVE' AND '&_MODE' NE 'PSWKEY' AND '&_MOD*
+               E' NE 'SUP').ERR4B
+         AIF   ('&OPTION' EQ 'RESET' AND K'&SAVE NE 0).ERR4C
+         AIF   ('&OPTION' EQ 'RESET' AND '&BXA_SETMODE_SAVE' EQ '').ERR*
+               4D
+         AGO   .NOERR4
+.ERR4A   MNOTE 8,'Second positional parameter must be omitted or ''RESE*
+               T'' or ''SAVE'''
+         AGO   .NOERR4
+.ERR4B   MNOTE 4,'&OPTION ignored: not valid with &_MODE'
+         AGO   .NOERR4
+.ERR4C   MNOTE 4,'SAVE-parameter must not be specified for PSWKEY,RESET*
+               : ignored'
+         AGO   .NOERR4
+.ERR4D   MNOTE 8,'Cannot RESET: previous operation did not SAVE'
+.NOERR4  ANOP
+.*
+.* Define sub-macro SAVE_PSWKEY
+         SETMODE0 ,                    * Define inner macro
+.*
+.* Select the correct expansion
+         AIF   ('&_MODE' EQ 'SUP').SUP
+         AIF   ('&_MODE' EQ 'PROB').PROB
+         AIF   ('&_MODE' EQ 'AR').AR
+         AIF   ('&_MODE' EQ 'PRIM').PRIM
+         AIF   ('&_MODE' EQ 'PSWKEY').PSWKEY
+         AIF   ('&_MODE' EQ 'SMC').SMC
+         AIF   ('&_MODE' EQ 'NOSMC').NOSMC
+         MNOTE 12,'Internal error'
+         MEXIT
+.*
+.* Switch to supervisor mode
+.SUP     ANOP
+         AIF   (K'&KEY NE 0).SUPKEY    * If key parm not specified
+&_KEY    SETC  'ZERO'                  * Use default
+.SUPKEY  ANOP
+         AIF   (NOT &BXA_SVCMODE).SUPNMSG
+         MNOTE 4,'You are in supervisor mode. Why switch to it?'
+.SUPNMSG ANOP
+.*
+.* Generate code
+&LABEL   LABEL
+&BXA_SETMODE_SAVE SETC ''              * Reset saved-pswkey register
+         AIF   ('&OPTION' EQ 'SAVE').SUPSAVE
+         AIF   (K'&SAVE NE 0).SUPSAVE
+         AGO   .SUPNSAV
+.SUPSAVE ANOP
+         SAVE_PSWKEY &_SAVE            * Insert current PSW key in reg
+.SUPNSAV ANOP
+&_ASCE   SETC  '&SYSASCE'              * Copy current ASC AR mode
+         AIF   ('&_ASCE' EQ 'P').SUPGO * Primary: ok issue MODESET
+         SETMODE PRIM                  * Switch to primary mode, then
+.SUPGO   ANOP
+         MODESET MODE=SUP,             * Switch to supervisor mode     *
+               KEY=&_KEY               *
+         AIF   ('&_ASCE' EQ 'P').SUPOK * Primary: ok terminate
+         SETMODE AR                    * And back again to primary mode
+.SUPOK   ANOP
+&BXA_SVCMODE SETB 1                    * Signal we're in SVC mode
+         MEXIT
+.*
+.* Switch to problem program mode
+.PROB    ANOP
+         AIF   (K'&KEY NE 0).PRBKEY    * If key parm not specified
+&_KEY    SETC  'NZERO'                 * Use default
+.PRBKEY  ANOP
+         AIF   (&BXA_SVCMODE).PRBNMSG
+         MNOTE 4,'You are in problem mode. Why switch to it?'
+.PRBNMSG ANOP
+.* Generate code
+&LABEL   LABEL
+&_ASCE   SETC  '&SYSASCE'              * Copy current ASC AR mode
+         AIF   ('&_ASCE' EQ 'P').PRBGO * Primary: ok issue MODESET
+         SETMODE PRIM                  * Switch to primary mode, then
+.PRBGO   ANOP
+         MODESET MODE=PROB,            * Switch to problem mode        *
+               KEY=&_KEY               *
+         AIF   ('&_ASCE' EQ 'P').PRBOK * Primary: ok terminate
+         SETMODE AR                    * And back again to primary mode
+.PRBOK   ANOP
+&BXA_SVCMODE SETB 0                    * Signal we're in problem mode
+&BXA_SETMODE_SAVE SETC ''              * Reset saved-pswkey register
+         MEXIT
+.*
+.* Switch to ASC AR mode (Access Register mode)
+.AR      ANOP
+         AIF   ('&SYSASCE' NE 'AR').ARNMSG
+         MNOTE 4,'You are in ASC AR mode. Why switch to it?'
+.ARNMSG  ANOP
+         SAC   512                     * Switch to AR mode
+         SYSSTATE ASCENV=AR            * Signal we're in AR mode
+         MEXIT
+.*
+.* Switch to Primary mode (Non-Access Register mode)
+.PRIM    ANOP
+         AIF   ('&SYSASCE' NE 'P').PRMNMSG
+         MNOTE 4,'You are in primary mode. Why switch to it?'
+.PRMNMSG ANOP
+         SAC   0                       * Switch to primary mode
+         SYSSTATE ASCENV=P             * Signal we're in primary mode
+         MEXIT
+.*
+.* Set new PSW key
+.PSWKEY  ANOP
+&LABEL   LABEL
+         AIF   ('&OPTION' EQ 'RESET').PSWRESET
+&BXA_SETMODE_SAVE SETC ''              * Reset saved-pswkey register
+         AIF   ('&OPTION' EQ 'SAVE').PSWSAVE
+         AIF   (K'&SAVE NE 0).PSWSAVE
+         AGO   .PSWNSAV
+.PSWSAVE ANOP
+         SAVE_PSWKEY &_SAVE            * Insert current PSW key in reg
+.PSWNSAV ANOP
+.*
+.* Set new PSW key from literal or from (reg)
+         AIF   ('&KEY'(1,1) NE '(').PSWLIT
+&_KEY    SETC  '&KEY(1)'
+         SPKA  0(&_KEY)                * Set new PSW key value
+         MEXIT
+.*
+.PSWLIT  ANOP
+         SPKA  16*&KEY                 * Set new PSW key value
+         MEXIT
+.*
+.* Reset PSW key to saved value
+.PSWRESET ANOP
+         SPKA  0(&BXA_SETMODE_SAVE)    * Reset PSW key to saved value
+&BXA_SETMODE_SAVE SETC ''              * Reset saved-pswkey register
+         MEXIT
+.*
+.* Set Step-Must-Complete mode
+.SMC     ANOP  ,
+         STATUS SET,MC,PROCESS         * Set step-must-complete status
+         MEXIT
+.*
+.* Reset Step-Must-Complete mode
+.NOSMC   ANOP  ,
+         STATUS RESET,MC,PROCESS       * Cancel SMC status
+         MEXIT
+.*
+.MEND    MEND

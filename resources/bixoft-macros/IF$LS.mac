@@ -1,0 +1,184 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Load a signed field or literal into a register
+.* This is a sub-macro for use by the $IF-macro only
+.*
+&LABEL   IF$LS &REG,                   * Register to load              *
+               &FLD,                   * Field or literal with value   *
+               &LITLEN,                * Length of literal or 0 for fld*
+               &TYPE                   * Type of field
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC IF$LS                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLA  &LEN
+         LCLA  &I
+         LCLC  &NUM
+         LCLC  &_FLD
+.*
+.* Determine length of field to be loaded
+         AIF   ('&TYPE' EQ '0').DECLIT
+         AIF   (K'&LITLEN EQ 0).FLDLEN
+         AIF   (&LITLEN EQ 0).FLDLEN
+&LEN     SETA  &LITLEN                 * Length is that of literal
+         AGO   .LENOK
+.FLDLEN  ANOP  ,
+&LEN     SETA  L'&FLD                  * Length is that of field
+.LENOK   ANOP
+.*
+.* Action depends on length of field to be loaded
+         AIF   (&LEN EQ 1).LEN1
+         AIF   (&LEN EQ 2).LEN2
+         AIF   (&LEN EQ 3).LEN3
+         AIF   (&LEN EQ 4).LEN4
+&_FLD    SETC  (DOUBLE '&FLD')
+         MNOTE 8,'&_FLD is too long to load into a register'
+         MEXIT
+.*
+.* Load a 1-byte value into a register
+.LEN1    ANOP  ,
+&LABEL   ICM   &REG,YNNN,&FLD          * Load signed byte
+         SRA   &REG,24                 * Remove garbage & sign extend
+         MEXIT
+.*
+.* Load a 2-byte value into a register
+.LEN2    ANOP  ,
+&I       SETA  ('AFHVY' FIND '&TYPE')  * Some aligned type?
+         AIF   (&I NE 0).LEN2_LH       * Yes: use LH
+         AIF   ('&FLD'(1,1) EQ '=').LEN2_LH * 2-byte literal: aligned!
+&LABEL   ICM   &REG,YYNN,&FLD          * Load signed bytes
+         SRA   &REG,16                 * Remove garbage & sign extend
+         MEXIT
+.LEN2_LH ANOP  ,
+&LABEL   LH    &REG,&FLD               * Load signed halfword
+         MEXIT
+.*
+.* Load a 3-byte value into a register
+.LEN3    ANOP  ,
+&LABEL   ICM   &REG,YYYN,&FLD          * Load signed bytes
+         SRA   &REG,8                  * Remove garbage & sign extend
+         MEXIT
+.*
+.* Load a 4-byte value into a register
+.LEN4    ANOP  ,
+&I       SETA  ('AFV' FIND '&TYPE')    * Some aligned type?
+         AIF   (&I NE 0).LEN4_L        * Yes: use L
+         AIF   ('&FLD'(1,1) EQ '=').LEN4_L * 4-byte literal: aligned!
+&LABEL   ICM   &REG,YYYY,&FLD          * Load signed bytes
+         MEXIT
+.LEN4_L  ANOP  ,
+&LABEL   L     &REG,&FLD               * Load signed word
+         MEXIT
+.*
+.* Handle a decimal literal - may be negative
+.DECLIT  ANOP  ,
+         AIF   ('&FLD'(1,1) EQ '-').DECLITN
+&I       SETA  ('&FLD'(1,1) FIND '0123456789')
+         AIF   (&I NE 0).DECLITP       * Decimal value
+         AIF   ('&FLD'(K'&FLD,1) EQ '''').DECLITP * Hex or Bin value
+.* Specified literal must be an equated symbol of type 0
+         AIF   (T'&FLD EQ '0').NOERR1
+&_FLD    SETC  (DOUBLE '&FLD')         * Make displayable
+.ERR1    MNOTE 8,'&_FLD has type T'&FLD, expected type of 0'
+         MEXIT
+.NOERR1  ANOP  ,
+.*
+.* Retrieve value and decide how to load it
+&I       SETA  L'&FLD                  * Type 0: length = copy of value
+         AIF   (&I EQ 0).USE_CLEAR
+         AIF   (&I GT 32767).USE_L
+         AIF   (&I GT 4095).USE_LH
+         AIF   (&I GT 0).USE_LA
+         AIF   (&I LT -32767).USE_L
+         AGO   .USE_LH
+.*
+.* Handle positive literal
+.DECLITP ANOP  ,                       * Positive literal number
+&I       SETA  &FLD                    * Load decimal value
+         AIF   (&I EQ 0).USE_CLEAR
+         AIF   (&I LT 4096).USE_LA
+         AIF   (&I LT 32768).USE_LH
+         AGO   .USE_L
+.*
+.* Handle negative literal
+.DECLITN ANOP  ,                       * Negative literal number
+&NUM     SETC  '&FLD'(2,*)             * Extract numerical part
+&I       SETA  &NUM
+         AIF   (&I EQ 0).USE_CLEAR
+         AIF   (&I LT 32768).USE_LH
+         AGO   .USE_L
+.*
+.USE_CLEAR ANOP ,
+&LABEL   CLEAR &REG                    * Wipe register
+         MEXIT
+.*
+.USE_LA  ANOP  ,
+&LABEL   LA    &REG,&FLD               * Load literal number
+         MEXIT
+.*
+.USE_LH  ANOP  ,
+&LABEL   LH    &REG,=H'&FLD'           * Load literal number
+         MEXIT
+.*
+.USE_L   ANOP  ,
+&LABEL   L     &REG,=F'&FLD'           * Load literal number
+         MEXIT
+.*
+.MEND    MEND

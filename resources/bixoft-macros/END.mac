@@ -1,0 +1,658 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Terminate assembly. This macro replaces the normal END instruction.
+.* The required OPSYN is issued by the PGM macro.
+.*
+&LABEL   END   &EP                     * Entry point label
+.*
+.* &EP   specifies the entry point, as in the END instruction
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC END                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &SP_SHOWALL             * Print option from JCL
+         GBLA  &BXA_SAVES              * Number of internal save-areas
+         GBLC  &BXA_ENTRY              * Type of program
+         GBLC  &BXA_SUBR               * Name of current subroutine
+         GBLC  &BXA_SRDNAM(50)         * Names of defined subroutines
+         GBLC  &BXA_SRDTYP(50)         * Types of defined subroutines
+         GBLB  &BXA_SRDDUP(50)         * Duplication status of subrs
+         GBLC  &BXA_SRUNAM(50)         * Names of used subroutines
+         GBLA  &BXA_SRUCT(50)          * Use count of subroutines
+         GBLA  &BXA_SRNAML             * Max subr name length
+         GBLC  &BXA_SR_CALLER(50)      * Names of calling subrs
+         GBLC  &BXA_SR_CALLED(50)      * Names of called subrs
+         LCLA  &I,&J                   * Index into BXA_SRxNAM arrays
+         LCLA  &S1,&S2                 * Sort-limit indices
+         LCLC  &LIN                    * MNOTE line in formation
+         LCLC  &LVL                    * MNOTE line severity level
+         LCLC  &LINE(50)               * MNOTE lines
+         LCLA  &LINE_LEN               * Length of longest line
+         LCLC  &LEVEL(50)              * MNOTE line severity levels
+         LCLA  &L                      * Index into LINE/LEVEL arrays
+         GBLC  &_CALLER(50)            * Copy of BXA_SR_CALLER
+         GBLC  &_CALLED(50)            * Copy of BXA_SR_CALLED
+         LCLC  &CALLERS(50)            * Callers of 1 subr
+         LCLA  &CALLCT(50)             * Count of EXSR per caller
+         LCLA  &C,&D,&E                * Index into _CALLxx/CALLERS
+         LCLC  &CALLER                 * 1 caller of current subr
+         LCLB  &RECURSE                * On if recursion found in subr
+         LCLA  &NESTLVL                * Level of subroutine nesting
+         LCLB  &LVLUP                  * On if nestlvl increased
+         LCLC  &SRTYP                  * Subroutine type (current)
+         LCLC  &SR_TYP(5)              * Subroutine types
+         LCLA  &SR_NEST(5)             * Max nestlvl for this subr.type
+         LCLB  &PGM_REC                * On if recursion found in pgm
+         LCLA  &NESTMAX                * Max. level of subr nesting
+         LCLA  &INT_MAX                * Max. level of subr nesting
+         LCLA  &EXT_MAX                * Max. level of subr nesting
+         GBLC  &BXA_ABND(50)           * Used ABND-labels
+         GBLC  &BXA_ABNDPGM(50)        * Defined ABND-labels
+         GBLC  &BXA_ABND_DFT           * Default ABND-label
+         GBLB  &SP_DBG                 * On if DBG-code enabled
+         GBLB  &SP_SRLIST              * On if subr-listing desired
+         GBLB  &SP_SRXREF              * On for subr cross reference
+         GBLA  &BXA_DBG_SKIP           * Nr of skipped DBG-operations
+         LCLC  &_PRINT                 * Print option for PRINT
+         LCLC  &_PROPT                 * Print option for PUSH/POP
+         LCLC  &CT                     * Call count as text
+         LCLC  &_MAIN                  * Length-adjusted constant *MAIN
+         GBLC  &BXA_RETRN_RC(5)        * Returncodes
+         GBLC  &BXA_RETRN_RS(5)        * Reasoncodes
+         GBLC  &BXA_RETRN_RP(5)        * Return pointers
+         GBLC  &BXA_RETRN_WA(5)        * FREE/NOFREE
+         GBLC  &BXA_RETRN_LBL(5)       * Routine labels
+.*
+.* Check that the structured programming stack is empty
+         CHK_STACK ,                   *
+.*
+.* Check that we're not in the midst of a subroutine
+         AIF   ('&BXA_SUBR' EQ '*MAIN').NOERR1
+.ERR1    MNOTE 8,'Missing ENDSR statement'
+.NOERR1  ANOP
+.*
+.* Set listing options
+&_PRINT  SETC  'ON'                    * SHOWALL: show PRINT lines
+         AIF   (&SP_SHOWALL).PRINTOK   * SHOWALL: show PUSH/POP lines
+&_PRINT  SETC  'OFF,NOPRINT'           * Not ALL: omit PRINT lines
+&_PROPT  SETC  ',NOPRINT'              * Not ALL: omit PUSH/POP lines
+.PRINTOK ANOP
+.*
+.* Check that no override instances remain pending
+         DSOVR *END
+         EJECTOVR *END
+         EQUOVR *END
+.*
+.* Generate code
+&LABEL   LABEL H                       * Align on halfword
+.*
+.* Insert remote RETRN-routines
+&I       SETA  N'&BXA_RETRN_LBL        * Nr of entries in RETRN tables
+.LOOPR   ANOP  ,                       * For all remote RETRNs
+         AIF   (&I EQ 0).LOOPROK       * At end: quit loop
+&BXA_RETRN_LBL(&I) RETRN RC=&BXA_RETRN_RC(&I),                         *
+               REASON=&BXA_RETRN_RS(&I),                               *
+               RETPTR=&BXA_RETRN_RP(&I),                               *
+               WORKAREA=&BXA_RETRN_WA(&I),                             *
+               INLINE=NO
+&I       SETA  &I-1                    * Point to next entry
+         AIF   (&I GT 0).LOOPR         * Not done: repeat loop
+         LTORG ,                       * Literals for RETRN
+.LOOPROK ANOP
+.*
+.* Insert remote data definitions
+         DROP  ,                       * End all USINGs
+         RLTORG ,                      *
+         EJECT ,                       * Force heading with USINGs
+.*
+.* Report suppression of DBG-code
+         AIF   (&SP_DBG).DBGOK         * DBG enabled: no msg
+         AIF   (&BXA_DBG_SKIP EQ 0).DBGOK * No DBGs: no msg
+         MNOTE 0,'&BXA_DBG_SKIP DBG-operations suppressed due to specif*
+               ied SYSPARM'
+.DBGOK   ANOP
+.*
+.* Check ABND and ABNDPGM macro usage
+.* First check whether the ABND SETDFT label was defined with ABNDPGM
+         AIF   ('&BXA_ABND_DFT' EQ '').LOOPIND * No default specified
+&J       SETA  0                       * J indexes BXA_ABNDPGM
+.LOOPI   ANOP
+&J       SETA  &J+1                    * Point next defined label
+         AIF   (&J GT N'&BXA_ABNDPGM).LOOPINF * End of array
+         AIF   ('&BXA_ABNDPGM(&J)' EQ '&BXA_ABND_DFT').LOOPIOK * Found
+         AGO   .LOOPI                  * Go process next entry
+.LOOPINF ANOP  ,                       * Not Found
+         MNOTE 4,'ABND SETDFT specified a label that was not defined wi*
+               th ABNDPGM'
+         AGO   .LOOPIOK                * Loop done
+.LOOPIND ANOP  ,                       * Not defined
+         AIF   ('&BXA_ENTRY' EQ 'FRR').LOOPIOK
+         AIF   ('&BXA_ENTRY' EQ 'RMTR').LOOPIOK
+         MNOTE 4,'ABND SETDFT not issued in source &SYSIN_MEMBER'
+.LOOPIOK ANOP
+.*
+.* LOOPJ/LOOPK checks whether ABND labels were defined with ABNDPGM
+&I       SETA  0                       * I indexes BXA_ABND
+.LOOPJ   ANOP
+&I       SETA  &I+1                    * Point next used label
+         AIF   (&I GT N'&BXA_ABND).LOOPJOK * End of loop
+&J       SETA  0                       * J indexes BXA_ABNDPGM
+.LOOPK   ANOP
+&J       SETA  &J+1                    * Point next defined label
+         AIF   (&J GT N'&BXA_ABNDPGM).LOOPKNF * Not found: error
+         AIF   ('&BXA_ABND(&I)' EQ '&BXA_ABNDPGM(&J)').LOOPKF * Found
+         AGO   .LOOPK                  * Continue search
+.LOOPKF  ANOP
+&BXA_ABNDPGM(&J) SETC ''               * Removed defined label: used
+         AGO   .LOOPKOK
+.LOOPKNF MNOTE 8,'Label &BXA_ABND(&I) used on ABND-macro, but not defin*
+               ed on ABNDPGM-macro'
+.LOOPKOK ANOP
+         AGO   .LOOPJ
+.LOOPJOK ANOP
+.*
+.* All defined labels that are not used still remain in BXA_ABNDPGM
+&J       SETA  0                       * J indexes BXA_ABNDPGM
+.LOOPL   ANOP
+&J       SETA  &J+1                    * Point next defined label
+         AIF   (&J GT N'&BXA_ABNDPGM).LOOPLOK * End of array
+         AIF   ('&BXA_ABNDPGM(&J)' EQ '').LOOPL * Skip empty entries
+         MNOTE 4,'Label &BXA_ABNDPGM(&J) defined in ABNDPGM-macro but n*
+               ot used on ABND-macro'
+         AGO   .LOOPL                  * Go process next entry
+.LOOPLOK ANOP
+.*
+.* Create local copies of subroutine cross reference tables
+&I       SETA  0
+.LOOP0   ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&BXA_SR_CALLED).LOOP0OK
+&LIN     SETC  '&BXA_SR_CALLER(&I)'.(64)' ' * Append a lot of blanks
+&_CALLER(&I) SETC '&LIN'(1,&BXA_SRNAML)     * Truncate to length
+&LIN     SETC  '&BXA_SR_CALLED(&I)'.(64)' ' * Append a lot of blanks
+&_CALLED(&I) SETC '&LIN'(1,&BXA_SRNAML)     * Truncate to length
+         AGO   .LOOP0                  * And go copy nxt set of entries
+.LOOP0OK ANOP
+&_MAIN   SETC  '*MAIN'.(64)' '              * Also create name of *MAIN
+&_MAIN   SETC  '&_MAIN'(1,&BXA_SRNAML)      *     truncate to length
+.*
+.* Adjust length of subroutine names in BXA_SRUNAM cross ref. table
+&I       SETA  0
+.LOOPQ   ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&BXA_SRUNAM).LOOPQOK
+&LIN     SETC  '&BXA_SRUNAM(&I)'.(64)' '   * Append a lot of blanks
+&BXA_SRUNAM(&I) SETC '&LIN'(1,&BXA_SRNAML) * Truncate to length
+         AGO   .LOOPQ                  * And go adjust nest entry
+.LOOPQOK ANOP
+.*
+.* Create an overview of all defined subroutines
+         AIF   ('&BXA_SRDNAM(1)' EQ '').LOOP1OK * If empty skip loop
+&I       SETA  0                       * Init for loop
+.LOOP1   ANOP
+&I       SETA  &I+1                    * Index next entry
+         AIF   (&I GT N'&BXA_SRDNAM).LOOP1OK * End loop
+&LVL     SETC  '*'                     * Default: info msg
+&LIN     SETC  '&BXA_SRDNAM(&I)'.(64)' ' * Extract name of subroutine
+&LIN     SETC  '&LIN'(1,&BXA_SRNAML)   *  and trunc. to desired length
+&BXA_SRDNAM(&I) SETC '&LIN'            * Update name in table too
+.* Look up the subr-name in the BXA_SRUNAM table
+&J       SETA  0                       * Init for inner loop
+.LOOP2   ANOP
+&J       SETA  &J+1                    * Index next entry
+         AIF   (&J GT N'&BXA_SRUNAM).LOOP2NF * Not found: end loop
+         AIF   ('&BXA_SRUNAM(&J)' EQ '&LIN').LOOP2F * Found: msg
+         AGO   .LOOP2                  * Continue search with nxt entry
+.* Found: build complete message, remove SRUNAM entry
+.LOOP2F  ANOP
+         AIF   (&SP_SRXREF).LOOP2NC
+&CT      SETC  (3)' '.'&BXA_SRUCT(&J)' * Prefix blanks to count
+&CT      SETC  '&CT'(K'&CT-2,*)        * Make a 3-digit number
+&LIN     SETC  '&LIN'.'  Call count: &CT'
+.LOOP2NC ANOP  ,                       * No count on full Xref
+&LIN     SETC  '&LIN'.'  &BXA_SRDTYP(&I).ernal subroutine'
+&BXA_SRUNAM(&J) SETC ''                * Remove reported UNAM entry
+         AGO   .LOOP2OK                * And go put line into array
+.* Not found: issue partial message
+.LOOP2NF ANOP
+         AIF   (&BXA_SRDDUP(&I)).LOOP2DUP * Duplicate subroutine name?
+         AIF   (K'&BXA_SRDTYP(&I) LT 5).LOOP2NR * No ESTAE normal unref
+         AIF   ('&BXA_SRDTYP(&I)'(1,5) EQ 'ESTAE').LOOP2EST * ESTAE ?
+         AIF   ('&BXA_SRDTYP(&I)'(1,5) EQ 'RETRY').LOOP2RET * RETRY ?
+.LOOP2NR ANOP  ,                       * Not referenced
+&LIN     SETC  '&LIN'.' *Unreferenced internal subroutine'
+&LVL     SETC  '4'                     * Set warning level
+         AGO   .LOOP2OK                * And go put line into array
+.LOOP2EST ANOP
+&LIN     SETC  '&LIN'.' *ESTAE routine'
+         AGO   .LOOP2OK                * And go put line into array
+.LOOP2RET ANOP
+&LIN     SETC  '&LIN'.' *RETRY routine'
+         AGO   .LOOP2OK                * And go put line into array
+.LOOP2DUP ANOP
+&LIN     SETC  '&LIN'.' *Duplicate definition'
+&LVL     SETC  '8'                     * Set error level
+.* &LIN completed: put into array LINE, then continue
+.LOOP2OK ANOP
+&L       SETA  &L+1                    * Point to next line entry
+&LINE(&L) SETC '&LIN'                  * Put line into array
+&LEVEL(&L) SETC '&LVL'                 * Put msg level into array
+         AGO   .LOOP1                  * And go process next entry
+.LOOP1OK ANOP  ,                       * &I now points to free entry
+.*
+.* Condense BXA_SRUNAM and BXA_SRUCT
+&I       SETA  0                       * Index into BXA_UNAM
+&J       SETA  0                       * Nr of valid entries
+.LOOP3   ANOP
+&I       SETA  &I+1                    * Point next UNAM-entry
+         AIF   (&I GT N'&BXA_SRUNAM).LOOP3OK * End loop
+         AIF   ('&BXA_SRUNAM(&I)' EQ '').LOOP3 * Skip empty entry
+&J       SETA  &J+1                    * Increment valid entry count
+         AIF   (&I EQ &J).LOOP3        * No move req'd, process next
+&BXA_SRUNAM(&J) SETC '&BXA_SRUNAM(&I)' * Move UNAM-entry
+&BXA_SRUCT(&J) SETA &BXA_SRUCT(&I)     * Move UCT-entry
+         AGO   .LOOP3                  * And go process next entry
+.LOOP3OK ANOP
+.*
+.* Add undefined subroutines to LINE array
+         AIF   (&J EQ 0).LOOP4OK       * If empty skip loop
+&I       SETA  0                       * Init for loop
+.LOOP4   ANOP
+&I       SETA  &I+1                    * Index next entry
+         AIF   (&I GT &J).LOOP4OK      * End loop
+&LIN     SETC  '&BXA_SRUNAM(&I)'       * Put name into print-line
+&LIN     LABEL H                       * Missing subroutine name
+&LIN     SETC  '&LIN'.(64)' '          *  add trailing blanks
+&LIN     SETC  '&LIN'(1,&BXA_SRNAML)   *  and trunc. to desired length
+&LIN     SETC  '&LIN'.' *Undefined'
+&L       SETA  &L+1                    * Point to next line entry
+&LINE(&L) SETC '&LIN'                  * Put line into array
+&LEVEL(&L) SETC '8'                    * Set error severity
+         AGO   .LOOP4                  * And go process next entry
+.LOOP4OK ANOP
+.*
+.* To sort the LINE-array all lines must have equal lengths
+&I       SETA  0
+.LOOP5   ANOP
+&I       SETA  &I+1                    * Point to next LINE
+         AIF   (&I GT &L).LOOP5OK      * End of LINE array
+         AIF   (K'&LINE(&I) LE &LINE_LEN).LOOP5 * This line longer?
+&LINE_LEN SETA K'&LINE(&I)             * Yes: set new max. length
+         AGO   .LOOP5                  * And go process next LINE
+.LOOP5OK ANOP
+&I       SETA  0
+.LOOP6   ANOP
+&I       SETA  &I+1                    * Point to next LINE
+         AIF   (&I GT &L).LOOP6OK      * End of LINE array
+         AIF   (K'&LINE(&I) GE &LINE_LEN).LOOP6 * This line too short?
+&J       SETA  &LINE_LEN-K'&LINE(&I)   * Nr of missing characters
+&LINE(&I) SETC '&LINE(&I)'.(&J)' '     * Append missing blanks
+         AGO   .LOOP6                  * And go process next LINE
+.LOOP6OK ANOP
+.*
+.* Sort LINE/LEVEL arrays
+.* S0 points to first unsorted element in LINE
+.* S1 points to last unsroted element in LINE
+.* S2 contains the last swapped element this pass
+         AIF   (&L LT 2).LOOP7OK       * <2 elements: no need to sort
+&S2      SETA  &L                      * End of unsorted part
+.LOOP7   ANOP  ,                       *** DO UNTIL (S2 = 0)
+         AIF   (&S2 EQ 0).LOOP7OK      * Sort completed?
+&I       SETA  0                       * Point before first unsorted
+&J       SETA  1                       *   and following indices
+&S1      SETA  &S2                     * Point to last unsorted element
+&S2      SETA  0                       * Reset new end-of-sort pointer
+.LOOP8   ANOP  ,                       *** FOR I = S0 to S1-1
+&I       SETA  &I+1                    * Point to next unsorted
+&J       SETA  &J+1                    *   element indices
+         AIF   (&J GT &S1).LOOP8OK     * End of inner loop?
+         AIF   ('&LINE(&I)' LT '&LINE(&J)').LOOP8
+&LIN     SETC  '&LINE(&I)'             * Swap
+&LINE(&I) SETC '&LINE(&J)'             *  the two
+&LINE(&J) SETC '&LIN'                  *   lines
+&LVL     SETC  '&LEVEL(&I)'            * Swap
+&LEVEL(&I) SETC '&LEVEL(&J)'           *  the two
+&LEVEL(&J) SETC '&LVL'                 *   level-values
+&S2      SETA  &I                      * Set last-swapped index
+         AGO   .LOOP8                  * Go process next set of entries
+.LOOP8OK ANOP
+         AGO   .LOOP7                  * Go start next pass
+.LOOP7OK ANOP
+.*
+.* Create overview from LINE-array
+         AIF   (NOT &SP_SRLIST).LOOP9IN * No listing: suppress header
+         AIF   (&L EQ 0).SRLIST0       * Notify programmer: no subrs
+.* EJECT statement removed: RETRN ends with an EJECT
+         MNOTE 0,'Subroutine usage overview'
+         AGO   .LOOP9IN
+.SRLIST0 ANOP
+         MNOTE 0,'No subroutines in program &SYSIN_MEMBER'
+         AGO   .LOOP9OK                * Skip loop for lack of subrs
+.*
+.LOOP9IN ANOP  ,                       *
+         ACTR  256*&L+2*&L*&L*&L       * Set ACTR counter
+&I       SETA  0                       * Use as index into LINE
+.LOOP9   ANOP  ,                       *
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &L).LOOP9OK      * End of loop
+         AIF   ('&LEVEL(&I)' EQ '*').LOOP9A * Handle asterisk separate
+         MNOTE &LEVEL(&I),'&LINE(&I)'  * Issue subr message
+         AGO   .LOOP9XR                * Go process next entry
+.LOOP9A  ANOP
+         AIF   (NOT &SP_SRLIST).LOOP9XR * Skip info-msg if SRLIST off
+         MNOTE *,'     &LINE(&I)'      * Issue subr message
+         AGO   .LOOP9XR                * Go process next entry
+.*
+.* Create cross reference lines with invoking subroutines
+.LOOP9XR ANOP
+&LIN     SETC  '&LINE(&I)'(1,&BXA_SRNAML) * Extract subroutine name
+&J       SETA  0                       * Loop-index in BXA_SR_CALLED
+&C       SETA  0                       * Ptr last entry CALLERS/CALLCT
+.LOOPA   ANOP
+&J       SETA  &J+1                    * Point next XREF entry
+         AIF   (&J GT N'&BXA_SR_CALLED).LOOPAOK * end of XREF tables
+         AIF   ('&LIN' NE '&_CALLED(&J)').LOOPA * Unequal: skip entry
+.* Do not add duplicates to CALLERS
+&D       SETA  0                       * &D indexes into CALLERS
+.LOOPB   ANOP
+&D       SETA  &D+1                    * Point next CALLERS entry
+         AIF   (&D GT &C).LOOPBAD      * Not found: go add entry
+         AIF   ('&_CALLER(&J)' NE '&CALLERS(&D)').LOOPB * Cont. search
+&CALLCT(&D) SETA &CALLCT(&D)+1         * Increment occurrence count
+         AGO   .LOOPBOK                * and we're done
+.LOOPBAD ANOP  ,                       * Add an entry to CALLERS
+&C       SETA  &C+1                    * Point next entry
+&CALLERS(&C) SETC '&_CALLER(&J)'       * Copy calling subr. name
+&CALLCT(&C) SETA 1                     * Occurrence count starts at 1
+.LOOPBOK ANOP
+         AGO   .LOOPA                  * Go process next XREF entry
+.LOOPAOK ANOP
+.*
+.* Do not issue Cross reference line messages if &SP_SRXREF is off
+         AIF   (NOT &SP_SRXREF).LOOPCOK * Skip the whole thing
+&J       SETA  0                       * &J indexes CALLERS
+.LOOPC   ANOP  ,                       * Create invokation XREF lines
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT &C).LOOPCOK      * End of CALLERS array
+         AIF   (&J EQ 1).LOOPC1        * First line: extra info
+&LIN     SETC  '            &CALLERS(&J)' * Create standard line
+         AGO   .LOOPC2
+.LOOPC1  ANOP
+&LIN     SETC  'Called by : &CALLERS(&J)' * Create line with extra text
+.LOOPC2  ANOP
+&LIN     SETC  (&BXA_SRNAML+7)' '.'&LIN' * Left-adjust line in overview
+         AIF   (&CALLCT(&J) EQ 1).LOOPCNC * No count needed
+&CT      SETC  (3)' '.'&CALLCT(&J)'    * Prefix blanks to count
+&CT      SETC  '&CT'(K'&CT-2,*)        * Make a 3-digit number
+&LIN     SETC  '&LIN &CT times'        * Add call count
+.LOOPCNC ANOP
+         MNOTE *,'&LIN'                * Issue XREF-line
+         AGO   .LOOPC
+.LOOPCOK ANOP
+.*
+.* CALLCT will now contain the invoker level: Set to 1 for all entries
+&J       SETA  0                       * &J indexes CALLERS
+.LOOPD   ANOP  ,                       *
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT &C).LOOPDOK      * End of CALLERS array
+&CALLCT(&J) SETA 1                     * Nesting level is 1
+         AGO   .LOOPD                  * And repeat for all entries
+.LOOPDOK ANOP
+.*
+.* Determine the maximum nesting level for this subroutine
+.* Put all invokers of all invokers into array CALLERS, keep the
+.* invocation level count in CALLCT. Do not re-examine current subr.
+&RECURSE SETB  0                       * This routine not recursive
+&LVLUP   SETB  0                       * No subrs increased in level
+&LIN     SETC  '&LINE(&I)'(1,&BXA_SRNAML) * Extract subroutine name
+&J       SETA  0
+.LOOPE   ANOP  ,                       * Search XREF for callers
+&J       SETA  &J+1                    * Point next CALLERS entry
+         AIF   (&J GT &C).LOOPEOK      * Array CALLERS now complete
+         AIF   ('&LIN' EQ '&_MAIN').LOOPE * Skip *MAIN: not a subr!
+         AIF   ('&LIN' EQ '&CALLERS(&J)').LOOPERC * Recursion!
+.* Find all callers of this caller, add them to CALLERS, unless double
+&CALLER  SETC  '&CALLERS(&J)'          * Name of invoking routine
+&D       SETA  0                       * &D now indexes XREF arrays
+.LOOPF   ANOP
+&D       SETA  &D+1                    * Point to next set of entries
+         AIF   (&D GT N'&BXA_SR_CALLED).LOOPFOK * End of XREF
+         AIF   ('&CALLER' NE '&_CALLED(&D)').LOOPF * No match: next
+.* &_CALLER(&D) is a caller of the current CALLER
+&E       SETA  0                       * &E now indexes CALLERS
+.LOOPG   ANOP
+&E       SETA  &E+1                    * Point to next CALLERS-entry
+         AIF   (&E GT &C).LOOPGAD      * End of CALLERS
+         AIF   ('&_CALLER(&D)' NE '&CALLERS(&E)').LOOPG * Skip
+.* Found matching entry: check invocation level
+&NESTLVL SETA  &CALLCT(&J)+1           * Determine nesting level
+         AIF   (&NESTLVL LE &CALLCT(&E)).LOOPGOK
+&CALLCT(&E) SETA &NESTLVL              * Set new nesting level
+         AIF   (&E GT &J).LOOPGOK      * Unprocessed entry: proceed
+&LVLUP   SETB  1                       * Signal a redo is req'd
+         AGO   .LOOPGOK
+.LOOPGAD ANOP  ,                       * Add new entry to CALLERS
+&C       SETA  &C+1                    * Point to next empty entry
+&CALLERS(&C) SETC '&_CALLER(&D)'       * Add caller to CALLER
+&NESTLVL SETA  &CALLCT(&J)+1           * Determine nesting level
+&CALLCT(&C) SETA &NESTLVL              * Set caller's nesting level
+.LOOPGOK ANOP
+         AGO  .LOOPF                   * Process next XREF entry
+.LOOPFOK ANOP
+         AGO  .LOOPE                   * Process next CALLERS entry
+.LOOPERC ANOP  ,                       * Recursion detected!
+&RECURSE SETB  1                       * Signal recursion
+         AGO   .LOOPE
+.LOOPEOK ANOP
+.*
+.* Loop thru CALLCT to determine highest invocation level number
+&NESTLVL SETA  0                       *
+&J       SETA  0                       *
+.LOOPH   ANOP
+&J       SETA  &J+1                    * Point to next CALLCT entry
+         AIF   (&J GT &C).LOOPHOK      * End of CALLCT array
+         AIF   (&CALLCT(&J) LE &NESTLVL).LOOPH
+&NESTLVL SETA  &CALLCT(&J)             * Copy higher value
+         AGO   .LOOPH
+.LOOPHOK ANOP
+.*
+.* If some routine was increased in level after being processed:
+.*    redo from init LOOPE, unless recursion prevents this
+         AIF   (&LVLUP AND &NESTLVL LT &C).LOOPDOK
+.*
+.* Now we're back in our outer loop (Varying &I over &LINES array)
+.* If routine is recursive, flag the program as recursive and issue
+.* an additional message for the overview
+         AIF   (NOT &RECURSE).LOOP9NR  * Check recursion status
+&PGM_REC SETB  1                       * Recursion found in pgm
+         AIF   (NOT &SP_SRLIST).LOOP9NR * Skip message if NOSRLIST
+         MNOTE *,'     &LIN -May be entered recursively'
+.LOOP9NR ANOP
+.*
+.* For each caller in the CALLERS array, the type of subroutine needs
+.* to be determined from the BXA_SRDTYP array, therefore each name must
+.* be looked up in the associated BXA_SRDNAM array. When we have the
+.* the type we can look it up in the SR_TYP table, to locate the
+.* associated entry in the SR_NEST table. The nesting level in the
+.* SR_NEST will be updated if it is less than the value in the CALLCT
+.* entry, associated with the CALLERS entry we are processing.
+.* This way, we create - at program level - the maximum invocation
+.* level for each type of subroutine.
+.*
+.* First we must add an entry in CALLERS/CALLCT for the current subr
+&C       SETA  &C+1
+&CALLERS(&C) SETC '&LINE(&I)'(1,&BXA_SRNAML) * Subroutine name
+&CALLCT(&C) SETA 1                     * Value depends on type
+.*
+&J       SETA  0                       * Index into CALLERS/CALLCT
+.LOOPM   ANOP  ,                       * Process all CALLERS
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT &C).LOOPMOK      * End: quit loop
+&CALLER  SETC  '&CALLERS(&J)'          * Extract name of subroutine
+.*
+.* Find the routine in BXA_SRDNAM to determine the type of subroutine
+         AIF   ('&CALLER' EQ '&_MAIN').LOOPNNF * *MAIN not in SRDNAM
+&D       SETA  0                       * Index into SRDNAM/SRDTYP
+.LOOPN   ANOP
+&D       SETA  &D+1                    * Point next entry
+         AIF   (&D GT N'&BXA_SRDNAM).LOOPNNF * End: not found
+         AIF   ('&BXA_SRDNAM(&D)' NE '&CALLER').LOOPN * Continue search
+&SRTYP   SETC  '&BXA_SRDTYP(&D)'       * Found: copy subroutine type
+         AGO   .LOOPNOK                *
+.LOOPNNF ANOP  ,                       * Name not found:
+&SRTYP   SETC  'INT'                   * Default to normal subroutine
+.LOOPNOK ANOP
+.*
+.* Now we must locate SRTYP in the SR_TYP table, to update the maximum
+.* nesting level in the corresponding SR_NEST table entry
+&D       SETA  0                       * D indexes SR_TYP/SR_NEST
+.LOOPO   ANOP  ,                       *
+&D       SETA  &D+1                    * Point next entry
+         AIF   (&D GT N'&SR_TYP).LOOPONF * End: not found
+         AIF   ('&SR_TYP(&D)' NE '&SRTYP').LOOPO * Continue search
+.LOOPOF  ANOP  ,                       * Found entry &D
+         AIF   (&CALLCT(&J) LE &SR_NEST(&D)).LOOPOOK
+&SR_NEST(&D) SETA &CALLCT(&J)          * Set new (higher) value
+         AGO   .LOOPOOK                *
+.LOOPONF ANOP  ,                       * Subroutine type not found
+&SR_TYP(&D)  SETC '&SRTYP'             * &D points to empty entry
+&SR_NEST(&D) SETA &CALLCT(&J)          * Create new entry
+.LOOPOOK ANOP
+.*
+         AGO   .LOOPM                  * Go process next CALLER
+.LOOPMOK ANOP
+.*
+         AGO   .LOOP9                  * Go process next LINE
+.LOOP9OK ANOP  ,                       *
+         ACTR  4096                    * Reset ACTR value
+.*
+.* Determine total nesting level by adding the several types
+&INT_MAX SETA  0                       * Max. nestlvl for internal
+&EXT_MAX SETA  0                       * Max. nestlvl for external
+&NESTMAX SETA  0                       * Max. subroutine nesting level
+&J       SETA  0                       * J indexes SR_TYP/SR_NEST
+.LOOPP   ANOP  ,                       *
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT N'&SR_TYP).LOOPPOK * End: quit loop
+&LIN     SETC  '&SR_TYP(&J)'           * Copy type of routine
+         AIF   ('&LIN' EQ 'INT').LOOPPINT * Save INTernal max level
+         AIF   ('&LIN' EQ 'EXT').LOOPPEXT * Save external routines
+         AIF   ('&LIN' EQ 'RETRY').LOOPPD * First RETRY needs no SA
+         AIF   (K'&LIN LT 2).INTERR    * Should be ESTAEn
+&LIN     SETC  '&LIN'(1,K'&LIN-1)      * Clip level nr off
+         AIF   ('&LIN' EQ 'ESTAE').LOOPPI * Increment by one
+.INTERR  MNOTE 12,'Internal error: &LIN unknown subroutine type'
+         AGO   .LOOPPAD                *
+.*
+.LOOPPINT ANOP
+&INT_MAX SETA  &SR_NEST(&J)
+         AGO   .LOOPP
+.LOOPPEXT ANOP
+&EXT_MAX SETA  &SR_NEST(&J)
+         AGO   .LOOPP
+.*
+.LOOPPI  ANOP  ,                       * Increment by one for
+&SR_NEST(&J) SETA &SR_NEST(&J)+1       * ESTAE routines need 1 SA extra
+         AGO   .LOOPPAD                * Go add to total nestlevel
+.LOOPPD  ANOP  ,                       * Decrement count by one for
+&SR_NEST(&J) SETA &SR_NEST(&J)-1       *   RETRY routines need no SA
+.*
+.LOOPPAD ANOP  ,                       * Add adjusted count to total
+&NESTMAX SETA  &NESTMAX+&SR_NEST(&J)   * Add to total nest level
+         AGO   .LOOPP                  * and process next entry
+.LOOPPOK ANOP  ,                       *
+.*
+.* Add the greater value of INT_MAX and EXT_MAX
+         AIF   (&INT_MAX GT &EXT_MAX).ADDINT
+&NESTMAX SETA  &NESTMAX+&EXT_MAX       * Add external count to max.
+         AGO   .CHKNLVL                * And go check nesting level
+.ADDINT  ANOP
+&NESTMAX SETA  &NESTMAX+&INT_MAX       * Add internal count to max.
+.CHKNLVL ANOP
+.*
+.* Issue message if Internal save-areas inadequate.
+         AIF   (NOT &PGM_REC AND &NESTMAX GT &BXA_SAVES).MSG1
+         AIF   (NOT &PGM_REC AND &NESTMAX LT &BXA_SAVES).MSG2
+         AIF   (&PGM_REC AND &NESTMAX GT &BXA_SAVES).MSG3
+         AIF   (&PGM_REC AND &NESTMAX LE &BXA_SAVES).MSG4
+         AGO   .NOMSG
+.MSG1    MNOTE 8,'Insufficient internal save-areas; at least &NESTMAX a*
+               re required'
+         AGO   .NOMSG
+.MSG2    MNOTE 4,'Too many internal save-areas; only &NESTMAX are requi*
+               red'
+         AGO   .NOMSG
+.MSG3    MNOTE 8,'Insufficient internal save-areas, apart from recursio*
+               n &NESTMAX at least are required'
+         AGO   .NOMSG
+.MSG4    MNOTE 0,'Do you have sufficient internal save-areas; apart fro*
+               m recursion &NESTMAX at least are required'
+.NOMSG   ANOP
+.*
+.* End assembly
+         AIF   (K'&EP EQ 0).NO_EP
+         _END  &EP
+         MEXIT
+.*
+.NO_EP   ANOP
+         _END
+.*
+.MEND    MEND

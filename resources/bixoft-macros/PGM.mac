@@ -1,0 +1,1019 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates entry logic for a CSECT
+.*
+&LABEL   PGM   &VERSION=,              * Version id: VnnRnnMnn         *
+               &AMODE=31,              * Amode default=31              *
+               &RMODE=ANY,             * Rmode default=ANY             *
+               &ENTRY=MAIN,            * MAIN/SUBR/SUBPGM/SVC          *
+               &SAVES=,                * Nr of internal saveareas      *
+               &MAPS=,                 * Mapping macro's to include    *
+               &LIST=NO,               * List maps (YES/NO)            *
+               &WORKPTR=,              * Pointer to dyn.area           *
+               &WORKAREA=,             * Descriptor of dyn.area        *
+               &HDRTXT='No description', * Description for list-headers*
+               &DBG=,                  * Name of ptrs for debugging    *
+               &ABND=                  * Info for Abend service rout.
+.*
+.* &LABEL      CSECT name to be used. Defaults to member name.
+.* &VERSION    must be in the format VnnRnnMnn
+.* &AMODE      must be 24 or 31
+.* &RMODE      must be 24, 31, or ANY
+.* &ENTRY      Type of program (see below) or (Type,ASC-mode)
+.*             ASC-mode defaults to PRIM, but may be specified as AR
+.*             as well. The following types of program are defined:
+.*             MAIN:   Generates linkage using a stack-entry (BAKR).
+.*                     Intended for main programs
+.*             SUBPGM: Generates normal linkage using savearea at R13.
+.*                     Intended for sub-programs
+.*             SUBR:   Generates normal linkage using internal savearea
+.*                     Intended for CSECTS that share their R13 with
+.*                       their caller.
+.*             SVC:    Generates linkage appropriate for SVC-entry.
+.*                     Intended for SVC's and SVC-screening routines
+.*             SPCR:   Generates linkage appropriate for stacking
+.*                     PC-routines. Assumes routine is entered
+.*                     in supervisor mode.
+.*             SRB:    Generates linkage appropriate for SRB-entry.
+.*                     Sets up FRR parmlist with ptr to SRB and passes
+.*                     the SRB parmlist ptr in R1 to the mainline.
+.*             FRR     Generates linkage appropriate for FRR routines.
+.*             RMTR    Generates linkage appropriate for RMTR routines.
+.*                     Passes the SRB address in R1 to the mainline.
+.*             RESMGR  Generates linkage appropriate for a resource
+.*                     manager routine. Sets up MAIN linkage and
+.*                     establishes addressability to the RMPL.
+.* &SAVES      The number of internal save-areas to allocate
+.* &MAPS       Mapping macro's to be generated, must be a sublist
+.* &LIST       NO: no listings are generated from the MAPS parameter
+.*             YES: listings are generated from the MAPS parameter
+.* &WORKPTR    Either one or three sub-operands.
+.*             When omitted, no pointer is assumed to exist and a
+.*             workarea will be allocated, as specified in &WORKAREA.
+.*             If specified as three operands, they must be specified
+.*             as follows:
+.*           - The label of the pointer field
+.*           - The label of a using-location
+.*           - The register that contains the address of the using loc.
+.*             If there is only 1 sub-operand, must be a (register),
+.*             unless ENTRY=SUBR, in which case the sub-operand may
+.*             specify a field in the workarea, passed thru R13.
+.* &WORKAREA   DSECT name or sublist with two to four sub-operands:
+.*           - DSECT name for using with R13. This DSECT must start
+.*             with a DCL BXASAVE. It also must contain an
+.*             equate for DSECTname_LEN. The DSECT must be specified on
+.*             the MAPS-parameter of the macro invocation.
+.*           - Length of the work-area to be allocated
+.*             This parameter may be omitted for ENTRY=SUBR
+.*           - An optional 8-character id for the first 8 positions of
+.*             the work-area. Defaults to &_LABEL.
+.*           - An optional fieldname in the workarea, which is to
+.*             contain the total amount of storage allocated for
+.*             the workarea plus internal saveareas.
+.* &HDRTXT     Header text for use on the listing's header lines
+.* &DBG        Valid only with ENTRY=SUBR. Names of 2 fields with:
+.*           - pointer to debug module
+.*           - plist for debug module
+.* &ABND       One or two sub-operands
+.*           - User abend code to use for this program
+.*           - Label to use for the abend service routine (dft: _ABND)
+.*
+.* Work-area requirements: (See macro MAPSAVE)
+.* at offset  0: a doubleword reserved for an area ID
+.* at offset  8: a standard MVS save-area of 18 fullwords
+.* at offset 80: two pointers to internal save-areas, see MAPSAVE
+.*
+.* Define global variables
+         GBLC  &SYSASCE                * SYSSTATE's ASC mode variable
+         GBLC  &BXA_WALAB              * Work label (for using)
+         GBLC  &BXA_WALEN              * Work area length
+         GBLC  &BXA_ENTRY              * Entry mode
+         GBLA  &BXA_SAVES              * Nr of internal save-areas
+         GBLC  &BXA_WORKPTR(3)         * Pointer to dyn.storage
+         GBLB  &BXA_SVCMODE            * On when in supervisor mode
+         GBLC  &BXA_SUBR               * Current subroutine name
+         GBLC  &BXA_SUBRTP             * Current subroutine type
+         GBLC  &BXA_AMODE              * Current Amode
+         GBLC  &BXA_USE_R12            * USING label for R12
+         GBLC  &BXA_USE_DS(50)         * DSECT names with DCL's
+         GBLC  &BXA_USE_SDS(50)        * Sub-DSECTs
+         GBLC  &BXA_USE_LBL(50)        * Labels for the Sus-DSECTs
+         GBLB  &BXA_PGM                * On if expanded before
+         GBLC  &BXA_PGM_LABEL          * Label used by PGM-expansion
+         GBLC  &BXA_PGM_TITLE          * Title used for the listing
+         GBLC  &BXA_ABND(50)           * Labels used by ABND macro
+         GBLB  &SP_SHOWALL             * On if all lines to show
+         GBLB  &SP_OPT                 * On for optimize mode
+         GBLC  &BXA_DBG_PTR            * Fieldname of ptr to dbg-mod
+         GBLC  &BXA_DBG_PLIST          * Fieldname of plist for dbg-mod
+         GBLA  &BXA_USENDX             * Master index for USING tables
+         GBLB  &BXA_MAC_MAPPSA         * PSA mapped?
+         GBLA  &BXA_NUMVAL             * Retvalue from CHKREG/CHKNUM
+.*
+.* &BXA_ENTRY is given a value after validity check at error6
+.* &BXA_WALAB is given a value after validity check at error7
+.* &BXA_WALEN is given a value after validity check at error7
+.* &BXA_SAVES is given a value after validity check at error10
+&BXA_WORKPTR(1) SETC '&WORKPTR(1)'     * Copy
+&BXA_WORKPTR(2) SETC '&WORKPTR(2)'     *   workptr
+&BXA_WORKPTR(3) SETC '&WORKPTR(3)'     *     values
+&BXA_SUBR SETC '*MAIN'                 * Start with open code
+&BXA_SUBRTP SETC ''                    * Start with normal type routine
+&BXA_AMODE SETC '&AMODE'               * Start with 31-bit Amode
+&BXA_USENDX SETA 1                     * Init index BXA_USENDX0/1 to 1
+.*
+.* Define local variables
+         LCLC  &_ENTRY1                * Type of program
+         LCLC  &_ENTRY2                * ASC-mode of program on entry
+         LCLC  &_WORKA1                * Label for USING for workarea
+         LCLC  &_WORKA2                * Length of workarea
+         LCLC  &_WORKA3                * Id for workarea
+         LCLC  &_WORKA4                * Fieldname for total size
+         LCLB  &_WORKP1REG             * On if &WORKPTR(1) is a reg.
+         LCLC  &_WORKP1                * First sub-operand of WORKPTR
+         LCLC  &_WORKP3                * Basereg. for area with ptr
+         LCLC  &_HDRTXT                * Text for headers
+         LCLC  &_LABEL                 * Entry point label
+         LCLC  &_STOR_LEN              * Size of getmain
+         LCLC  &_STOR_LOC              * Location for getmained area
+         LCLA  &LEN                    * Length of HDRTXT
+         LCLC  &CC,&YY,&MM,&DD         * Century, year, month, day
+         LCLC  &HR,&MIN                * Hours and minutes
+         LCLC  &_LIST1,&_LIST2         * LIST sub-option 1 and 2
+         LCLC  &_MCALL                 * Print option MCALL/NOMCALL
+         LCLC  &_PROPT                 * Print option for PUSH/POP
+         LCLC  &_ABND1                 * Abend code to generate
+         LCLC  &_ABND2                 * Abend label to generate
+         LCLA  &I                      * Index for &BXA_USE_... arrays
+         LCLC  &SA                     * Savearea prefix
+         LCLC  &_ID                    * Identifier for workarea
+         LCLC  &_REG                   * reg with ptr to WA after alloc
+         LCLC  &_CLRSZ                 * Size of area to clear
+.*
+.* PGM used before?
+         AIF   (&BXA_PGM).ERR0A
+         AGO   .NOERR0A
+.ERR0A   MNOTE 8,'You cannot issue PGM more than once in a program'
+         MEXIT
+.NOERR0A ANOP
+&BXA_PGM SETB 1
+.*
+.* Extract assembly options from SYSPARM
+         SYSPARM
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC PGM                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Set listing options
+&_MCALL  SETC  'MCALL'                 * SHOWALL: show MCALL lines
+         AIF   (&SP_SHOWALL).PRINTOK   * SHOWALL: show PUSH/POP lines
+&_MCALL  SETC  'NOMCALL'               * Not ALL: omit MCALL lines
+&_PROPT  SETC  ',NOPRINT'              * Not ALL: omit PUSH/POP lines
+.PRINTOK ANOP
+         PRINT GEN,DATA,&_MCALL,UHEAD&_PROPT
+.*
+.* Check Label parameter
+&_LABEL  SETC  '&LABEL'
+         AIF   (K'&LABEL NE 0).LABELOK
+&_LABEL  SETC  '&SYSIN_MEMBER'
+.LABELOK ANOP
+&BXA_PGM_LABEL SETC '&_LABEL'
+.*
+.* Check hdrtxt parameter - remove quotes if necessary
+&_HDRTXT SETC  '&HDRTXT'
+         AIF   ('&HDRTXT'(1,1) NE '''').NOQUOTE
+&LEN     SETA  K'&HDRTXT
+&LEN     SETA  &LEN-2
+&_HDRTXT SETC  '&HDRTXT'(2,&LEN)
+.NOQUOTE ANOP
+.*
+.* Set title for listing
+&BXA_PGM_TITLE SETC  '&_LABEL - Copyright B.V. Bixoft - &_HDRTXT'
+         TITLE '&BXA_PGM_TITLE'
+         AIF   (&SP_SHOWALL).TITLE
+.* Generate comment line in stead of a MNOTE line
+*
+         AGO   .TITLEOK
+.TITLE   ANOP
+         MNOTE *,'Previous STMT: TITLE ''&BXA_PGM_TITLE'''
+.TITLEOK ANOP
+.*
+.* PGM used as first macro?
+         AIF   (&SYSNDX NE 1).ERR0B
+         AGO   .NOERR0B
+.ERR0B   MNOTE 8,'PGM must be the first macro in your program'
+         MEXIT
+.NOERR0B ANOP
+.*
+.* Check version parameter
+         AIF   (K'&VERSION NE 9).ERROR1
+         AIF   ('&VERSION'(1,1) NE 'V').ERROR1
+         AIF   ('&VERSION'(2,1) LT '0').ERROR1
+         AIF   ('&VERSION'(3,1) LT '0').ERROR1
+         AIF   ('&VERSION'(4,1) NE 'R').ERROR1
+         AIF   ('&VERSION'(5,1) LT '0').ERROR1
+         AIF   ('&VERSION'(6,1) LT '0').ERROR1
+         AIF   ('&VERSION'(7,1) NE 'M').ERROR1
+         AIF   ('&VERSION'(8,1) LT '0').ERROR1
+         AIF   ('&VERSION'(9,1) LT '0').ERROR1
+         AGO   .NOERR1
+.ERROR1  MNOTE 8,'Parameter VERSION must be present with format VnnRnnM*
+               nn'
+.NOERR1  ANOP
+.*
+.* Check amode parameter
+         AIF   ('&AMODE' EQ '24').NOERR2
+         AIF   ('&AMODE' EQ '31').NOERR2
+         AIF   ('&AMODE' EQ 'ANY').NOERR2
+.ERROR2  MNOTE 8,'Parameter AMODE must be 24, 31 or ANY'
+.NOERR2  ANOP
+.*
+.* Check rmode parameter
+         AIF   ('&RMODE' EQ '24').NOERR3
+         AIF   ('&RMODE' EQ 'ANY').NOERR3
+.ERROR3  MNOTE 8,'Parameter RMODE must be 24 or ANY'
+.NOERR3  ANOP
+.*
+.* For amode 24, rmode must 24 as well
+         AIF   ('&AMODE' NE '24').NOERR4
+         AIF   ('&RMODE' EQ '24').NOERR4
+.ERROR4  MNOTE 8,'For Amode 24 Rmode must be 24 as well'
+.NOERR4  ANOP
+.*
+.* For rmode any, amode must not be 24
+         AIF   ('&RMODE' NE 'ANY').NOERR5
+         AIF   ('&AMODE' NE '24').NOERR5
+.ERROR5  MNOTE 8,'For Rmode ANY Amode must not be 24'
+.NOERR5  ANOP
+.*
+.* Check entry parameter
+         AIF   (K'&ENTRY EQ 0).ERR6A
+&_ENTRY1 SETC  '&ENTRY'
+&_ENTRY2 SETC  'PRIM'
+         AIF   ('&ENTRY'(1,1) NE '(').NOERR6A
+&_ENTRY1 SETC  '&ENTRY(1)'             * Extract type of program
+&_ENTRY2 SETC  '&ENTRY(2)'             * Extract initial ASC-mode
+         AIF   (N'&ENTRY GE 2).NOERR6A
+&_ENTRY2 SETC  'PRIM'                  * Default to primary mode
+         AGO   .NOERR6A
+.ERR6A   MNOTE 8,'Required ENTRY-parameter missing'
+         AGO   .NOERR6
+.NOERR6A ANOP  ,
+         AIF   ('&_ENTRY1' EQ 'FRR').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'MAIN').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'RESMGR').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'RMTR').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'SPCR').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'SRB').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'SUBPGM').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'SUBR').NOERR6B
+         AIF   ('&_ENTRY1' EQ 'SVC').NOERR6B
+.ERR6B   MNOTE 8,'ENTRY parameter must specify a valid program type'
+.NOERR6B ANOP  ,
+         AIF   ('&_ENTRY2' EQ 'PRIM').NOERR6C
+         AIF   ('&_ENTRY2' EQ 'AR').NOERR6C
+.ERR6C   MNOTE 8,'ENTRY parameter must specify mode AR or PRIM'
+.NOERR6C ANOP  ,
+.NOERR6  ANOP
+&BXA_ENTRY SETC '&_ENTRY1'             * Copy entry parameter value
+.*
+.* Check workarea parameter
+         AIF   (K'&WORKAREA EQ 0)._WORKAX
+         AIF   ('&WORKAREA'(1,1) EQ '(')._WORKA
+&_WORKA1 SETC  '&WORKAREA'             * Id of DSECT to use with R13
+&_WORKA2 SETC  '&WORKAREA'.'_LEN'      * Length of DSECT to allocate
+         AGO   ._WORKAX
+._WORKA  ANOP
+&_WORKA1 SETC  '&WORKAREA(1)'          * Field that R13 will point to
+&_WORKA2 SETC  '&WORKAREA(2)'          * Length of DSECT to allocate
+&_WORKA3 SETC  '&WORKAREA(3)'          * Identifier for DSECT
+&_WORKA4 SETC  '&WORKAREA(4)'          * Total length field
+._WORKAX ANOP
+.*
+.* For ENTRY=SUBR, the id must be specified
+         AIF   ('&_ENTRY1' NE 'SUBR').NOERR7E
+         AIF   (K'&_WORKA1 NE 0 AND K'&_WORKA3 NE 0).NOERR7E
+.ERR7E   MNOTE 8,'WORKAREA parameter misses USING label or identifier c*
+               ontent'
+.NOERR7E ANOP  ,
+.*
+.* If length field specified, &WORKPTR must be specifie too
+         AIF   (K'&_WORKA4 EQ 0).NOERR7F
+         AIF   (K'&WORKPTR NE 0).NOERR7F
+.ERR7F   MNOTE 8,'WORKAREA specifies a length field, but WORKPTR was no*
+               t specified'
+.NOERR7F ANOP  ,
+.*
+.* If WORKAREA completely omitted, use BXASAVE as a default
+         AIF   (K'&WORKAREA NE 0).NODFT7
+&_WORKA1 SETC  'BXASAVE'
+&_WORKA2 SETC  'BXASAVE_LEN'
+&_WORKA3 SETC  '&_LABEL'
+         AGO   .DFT7OK
+.NODFT7  ANOP  ,
+.*
+.* If Workarea is not a list of four parms: issue error message
+         AIF   (N'&WORKAREA GT 4).ERROR7B
+         AGO   .NOERR7B
+.ERROR7B MNOTE 4,'WORKAREA parameter contains too many subparameters'
+.NOERR7B ANOP
+.*
+.* If Label omitted: use SAVEAREA as a default
+         AIF   (K'&_WORKA1 NE 0).NODFT7B
+&_WORKA1 SETC  'SAVEAREA'
+.NODFT7B ANOP
+.*
+.* If length omitted: use label with _LEN appended
+         AIF   (K'&_WORKA2 NE 0).NODFT7C
+&_WORKA2 SETC  '&_WORKA1'.'_LEN'
+.NODFT7C ANOP
+.*
+.* If id omitted: use csect name
+         AIF   (K'&_WORKA3 NE 0).NODFT7D
+&_WORKA3 SETC  '&_LABEL'
+.NODFT7D ANOP
+.*
+.DFT7OK  ANOP
+&BXA_WALAB SETC '&_WORKA1'
+&BXA_WALEN SETC '&_WORKA2'
+.*
+.* Check workid parameter
+         AIF   (K'&_WORKA3 LE 8).NOERR7C
+.ERROR7C MNOTE 8,'Workid parameter truncated to 8 characters'
+&_WORKA3 SETC  '&_WORKA3'(1,8)         * Use first 8 chars
+.NOERR7C ANOP
+.*
+.* Check list parameter
+&_LIST1  SETC  '&LIST'
+         AIF   ('&LIST' EQ 'YES').NOERR8
+         AIF   ('&LIST' EQ 'NO').NOERR8
+.ERR8A   MNOTE 8,'List parameter must specify either YES or NO'
+.NOERR8  ANOP
+.*
+.* Check workptr parameter
+         AIF   (K'&WORKPTR EQ 0).NOERR9
+         AIF   ('&_ENTRY1' EQ 'SUBPGM').NOERR9A
+         AIF   ('&_ENTRY1' EQ 'SUBR').NOERR9A
+.ERR9A   MNOTE 8,'WORKPTR parameter valid only when ENTRY=SUBPGM or ENT*
+               RY=SUBR'
+.NOERR9A ANOP
+         AIF   (K'&WORKPTR(1) NE 0).NOERR9B
+.ERR9B   MNOTE 8,'First operand of Workptr must specify a label or a re*
+               gister'
+.NOERR9B ANOP
+         AIF   (N'&WORKPTR EQ 1).NOERR9E
+         AIF   (K'&WORKPTR(2) NE 0).NOERR9C
+.ERR9C   MNOTE 8,'Second operand of Workptr must specify a using label'
+.NOERR9C ANOP
+         AIF   (K'&WORKPTR(3) NE 0).NOERR9D
+.ERR9D   MNOTE 8,'Third operand of Workptr must specify a register'
+.NOERR9D ANOP
+         AIF   (N'&WORKPTR EQ 3).NOERR9E
+.ERR9E   MNOTE 8,'Workptr must have either 1 or 3 sub-operands'
+.NOERR9E ANOP
+         AIF   (N'&WORKPTR NE 1).NOERR9F
+         AIF   ('&WORKPTR(1)'(1,1) EQ '(').NOERR9F
+         AIF   ('&_ENTRY1' EQ 'SUBR').NOERR9F
+.ERR9F   MNOTE 8,'Workptr with only one sub-operand must specify a (reg*
+               ister)'
+.NOERR9F ANOP
+.* Check whether the WORKPTR(1) subparameter (if specified) designates
+.* a register or a field.
+         AIF   (N'&WORKPTR LT 1).NOERR9 * No sub-operands
+&_WORKP1 SETC  '&WORKPTR(1)'           * Extract first sub-operand
+         AIF   ('&_WORKP1'(1,1) NE '(').NOERR9
+&_WORKP1REG SETB 1                     * Indicate it's a register
+&_WORKP1 SETC  '&WORKPTR(1,1)'         * Extract register to use
+.NOERR9  ANOP
+.*
+.* Check saves parameter
+         AIF   (K'&SAVES EQ 0).NOERR10
+         CHKNUM MACRO=PGM,NAME=SAVES,VAL=&SAVES
+&BXA_SAVES SETA &SAVES
+.NOERR10 ANOP
+.*
+.* Check nesting level
+         AIF   (&SYSNEST EQ 1).NOERR11
+.ERR11   MNOTE 8,'PGM must not be issued from within another macro'
+.NOERR11 ANOP
+.*
+.* Check ABND-parameter
+         AIF   (K'&ABND EQ 0).ERR12A
+         AIF   ('&ABND'(1,1) EQ '(').ERR12LST
+&_ABND1  SETC  '&ABND'
+         AGO   .ERR12CHK
+.ERR12LST ANOP
+         AIF   (N'&ABND EQ 0).ERR12B
+&_ABND1  SETC  '&ABND(1)'
+         AIF   (N'&ABND EQ 1).ERR12CHK
+&_ABND2  SETC  '&ABND(2)'
+         AIF   (N'&ABND GT 2).ERR12C
+.ERR12CHK ANOP
+         CHKNUM MACRO=PGM,            * Abend code must be a valid     *
+               NAME=_ABND1,           *  number, maximum 4095          *
+               VAL=&_ABND1            *
+         AIF   (&BXA_NUMVAL EQ 0).ERR12D
+         AIF   (&BXA_NUMVAL GT 4095).ERR12E
+         AGO   .NOERR12
+.*
+.ERR12A  MNOTE 8,'ABND-parameter omitted'
+         AGO   .NOERR12
+.ERR12B  MNOTE 8,'ABND-parameter specifies empty sublist'
+         AGO   .NOERR12
+.ERR12C  MNOTE 4,'ABND-parameter too many sub-parameters'
+         AGO   .NOERR12
+.ERR12D  MNOTE 8,'ABND-parameter specifies a code that is zero or not n*
+               umeric'
+         AGO   .NOERR12
+.ERR12E  MNOTE 8,'ABND-parameter specifies a code that is more than 409*
+               5'
+.NOERR12 ANOP
+         AIF   (K'&_ABND2 NE 0).NODFT12
+&_ABND2  SETC  '_ABND'
+.NODFT12 ANOP
+.*
+.* Check DBG-parameter
+         AIF   (K'&DBG EQ 0).NOERR13
+         AIF   ('&_ENTRY1' NE 'SUBR').ERR13A
+         AIF   ('&DBG'(1,1) NE '(').ERR13B
+         AIF   (N'&DBG EQ 0).ERR13B
+         AIF   (N'&DBG EQ 1).ERR13B
+         AIF   (N'&DBG GT 2).ERR13B
+&BXA_DBG_PTR SETC '&DBG(1)'
+&BXA_DBG_PLIST SETC '&DBG(2)'
+         AIF   (K'&BXA_DBG_PTR EQ 0).ERR13B
+         AIF   (K'&BXA_DBG_PLIST EQ 0).ERR13B
+         AGO   .NOERR13
+.ERR13A  MNOTE 4,'DBG parameter ignored, valid only with ENTRY=SUBR'
+         AGO   .NOERR13
+.ERR13B  MNOTE 8,'DBG parameter must specify (dbg_ptr,dbg_plist)'
+.NOERR13 ANOP
+.*
+.* Extract date and time from system variables
+&YY      SETC  '&SYSDATE'(7,2)         * Extract year number
+&MM      SETC  '&SYSDATE'(1,2)         * Extract month number
+&DD      SETC  '&SYSDATE'(4,2)         * Extract day number
+&CC      SETC  '20'                    * Default 21st century
+         AIF   ('&YY' NE '99').CC20    * Default ok?
+&CC      SETC  '19'                    * No: use 20th century
+.CC20    ANOP  ,                       *
+.*
+&HR      SETC  '&SYSTIME'(1,2)         * Extract hours
+&MIN     SETC  '&SYSTIME'(4,2)         * Extract minutes
+.*
+.* Replace assembler directives and opcodes with our own macros
+         OPSYNS DROP,EJECT,END,EQU,LTORG,POP,PUSH,SPACE,USING
+         OPSYNS IPK,TRT                *
+         AIF   (NOT &SP_OPT).START     *
+         OPSYNS LA,LR                  *
+.START   ANOP  ,                       *
+.*
+.* Define internal macro's
+         PGM0  ,                       * Define CHK_STACK
+*
+* Program setup
+&_LABEL  START ,                       *
+&_LABEL  AMODE &AMODE                  *
+&_LABEL  RMODE &RMODE                  *
+*
+* Mapping macros
+         GENMAPS (MAPEQU,MAPSAVE),     * Include standard map-macro's  *
+               LIST=&_LIST1            *
+         AIF   (K'&MAPS EQ 0).NOMAPS   *
+         GENMAPS &MAPS,                * Include specified map-macro's *
+               LIST=&_LIST1            *
+.NOMAPS  ANOP  ,                       *
+.*
+.* Check that the supplied DSECT name begins with a BXASAVE-subarea
+.* and find the label used to set the savearea addressable
+         AIF   ('&_WORKA1' EQ 'BXASAVE').LOOP7OK
+&I       SETA  0                       * I is index in &BXA_USE_...
+.LOOP7   ANOP  ,                       * Loop until first match
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&BXA_USE_DS).LOOP7NF * End-of-table: not found
+         AIF   ('&BXA_USE_DS(&I)' NE '&_WORKA1').LOOP7 * Skip mismatch
+.LOOP7F  ANOP  ,                       * Found: check entry
+         AIF   ('&BXA_USE_SDS(&I)' NE 'BXASAVE').LOOP7R1
+&SA      SETC  '&BXA_USE_LBL(&I)'      * Copy label for USING
+         AIF   (K'&SA EQ 0).LOOP7OK
+&SA      SETC  '&SA'.'.'               * Add period to prefix-label
+         AGO   .LOOP7OK
+.LOOP7R1 MNOTE 8,'BXASAVE area in DSECT &_WORKA1 is not the on the firs*
+               t DCL-statement'
+         AGO   .LOOP7OK
+.LOOP7NF MNOTE 8,'No BXASAVE area found in DSECT &_WORKA1'
+.LOOP7OK ANOP
+.*
+.* If &ENTRY=MAIN:        generate BAKR to save regs
+.* If &ENTRY=SVC:         Store registers in RBEXSAVE
+.* If &ENTRY=SUBR/SUBPGM/FRR/RESMGR: generate STM to save regs
+.* If &ENTRY=SRB/RMTR:    No save is required
+*
+* Initialization code
+         AIF   ('&_ENTRY2' EQ 'AR').SETM_AR
+         SYSSTATE ASCENV=P             * Signal we're in primary mode
+         AGO   .SETM_OK
+.SETM_AR ANOP  ,
+         SYSSTATE ASCENV=AR            * Signal we're in AR mode
+.SETM_OK ANOP  ,
+.*
+         AIF   ('&_ENTRY1' EQ 'SVC').USER6
+         AIF   ('&_ENTRY1' EQ 'SPCR').USESPCR
+.* Init for SUBR/SUBPGM/MAIN/SRB/RMTR/RESMGR
+         USE   &_LABEL,R15             * R15 contains Entry Point Addr
+         AGO   .USEOK                  *
+.* Init for SVC
+.USER6   ANOP  ,                       *
+&BXA_SVCMODE SETB 1                    * Signal we're in SVC mode
+         USE   &_LABEL,R6              * R6 contains entry point addr
+         AGO   .USEOK
+.* Init for SPCR
+.USESPCR ANOP  ,                       *
+&BXA_SVCMODE SETB 1                    * Signal we're in SVC mode
+         BASR  R12,R0                  * Retrieve current address
+         USE   &_LABEL+2,R12           * R12 now contains EP address
+.USEOK   ANOP  ,                       *
+.* Init code common to all ENTRY types
+         B     _&_LABEL._START         * Skip CSECT identification
+*
+         DC    C'&_LABEL',C','         * CSECT name
+         DC    C'&CC.&YY',C'-'         * Compile year
+         DC    C'&MM',C'-'             * Compile month
+         DC    C'&DD',C','             * Compile day
+         DC    C'&HR',C':'             * Compile hour
+         DC    C'&MIN',C','            * Compile minute
+         DC    C'&VERSION',C'. '       * Version id
+         DC    C'(C) Copyright B.V. Bixoft, '
+         DC    C'The Netherlands, 1999-2000. '
+         DC    C'All rights reserved. '
+         DS    0F                      * Re-align on fullword boundary
+*
+* Constants used in PGM-generated code
+_&_LABEL._ID LABEL ,                   *
+         DC    CL8'&_WORKA3'           * Id-literal for dyn. workarea
+         AIF   ('&_ENTRY1' EQ 'FRR').NOABND
+         AIF   ('&_ENTRY1' EQ 'RMTR').NOABND
+*
+* Abend service routine
+&_ABND2  ABNDPGM CODE=&_ABND1          * Insert abend service routine
+         ABND  SETDFT,&_ABND2          * And set default abend label
+.*
+.* Add &_ABND2 to BXA_ABND table
+&BXA_ABND(1) SETC '&_ABND2'            * Put label into first element
+.NOABND  ANOP  ,                       *
+.*
+_&_LABEL._START LABEL ,                * Start of program code
+         AIF   ('&_ENTRY1' EQ 'FRR').INITSPGM
+         AIF   ('&_ENTRY1' EQ 'MAIN').INITMAIN
+         AIF   ('&_ENTRY1' EQ 'RESMGR').INITRESM
+         AIF   ('&_ENTRY1' EQ 'RMTR').INITRMTR
+         AIF   ('&_ENTRY1' EQ 'SPCR').INITSPCR
+         AIF   ('&_ENTRY1' EQ 'SRB').INITSRB
+         AIF   ('&_ENTRY1' EQ 'SUBPGM').INITSPGM
+         AIF   ('&_ENTRY1' EQ 'SUBR').INITSUBR
+         AIF   ('&_ENTRY1' EQ 'SVC').INITSVC
+         MNOTE 12,'Internal error'
+         MEXIT
+.*
+.* Init for SUBR
+.INITSUBR ANOP
+OUR      USE   SAVEAREA,R13            * Set external SA addressable
+         ST    R14,OUR.SAVEDR14        * Save return address
+         LAE   R14,0(,R13)             * Copy workarea pointer
+         SH    R14,=AL2(SAVEPRFX_LEN)  * Point to start of BXASAVE
+WORK     USE   BXASAVE,R14             * And set addressable as such
+         CLC   WORK.SAVEID,_&_LABEL._ID * Identifier correct?
+         ABND  NE                      * If not: big trouble
+         DROP  WORK                    * BXASAVE,R14
+         LT    R14,OUR.SAVEINTU        * Point to last-used SA
+         BZ    _SUBR1ST_&SYSNDX        * Zero-ptr: use 1st SA
+INT      USE   SAVEAREA,R14            * Set internal SA addressable
+         LT    R14,INT.SAVENEXT        * Point to available SA
+         ABND  Z                       * If it's not there: error!
+         B     _SUBR_OK_&SYSNDX        * Go use this SA
+_SUBR1ST_&SYSNDX LABEL
+         L     R14,OUR.SAVEINTF        * Set 1st internal SA usable
+_SUBR_OK_&SYSNDX LABEL
+         STM   R15,R12,INT.SAVEDR15    * Save registers 15, 0-12
+*                                      * R13 need not be saved
+         MVC   INT.SAVEDR14,OUR.SAVEDR14 * Copy saved R14 (ret-addr)
+         ST    R14,OUR.SAVEINTU        * Update ptr to last used SA
+         DROP  OUR                     * SAVEAREA,R13 external SA
+         DROP  INT                     * SAVEAREA,R14
+         LAE   R12,0(,R15)             * Copy entry point address
+         DROP  R15                     * Temp. base
+         USE   &_WORKA1,R13,           * Make acquired area addressable*
+               START=&_WORKA1+SAVEPRFX_LEN * upward from savearea
+         AGO   .INITOK
+.*
+.* Init for SUBPGM
+.INITSPGM ANOP
+         USE   SAVEAREA,R13            * R13 assumed valid SA-pointer
+         STM   R14,R12,SAVEDR14        * Save registers
+         DROP  R13                     * SAVEAREA not needed anymore
+         LAE   R12,0(,R15)             * Copy entry point address
+         DROP  R15                     * Drop temporary base
+         AGO   .INITOK                 *
+.*
+.* Init for RESMGR
+.INITRESM ANOP ,                       *
+&BXA_SVCMODE SETB 1                    * Signal we're in SVC mode
+         GENMAPS (RMPL)                * Make sure mappings are active
+         USE   SAVEAREA,R13            * R13 assumed valid SA-pointer
+         STM   R14,R12,SAVEDR14        * Save registers
+         DROP  R13                     * SAVEAREA not needed anymore
+         LAE   R12,0(,R15)             * Copy entry point address
+         DROP  R15                     * Drop temporary base
+         AGO   .INITOK
+.*
+.* Init for MAIN
+.INITMAIN ANOP
+         BAKR  R14,R0                  * Save all registers
+         LAE   R12,0(,R15)             * Copy entry point address
+         DROP  R15                     * Drop temporary base
+         AGO   .INITOK
+.*
+.* Init for SPCR
+.INITSPCR ANOP
+         LAE   R12,0(R12,R0)           * Wipe high-order bits and ALET
+         AGO   .INITOK2
+.*
+.* Init for SRB
+.INITSRB ANOP  ,                       *
+         GENMAPS (FRRPL,SRB)           * Make sure mappings are active
+         CPY   R12,R15                 * Copy entry point address
+         DROP  R15                     * Temp base no longer needed
+         USE   &_LABEL,R12             * Start using real base
+         CPY   R11,R0                  * Get SRB pointer
+         USE   SRB,R11                 * And set SRB addressable
+         GOTO  (R14),SRBFRRCL          * Quit if caller not waiting
+         CPY   R8,R14                  * Save return address
+         CPY   R1,SRBPARM              * Retrieve ptr to parmlist
+         USE   FRRPL,R2                * R2 contains FRR parmarea ptr
+         ST    R1,FRRPLPRM             * Set up FRR parmlist (SRBPARM)
+         ST    R11,FRRPLSRB            * Set up FRR parmlist (SRB)
+         DROP  R11                     * SRB no longer needed
+         AGO   .INITOK2                *
+.*
+.* Init for RMTR
+.INITRMTR ANOP ,                       *
+         CPY   R12,R15                 * Copy entry point address
+         DROP  R15                     * Temp base no longer needed
+         USE   &_LABEL,R12             * Start using real base
+         CPY   R8,R14                  * Save return address
+         AGO   .INITOK2                *
+.*
+.* Init for SVC
+.INITSVC ANOP  ,                       *
+         USE   SVRB,R5                 * Set SVRB addressable
+         STM   R0,R2,RBEXSAVE          * Save R0-R2
+*                                      * R3-R5 need not be saved
+         ST    R6,RBEXSAVE+12          * Save R6
+*                                      * R7 need not be saved
+         STM   R8,R15,RBEXSAVE+16      * Save R8-R15
+         DROP  R5                      * SVRB not needed anymore
+*
+         LAE   R12,0(,R6)              * Copy entry point address
+         DROP  R6                      * Drop temporary base
+.*
+.* Init code common to all ENTRY types
+.INITOK  ANOP
+         USE   &_LABEL,R12             * And use it
+.INITOK2 ANOP
+         CPY   (R11,AR11),(R1,AR1)     * Save parm pointer
+         CPY   R9,R0                   * Copy second input register
+         CPY   AR9,AR0                 * and its ALET
+.*
+.* Assign ID for dynamic workarea and register for initializing
+.* workarea
+&_ID     SETC  '_&_LABEL._ID'          * Address of identifier
+&_REG    SETC  'R10'                   * Normally use R10 as ptr
+&_CLRSZ  SETC  'SAVEPRFX_LEN-L''SAVEID' * Area to clear after obtain
+         AIF   ('&_ENTRY1' NE 'SUBR').IDOK * For SUBR's:
+&_ID     SETC  '=CL8''&_LABEL'''       * Use literal program name
+&_REG    SETC  'R1'                    *  and keep ptr in R1
+&_CLRSZ  SETC  'SAVEPRFX_LEN-L''SAVEID+L''SAVEPTRS'
+.IDOK    ANOP
+.*
+.* If &workptr specified, include logic to test the pointer
+         AIF   (K'&WORKPTR EQ 0).NOWRKPT
+*
+* Check if dynamic work area has been allocated
+         AIF   (K'&WORKPTR(3) EQ 0).WORKPT1
+.* If &WORKPTR(3) specifies R1, replace it by R11, which currently
+.* holds that register's entry value.
+&_WORKP3 SETC  '&WORKPTR(3)'
+         CHKREG &_WORKP3,g
+         AIF   (&BXA_RC NE 0).NOTR11
+         AIF   (&BXA_NUMVAL NE 1).NOTR11
+&_WORKP3 SETC  'R11'                   * Replace value for ptr reg R1
+.NOTR11  ANOP
+.*
+         ABND  Z,TSTREG=&_WORKP3       * Pointer register zero?
+         USE   &WORKPTR(2),&_WORKP3    * Address area with pointer
+         LT    R1,&WORKPTR(1)          * Load pointer to work-area
+         BZ    _&_LABEL._OBTAIN        * Not valid: go allocate
+         AGO   .WORKPTOK
+.WORKPT1 ANOP  ,
+         AIF   (&_WORKP1REG).WORKPTR   * Pointer is a register?
+         LT    R1,&_WORKP1             * Pointer is valid?
+         BZ    _&_LABEL._OBTAIN        * No: go allocate workarea
+         AGO   .WORKPTOK
+.WORKPTR ANOP  ,                       * Check pointer register
+         ABND  Z,TSTREG=(R1,&_WORKP1)  * Load pointer to work-area
+.WORKPTOK ANOP  ,                      * Pointer in R1. Valid?
+         CLEAR AR1                     * Reset AR1 to primary space
+TMP      USE   BXASAVE,R1              * Set area addressable
+         CLC   TMP.SAVEID,&_ID         * Correct work-area?
+         BE    _&_LABEL._OBTAINED      * Yes: go use it
+         ABND
+         DROP  TMP                     * BXASAVE,R1 no longer needed
+.*
+.* If WORKPTR specifies no third arg. then _WORKP3 has not been set in
+.* USE and should not be DROPped. If the first and only sub-argument is
+.* a register, we need no _OBTAIN label. If the first sub-argument
+.* (either the only or the first of three) is a field, we do need the
+.* _OBTAIN label.
+.*
+         AIF   (K'&WORKPTR(3) EQ 0 AND NOT &_WORKP1REG).OBTAIN
+         AIF   (K'&WORKPTR(3) EQ 0).NOWRKPT
+         DROP  &_WORKP3                * Area with pointer
+*
+.OBTAIN  ANOP
+_&_LABEL._OBTAIN LABEL ,               * Do allocate a work area
+.NOWRKPT ANOP
+*
+* Allocate dynamic work area (WA) and set up save-area (SA) chaining
+&_STOR_LEN SETC ''
+&_STOR_LOC SETC 'BELOW'
+         AIF   ('&_ENTRY1' EQ 'SUBR' AND &BXA_SAVES EQ 0).USER13
+         AIF   ('&_ENTRY1' EQ 'SUBR').ALCSUBR
+.* Not SUBR linkage
+&_STOR_LEN SETC '&_WORKA2'             * Size of dynamic workarea
+         AIF   (&BXA_SAVES EQ 0).STOROBT
+&_STOR_LEN SETC '&_WORKA2'.'+SAVEAREA_LEN*&BXA_SAVES' * +internal SA's
+         AGO   .STOROBT                *
+.ALCSUBR ANOP  ,                       *
+&_STOR_LEN SETC 'SAVEPRFX_LEN+SAVEAREA_LEN*&BXA_SAVES' * prefix+int.SAs
+&_STOR_LOC SETC 'ANY'
+*
+.STOROBT ANOP  ,                       *
+&BXA_WALEN SETC '&_STOR_LEN'           * Total allocation
+         STORAGE OBTAIN,               * Allocate SA, Abend on error   *
+               LOC=&_STOR_LOC,         *                               *
+               LENGTH=&_STOR_LEN       *
+.*
+.* For SRB's: save ptr and length of area in FRR parmlist
+         AIF   ('&_ENTRY1' NE 'SRB').SKIPFRRP
+         CPY   FRRPLWRK,R1             * Insert ptr to wrkarea in FRRPL
+         LA    R0,&BXA_WALEN           * Retrieve length of allocation
+         CPY   FRRPLWSZ,R0             * Save size of allocated area
+         DROP  R2                      * FRR parameter area now set up
+.SKIPFRRP ANOP ,                       *
+*
+* Wipe allocated area except id and save-area
+         AIF   ('&_REG' EQ 'R1').EXTUSE * &_REG = R1 for ENTRY=SUBR
+         LAE   &_REG,0(R1,R0)          * Save pointer to new area
+.EXTUSE  ANOP  ,                       *
+EXT      USE   BXASAVE,&_REG           * Set savearea addressable
+         MVC   EXT.SAVEID,&_ID         * Identifier into workarea
+         CLEAR (EXT.SAVEPRFX+L'SAVEID,&_CLRSZ),,XC * Wipe remainder of *
+                                       * prefix + saveptrs (if SUBR)
+         AIF   ('&_ENTRY1' EQ 'SUBR').NOWIPE
+         AIF   ('&_WORKA1' EQ 'BXASAVE').NOWIPE
+         LAE   R14,EXT.SAVEAREA_END    * Point beyond save-area + id.
+         LA    R15,&_WORKA2-(SAVEAREA_LEN+SAVEPRFX_LEN) * unwiped size
+         SR    R0,R0                   * Set source to zero
+         LR    R1,R0                   * Source length + pad: zeroes
+         MVCL  R14,R0                  * Set unused part to zeroes
+.NOWIPE  ANOP
+.*
+.* If &workptr specified: store address of area in pointer field
+         AIF   (K'&WORKPTR(1) EQ 0).DROPEXT
+         AIF   (&_WORKP1REG).DROPEXT   * Cannot keep ptr in a reg
+         AIF   ('&_ENTRY1' EQ 'SUBR').SKIPUSE * for SUBR no USE needed
+         USE   &WORKPTR(2),&_WORKP3    * Re-establish addressability
+.SKIPUSE ANOP
+         ST    &_REG,&WORKPTR(1)       * Store address in ptr field
+         LA    R0,&WORKPTR(1)          * Get address of pointer
+         ST    R0,EXT.SAVEPTPT         * And save pointer to pointer
+         AIF   ('&_ENTRY1' EQ 'SUBR').DROPEXT * for SUBR no DROP needed
+         DROP  &_WORKP3                * End addressability
+.DROPEXT ANOP
+         AIF   ('&_ENTRY1' NE 'SUBR').NOPTSA * for SUBR ...
+         MVC   EXT.SAVEPTSA,&SA.SAVEINTU * set ptr to SA used on entry
+.NOPTSA  ANOP
+         DROP  EXT                     * BXASAVE
+         AIF   ('&_REG' EQ 'R1').OBTAINED
+         LAE   R1,0(,&_REG)            * Restore pointer to new area
+.OBTAINED ANOP ,                       *
+         AIF   (K'&_WORKA4 EQ 0).NOLENFLD * Need to save length?
+         USE   &_WORKA1,R1             * Set workarea addressable
+         LA    R0,&_STOR_LEN           * Length allocated
+         CPY   &_WORKA4,R0             * Save length in field
+         DROP  R1                      * Drop to swap using status
+.NOLENFLD ANOP ,                       *
+         AIF   (K'&WORKPTR EQ 0).SKIPLAB
+_&_LABEL._OBTAINED LABEL ,             * Use allocated work area
+.SKIPLAB ANOP
+         AIF   ('&_ENTRY1' EQ 'SUBR').USER13
+*
+* Save-area linkage (R1 points to work-area)
+         USE   BXASAVE,R1              * Make new storage addressable
+         LAE   R1,SAVEAREA             * Point to new save-area
+         DROP  R1                      * BXASAVE no longer pointed to
+.* Address old & new saveareas, store pointer old SA --> new SA
+NEW      USE   SAVEAREA,R1             * R1 addresses our new SA
+         AIF   ('&_ENTRY1' NE 'SRB' AND '&_ENTRY1' NE 'RMTR').NOR8SAV
+         ST    R8,NEW.SAVEHDR          * Save return address from SRB
+.NOR8SAV ANOP  ,                       *
+         AIF   ('&_ENTRY1' EQ 'SVC').NOPREV
+         AIF   ('&_ENTRY1' EQ 'SRB').NOPREV
+         AIF   ('&_ENTRY1' EQ 'RMTR').NOPREV
+         AIF   ('&_ENTRY1' EQ 'SPCR').PUTF1SA
+PREV     USE   SAVEAREA,R13            * R13 addresses previous SA
+         ST    R1,PREV.SAVENEXT        * Store forward pointer
+.* Store pointer new savearea --> old savearea
+         AIF   ('&_ENTRY1' NE 'SUBPGM' AND                             *
+               '&_ENTRY1' NE 'RESMGR' AND                              *
+               '&_ENTRY1' NE 'FRR').PUTF1SA
+         ST    R13,NEW.SAVEPREV        * Store backward pointer
+         AGO   .PUTOK
+.PUTF1SA ANOP
+         MVC   NEW.SAVEPREV,=CL4'F1SA' * Identify as 1st in chain
+         AIF   ('&_ENTRY1' EQ 'SPCR').NOPREV
+.PUTOK   ANOP
+         DROP  PREV                    * R13 (SAVEAREA)
+.NOPREV  ANOP
+         LAE   R13,NEW.SAVEAREA        * Address new SA
+         DROP  NEW                     * R1 (SAVEAREA)
+.USER13  ANOP
+*
+* Set up USING for dynamic area
+         AIF   (K'&_WORKA1 EQ 0).NODSECT
+         AIF   ('&_ENTRY1' EQ 'SUBR').NODSECT * SUBR has USE R13
+         USE   &_WORKA1,R13,           * Make acquired area addressable*
+               START=&_WORKA1+SAVEPRFX_LEN * upward from savearea
+.NODSECT ANOP  ,
+.*
+.* If saves-parameter was specified, include logic to allocate
+.* and initialize internal save-areas. If workptr was specified,
+.* allocation and initialization are to be performed only when
+.* the the internal SAs have not yet been allocated and initialized.
+         AIF   (&BXA_SAVES EQ 0).NOSAVES
+         AIF   ('&_ENTRY1' NE 'SUBR').NONEWID
+NEW      USE   BXASAVE,R1              * R1 points to allocated area
+         LA    R1,NEW.SAVEAREA         * Point beyond prefix area
+         DROP  NEW                     * BXASAVE,R1 - prefix complete
+NEW      USE   SAVEAREA,R1             * R1 now points to 1st new SA
+         L     R14,&SA.SAVEINTU        * Point to SA used for saving
+_LOOP_&SYSNDX LABEL
+         LAE   R15,0(,R14)             * Next on chain in R14
+OLD      USE   SAVEAREA,R15            * Set last-used SA addressable
+         LT    R14,OLD.SAVENEXT        * Is there another SA on chain?
+         BNZ   _LOOP_&SYSNDX           * Yes: runchain
+         ST    R15,NEW.SAVEPREV        * Append new chain to last entry
+         ST    R1,OLD.SAVENEXT         *  of existing chain
+         DROP  OLD                     * SAVEAREA,R15
+         DROP  NEW                     * SAVEAREA,R1
+.*
+         AIF   (&BXA_SAVES EQ 1).JUST1SA
+NEW      USE   SAVEAREA,R1             * R1 now points to 1st new SA
+         LT    R0,NEW.SAVENEXT         * Retrieve ptr to next SA
+         BNZ   _RESETR1                * Valid: skip SA allocation
+         DROP  NEW                     * SAVEAREA,R1
+.NONEWID ANOP
+*
+* Set up a chain of save-areas for internal use
+         AIF   (K'&WORKPTR EQ 0).INITSA
+         AIF   ('&_ENTRY1' EQ 'SUBR').INITSA
+         LT    R0,&SA.SAVEINTF         * Retrieve ptr to first SA
+         BNZ   _RESETR1                * Valid: skip SA allocation
+.INITSA  ANOP
+.*
+         AIF   ('&_ENTRY1' EQ 'SUBR').INILOOP
+         LAE   R1,&SA.SAVEAREA+&_WORKA2-SAVEPRFX_LEN * Pt to 1st int SA
+         ST    R1,&SA.SAVEINTF         * Store address in ptr field
+         CLEAR &SA.SAVEINTU,,XC        * Set last used to zero
+         AIF   (&BXA_SAVES EQ 1).JUST1SA
+.INILOOP ANOP
+THIS     USE   SAVEAREA,R1             * Set current SA adressable
+         AIF   ('&_ENTRY1' EQ 'SUBR').NOCLEAR * Not for SUBR-logic:
+         CLEAR THIS.SAVEPREV,,XC       * Set prv.ptr in 1st int.SA to 0
+.NOCLEAR ANOP
+         LAE   R2,0(,R1)               * Init next-ptr to current
+         LA    R3,&SAVES-1             * Nr of SA's to initialize
+_LOOP&SYSNDX LABEL
+         INC   R2,SAVEAREA_LEN         * Point to next save-area
+NEXT     USE   SAVEAREA,R2             * Set next SA adressable
+         CLEAR THIS.SAVEHDR,,XC        * Reset 1stword
+         ST    R2,THIS.SAVENEXT        * Save as forward pointer
+         ST    R1,NEXT.SAVEPREV        * Save as backward pointer
+*
+         DROP  NEXT                    * R2 (SAVEAREA)
+         DROP  THIS                    * R1 (SAVEAREA)
+         LAE   R1,0(,R2)               * Copy next ptr to current
+         BCT   R3,_LOOP&SYSNDX         * Repeat
+*
+INT      USE   SAVEAREA,R2             * Last SA in chain
+         CLEAR INT.SAVEHDR,,XC         * set 1stword to zeros
+         CLEAR INT.SAVENEXT,,XC        * set nextpointer to 0
+         DROP  INT                     * R2 (SAVEAREA)
+         AGO   .RESETR1
+.*
+.* If there's only 1 save-area we don't have any pointers
+.JUST1SA ANOP
+TMP      USE   SAVEAREA,R1             * Only SA in chain
+         AIF   ('&_ENTRY1' EQ 'SUBR').SA1SUBR
+         CLEAR TMP.SAVEPTRS,,XC        * Set 3 pointers to zero
+         AGO   .SA1DONE
+.SA1SUBR ANOP
+         CLEAR TMP.SAVEHDR,,XC         * Set header field to zero
+         CLEAR TMP.SAVENEXT,,XC        * and set next pointer to zero
+.SA1DONE ANOP
+         DROP  TMP                     * SAVEAREA,R1
+.*
+.RESETR1 ANOP
+         AIF   (K'&WORKPTR NE 0)._RESETR1 * If workptr spec'd: do label
+         AIF   ('&_ENTRY1' NE 'SUBR').NOSAVES * Label needed for SUBR..
+         AIF   (&BXA_SAVES LE 1)._RESETR1 * when there's more than 1 SA
+._RESETR1 ANOP
+_RESETR1 EQU   *                       * Target if intSAs pre-allocated
+.NOSAVES ANOP
+*
+* Restore original contents of register 1
+         CPY   (R1,AR1),(R11,AR11)     * Restore parm pointer
+         CPY   (R0,AR0),(R9,AR9)       * Restore parameter
+*
+* Set up literal pool and USING for CSECT
+&BXA_USE_R12 SETC '_&_LABEL._USE_R12'  *
+         B     &BXA_USE_R12            * branch over literals
+         LTORG ,                       *
+&BXA_USE_R12 LABEL ,                   *
+         LAE   R12,&BXA_USE_R12        * Load new base address
+         DROP  R12                     * End addressablity
+         USE   &BXA_USE_R12,R12        * And restart addressability
+         EJECT ,                       * Force heading with USINGs
+.*
+.* If PSA was mapped, include USE for PSA
+         AIF   (NOT &BXA_MAC_MAPPSA).NOPSA
+         USE   PSA,R0                  * PSA always valid at 0
+.NOPSA   ANOP  ,
+.*
+.MEND    MEND

@@ -1,0 +1,11 @@
+_build/
+.dist/
+node_modules/
+vscode/out/
+vscode/server/
+vscode/data/
+vscode/LICENSE
+vscode/README.md
+*.vsix
+.DS_Store
+Thumbs.db

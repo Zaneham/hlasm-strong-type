@@ -1,0 +1,284 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates a replaced machine instruction
+.*
+&LABEL   GEN   &X                      * &X must be a valid instruction
+.*                                     * Other operands in SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC GEN                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Stack pointer
+         GBLA  &BXA_STK_LVL(5)         * Nesting levels
+         LCLA  &LVL                    * Current nesting level
+         LCLA  &OPS                    * Nr of operands on instruction
+.*
+.* Determine current nesting level
+         AIF   (&BXA_STK EQ 0).LVLOK   * &LVL remains zero
+&LVL     SETA  (&BXA_STK_LVL(&BXA_STK)) * Current nesting level
+.LVLOK   ANOP  ,                       *
+.*
+.* Determine nr of operands
+&OPS     SETA  N'&SYSLIST              *
+         AIF   (&OPS LT 1).ERR1A       * Missing opcode
+         AIF   ('&X'(1,1) NE '_').ERR1B * Invalid instruction
+&OPS     SETA  &OPS-1                  * Nr of operands for &X
+         AIF   (&OPS GT 3).ERR1C       * Too many arguments
+         AGO   .NOERR1                 *
+.ERR1A   MNOTE 8,'No instruction specified'
+         MEXIT ,                       *
+.ERR1B   MNOTE 8,'Invalid instruction specified: &X'
+         MEXIT ,                       *
+.ERR1C   MNOTE 4,'More than three operands specified: remainder ignored*
+               '                       *
+.NOERR1  ANOP  ,                       *
+.*
+.* Generate code with indentation
+         AIF   (&LVL EQ 0).GEN0        *
+         AIF   (&LVL EQ 1).GEN1        *
+         AIF   (&LVL EQ 2).GEN2        *
+         AIF   (&LVL EQ 3).GEN3        *
+         AIF   (&LVL EQ 4).GEN4        *
+         AIF   (&LVL EQ 5).GEN5        *
+         AIF   (&LVL EQ 6).GEN6        *
+         AIF   (&LVL EQ 7).GEN7        *
+         AIF   (&LVL EQ 8).GEN8        *
+         AIF   (&LVL EQ 9).GEN9        *
+.ERR2A   MNOTE 4,'&LVL nesting levels of structured programming'
+         AGO   .GEN10                  *
+.*
+.* Generate code
+.GEN0    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN0_2      *
+         AIF   (&OPS EQ 3).GEN0_3      *
+         AIF   (&OPS EQ 1).GEN0_1      *
+&LABEL   &X    ,                       *
+         MEXIT ,                       *
+.GEN0_1  ANOP  ,                       *
+&LABEL   &X    &SYSLIST(2)             *
+         MEXIT ,                       *
+.GEN0_2  ANOP  ,                       *
+&LABEL   &X    &SYSLIST(2),&SYSLIST(3) *
+         MEXIT ,                       *
+.GEN0_3  ANOP  ,                       *
+&LABEL   &X    &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+         MEXIT ,                       *
+.*
+.GEN1    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN1_2      *
+         AIF   (&OPS EQ 3).GEN1_3      *
+         AIF   (&OPS EQ 1).GEN1_1      *
+&LABEL    &X   ,                       *
+          MEXIT ,                      *
+.GEN1_1   ANOP ,                       *
+&LABEL    &X   &SYSLIST(2)             *
+          MEXIT ,                      *
+.GEN1_2   ANOP ,                       *
+&LABEL    &X   &SYSLIST(2),&SYSLIST(3) *
+          MEXIT ,                      *
+.GEN1_3   ANOP ,                       *
+&LABEL    &X   &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+          MEXIT ,                      *
+.*
+.GEN2    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN2_2      *
+         AIF   (&OPS EQ 3).GEN2_3      *
+         AIF   (&OPS EQ 1).GEN2_1      *
+&LABEL     &X  ,                       *
+           MEXIT ,                     *
+.GEN2_1    ANOP ,                      *
+&LABEL     &X  &SYSLIST(2)             *
+           MEXIT ,                     *
+.GEN2_2    ANOP ,                      *
+&LABEL     &X  &SYSLIST(2),&SYSLIST(3) *
+           MEXIT ,                     *
+.GEN2_3    ANOP ,                      *
+&LABEL     &X  &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+           MEXIT ,                     *
+.*
+.GEN3    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN3_2      *
+         AIF   (&OPS EQ 3).GEN3_3      *
+         AIF   (&OPS EQ 1).GEN3_1      *
+&LABEL      &X ,                       *
+            MEXIT ,                    *
+.GEN3_1     ANOP ,                     *
+&LABEL      &X &SYSLIST(2)             *
+            MEXIT ,                    *
+.GEN3_2     ANOP ,                     *
+&LABEL      &X &SYSLIST(2),&SYSLIST(3) *
+            MEXIT ,                    *
+.GEN3_3     ANOP ,                     *
+&LABEL      &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+            MEXIT ,                    *
+.*
+.GEN4    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN4_2      *
+         AIF   (&OPS EQ 3).GEN4_3      *
+         AIF   (&OPS EQ 1).GEN4_1      *
+&LABEL       &X ,                      *
+             MEXIT ,                   *
+.GEN4_1      ANOP ,                    *
+&LABEL       &X &SYSLIST(2)            *
+             MEXIT ,                   *
+.GEN4_2      ANOP ,                    *
+&LABEL       &X &SYSLIST(2),&SYSLIST(3)
+             MEXIT ,                   *
+.GEN4_3      ANOP ,                    *
+&LABEL       &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+             MEXIT ,                   *
+.*
+.GEN5    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN5_2      *
+         AIF   (&OPS EQ 3).GEN5_3      *
+         AIF   (&OPS EQ 1).GEN5_1      *
+&LABEL        &X ,                     *
+              MEXIT ,                  *
+.GEN5_1       ANOP ,                   *
+&LABEL        &X &SYSLIST(2)           *
+              MEXIT ,                  *
+.GEN5_2       ANOP ,                   *
+&LABEL        &X &SYSLIST(2),&SYSLIST(3)
+              MEXIT ,                  *
+.GEN5_3       ANOP ,                   *
+&LABEL        &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+              MEXIT ,                  *
+.*
+.GEN6    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN6_2      *
+         AIF   (&OPS EQ 3).GEN6_3      *
+         AIF   (&OPS EQ 1).GEN6_1      *
+&LABEL         &X ,                    *
+               MEXIT ,                 *
+.GEN6_1        ANOP ,                  *
+&LABEL         &X &SYSLIST(2)          *
+               MEXIT ,                 *
+.GEN6_2        ANOP ,                  *
+&LABEL         &X &SYSLIST(2),&SYSLIST(3)
+               MEXIT ,                 *
+.GEN6_3        ANOP ,                  *
+&LABEL         &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+               MEXIT ,                 *
+.*
+.GEN7    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN7_2      *
+         AIF   (&OPS EQ 3).GEN7_3      *
+         AIF   (&OPS EQ 1).GEN7_1      *
+&LABEL          &X ,                   *
+                MEXIT ,                *
+.GEN7_1         ANOP ,                 *
+&LABEL          &X &SYSLIST(2)         *
+                MEXIT ,                *
+.GEN7_2         ANOP ,                 *
+&LABEL          &X &SYSLIST(2),&SYSLIST(3)
+                MEXIT ,                *
+.GEN7_3         ANOP ,                 *
+&LABEL          &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+                MEXIT ,                *
+.*
+.GEN8    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN8_2      *
+         AIF   (&OPS EQ 3).GEN8_3      *
+         AIF   (&OPS EQ 1).GEN8_1      *
+&LABEL           &X ,                  *
+                 MEXIT ,               *
+.GEN8_1          ANOP ,                *
+&LABEL           &X &SYSLIST(2)        *
+                 MEXIT ,               *
+.GEN8_2          ANOP ,                *
+&LABEL           &X &SYSLIST(2),&SYSLIST(3)
+                 MEXIT ,               *
+.GEN8_3          ANOP ,                *
+&LABEL           &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+                 MEXIT ,               *
+.*
+.GEN9    ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN9_2      *
+         AIF   (&OPS EQ 3).GEN9_3      *
+         AIF   (&OPS EQ 1).GEN9_1      *
+&LABEL            &X ,                 *
+                  MEXIT ,              *
+.GEN9_1           ANOP ,               *
+&LABEL            &X &SYSLIST(2)       *
+                  MEXIT ,              *
+.GEN9_2           ANOP ,               *
+&LABEL            &X &SYSLIST(2),&SYSLIST(3)
+                  MEXIT ,              *
+.GEN9_3           ANOP ,               *
+&LABEL            &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+                  MEXIT ,              *
+.*
+.GEN10   ANOP  ,                       *
+         AIF   (&OPS EQ 2).GEN10_2     *
+         AIF   (&OPS EQ 3).GEN10_3     *
+         AIF   (&OPS EQ 1).GEN10_1     *
+&LABEL             &X ,                *
+                   MEXIT ,             *
+.GEN10_1           ANOP ,              *
+&LABEL             &X &SYSLIST(2)      *
+                   MEXIT ,             *
+.GEN10_2           ANOP ,              *
+&LABEL             &X &SYSLIST(2),&SYSLIST(3)
+                   MEXIT ,             *
+.GEN10_3           ANOP ,              *
+&LABEL             &X &SYSLIST(2),&SYSLIST(3),&SYSLIST(4)
+                   MEXIT ,             *
+.*
+.MEND    MEND

@@ -1,0 +1,283 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates code to end a subroutine
+.*
+&LABEL   ENDSR &RC=0,                  * Returncode, (reg) or *        *
+               &KEEPREG=               * Registers NOT to be restored
+.*
+.* &RC  Specifies the returncode. If not specified, defaults to 0.
+.*      If specified as *, the value in R15 will be used.
+.* &KEEPREG specifies a register or a list of registers that are not
+.*          to be restored upon return. The values of these registers
+.*          will be passed back to the caller.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC ENDSR                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_REG                   * Register in &RC=(reg)
+         LCLA  &_REGNO                 * Register nr in &RC=(reg)
+         LCLA  &I                      * Index for &KEEPREG
+         LCLC  &_KR                    * 1 register to keep
+         LCLB  &_KEEP(16)              * register 0-15 keep Y/N
+         LCLA  &J                      * Index for &_KEEP
+         GBLC  &BXA_SUBR               * Name of current subroutine
+         GBLC  &BXA_SUBRTP             * Type of current subroutine
+         GBLB  &BXA_PGM                * PGM expanded Yes/No
+         GBLB  &SP_SHOWALL             * SYSPARM option
+         GBLC  &SYSASCE                * Current ASC mode
+         GBLA  &BXA_NUMVAL             * Return value from CHKREG
+         GBLC  &BXA_USE_R12            * Start label of mainline
+         GBLC  &BXA_WALAB              * Start label of dynamic area
+.*
+.* PGM must have been expanded
+         AIF   (&BXA_PGM).NOERR0A
+         MNOTE 8,'PGM-macro must be coded before using BEGSR/ENDSR'
+.NOERR0A ANOP
+.*
+.* Check that the structured programming stack is empty
+         CHK_STACK RESET=YES           *
+.*
+.* Check validity of RC parameter if in register notation
+         AIF   ('&RC'(1,1) NE '(').NOERR1
+         AIF   (N'&RC EQ 0).ERR1A
+&_REG    SETC  '&RC(1)'
+         AIF   (N'&RC GT 1).ERR1B
+         AGO   .NOERR1B
+.ERR1A   MNOTE 8,'No register specified in sublist of RC parameter'
+         AGO   .NOERR1
+.ERR1B   MNOTE 4,'More than 1 register specified in sublist of RC param*
+               eter'
+.NOERR1B ANOP  ,
+         CHKREG &_REG,g
+         AIF   (&BXA_RC GT 4).ERR1C
+&_REGNO  SETA  &BXA_NUMVAL             * Save nr of register
+         AGO   .NOERR1
+.ERR1C   ANOP  ,
+&_REG    SETC  (DOUBLE '&_REG')
+         MNOTE 8,'&_REG is not a valid general purpose register'
+.NOERR1  ANOP  ,
+.*
+.* Check validity of KEEPREG parameter
+         AIF   (K'&KEEPREG EQ 0).NOERR2
+         AIF   ('&KEEPREG'(1,1) EQ '(').CHKERR2A
+&_KR     SETC  '&KEEPREG'
+&I       SETA  1
+         AGO   .ERR2CHK
+.CHKERR2A ANOP
+         AIF   (N'&KEEPREG EQ 0).ERR2A
+&I       SETA  1
+         AIF   (N'&KEEPREG EQ 1).ERR2B
+.ERR2LOOP ANOP
+&_KR     SETC  '&KEEPREG(&I)'
+.ERR2CHK ANOP
+         CHKREG &_KR,g                 * Valid register?
+         AIF   (&BXA_RC GT 4).ERR2F    * No: issue error
+         AIF   (&BXA_NUMVAL EQ 15).ERR2C
+         AIF   (&BXA_NUMVAL EQ 14).ERR2D
+         AIF   (&BXA_NUMVAL EQ 13).ERR2E
+         AIF   (&BXA_NUMVAL NE 0 AND '&BXA_SUBRTP' EQ 'ESTAE').ERR2G
+&J       SETA  &BXA_NUMVAL+1           * Index zero invalid
+&_KEEP(&J) SETB 1                      * Set keep-indicator on
+.*
+.ERR2NEXT ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&KEEPREG).NOERR2
+         AGO   .ERR2LOOP
+.*
+.ERR2A   MNOTE 4,'No entries in KEEPREG-list'
+         AGO   .NOERR2
+.ERR2B   MNOTE 4,'Only 1 entry in KEEPREG-list'
+         AGO   .ERR2LOOP
+.ERR2C   MNOTE 8,'Register 15 invalid in KEEPREG, use RC=*'
+         AGO   .ERR2NEXT
+.ERR2D   MNOTE 8,'Register 14 invalid in KEEPREG'
+         AGO   .ERR2NEXT
+.ERR2E   MNOTE 4,'Register 13 useless in KEEPREG, is always kept'
+         AGO   .ERR2NEXT
+.ERR2F   ANOP  ,
+&_KR     SETC  (DOUBLE '&_KR')
+         MNOTE 8,'&_KR is not a valid general purpose register'
+         AGO   .ERR2NEXT
+.ERR2G   MNOTE 8,'For ESTAE-type routines only R0 can be specified with*
+                KEEPREG'
+         AGO   .ERR2NEXT
+.NOERR2  ANOP
+.*
+.* Check the current subroutine name
+         AIF   ('&BXA_SUBR' NE '*MAIN').NOERR3
+.ERR3    MNOTE 8,'ENDSR without preceding BEGSR'
+.NOERR3  ANOP
+.*
+.* For RETRY-routines, no parameters should be specified
+         AIF   ('&BXA_SUBRTP' NE 'RETRY').NOERR4
+         AIF   ('&RC' EQ '0').NOERR4A
+.ERR4A   MNOTE 4,'RC-parameter ignored for RETRY-routine'
+.NOERR4A ANOP
+         AIF   (K'&KEEPREG EQ 0).NOERR4
+.ERR4B   MNOTE 4,'KEEPREG-parameter ignored for RETRY-routine'
+.NOERR4  ANOP
+.*
+.* Check positional parameters
+         AIF   (N'&SYSLIST EQ 0).NOERR5
+         AIF   (K'&SYSLIST(1) NE 0).ERR5A
+         AIF   (N'&SYSLIST EQ 1).NOERR5
+         AIF   (K'&SYSLIST(2) NE 0).ERR5A
+         AIF   (N'&SYSLIST EQ 2).NOERR5
+.ERR5A   MNOTE 4,'No positional parameters expected: ignored'
+.NOERR5  ANOP  ,                       *
+.*
+.* Generate code
+&LABEL   LABEL
+         AIF   ('&BXA_SUBRTP' EQ 'RETRY').RETRY
+         AIF   ('&RC' EQ '*').RETCDOK
+*
+* Load returncode
+         AIF   ('&RC'(1,1) EQ '(').REG
+         AIF   ('&RC' EQ '0').RETCD0
+.* Normal specification:
+         LA    R15,&RC                 * Load returncode
+         AGO   .RETCDOK
+.* Returncode 0:
+.RETCD0  ANOP
+         CLEAR R15                     * Set returncode 0
+         AGO   .RETCDOK
+.* Returncode from register
+.REG     ANOP
+         AIF   ('&_REGNO' EQ '15').RETCDOK
+         LR    R15,&_REG               * Load returncode
+.RETCDOK ANOP  ,
+*
+* Find last internal save-area used
+         LT    R14,SAVEINTU            * Point to last-used save-area
+         ABND  Z                       * No save-area: Abend
+INT      USE   SAVEAREA,R14            * Address save-area
+         AIF   ('&SYSASCE' EQ 'P').AR14OK
+         CLEAR AR14                    * AR-mode: set AR14 to primary
+.AR14OK  ANOP  ,                       *
+         LA    R0,&BXA_SUBR            * Point to routine's EPA
+         C     R0,INT.SAVEHDR          * Correct?
+         ABND  NE                      * If not: Abend
+.*
+.* If keepregs specified: save the registers to keep
+         AIF   (K'&KEEPREG EQ 0).NOKEEP
+&J       SETA  0                       * Index into &_KEEP
+.KEEPLOOP ANOP
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GE 13).NOKEEP       * Reg 13 and higher: invalid
+         AIF   (NOT &_KEEP(&J)).KEEPLOOP * If off: do not save reg
+&I       SETA  &J-1                    * Get register number
+&_KR     SETC  'R'.'&I'                * This is the register name
+         ST    &_KR,INT.SAVED&_KR      * Save register value in SA
+         AGO   .KEEPLOOP               * And process next entry
+.NOKEEP  ANOP
+.*
+         AIF   ('&BXA_SUBRTP' EQ 'ESTAE').ESTAE
+*
+* Restore registers: R14 now points to last-used internal SA
+         MVC   SAVEINTU,INT.SAVEPREV   * Deactivate current SA
+         LM    R0,R12,INT.SAVEDR0      * Restore Regs 0-12
+*                                      * Register 13 remains unchanged
+         L     R14,INT.SAVEDR14        * Restore Reg 14
+*                                      * Register 15 retains retcd
+         AGO   .DROPINT
+.*
+.ESTAE   ANOP
+*
+* Upon entry to this ESTAE routine 2 save areas have been allocated.
+* These contain both a copy of the external save-area and the entry
+* registers (R14-R2) to the ESTAE routine. See the BEGSR comments
+* for details.
+*
+* R14 now points to last-used internal SA (INT.SAVEAREA)
+         ST    R15,INT.SAVEDR15        * Save returncode
+         MVC   INT.SAVEDR7,INT.SAVEPREV * R7 will be ptr to prev. SA
+         LM    R14,R12,INT.SAVEDR14    * Restore registers
+         DROP  ,                       * All USINGS invalid!
+         LR    R13,R3                  * Reset to system SA (in SDWA)
+INT      USE   SAVEAREA,R7             * R7 points to previous SA
+OUR      USE   BXASAVE,R2              * R2 points to external SA
+         AIF   ('&SYSASCE' EQ 'P').AR7OK
+         CLEAR AR7                     * AR-mode: set AR7 to primary
+         CPY   AR2,AR7                 *          and AR2 as well
+.AR7OK   ANOP
+         STM   R4,R6,OUR.SAVEPTRS      * Restore header of ext.SA
+         MVC   OUR.SAVEDR14(15*L'SAVEDR14),INT.SAVEDR14 * Copy 15 regs *
+                                         * to restore contents of extSA
+         MVC   OUR.SAVEINTU,INT.SAVEPREV * Deactivate 2 int.SA's
+.*
+.DROPINT ANOP
+         DROP  INT                     * R14 (SAVEAREA)
+         BR    R14                     * Return to caller
+         AGO   .DONE
+.*
+.RETRY   ANOP  ,                       *
+         ABND  ,                       * Return by branch to resume adr
+.*
+.DONE    ANOP  ,                       *
+         DROP  ,                       *
+         USE   &BXA_USE_R12,R12        * Set code addressable
+         USE   &BXA_WALAB,R13,         * Set workarea addressable      *
+               START=&BXA_WALAB+SAVEPRFX_LEN
+.*
+&BXA_SUBR SETC '*MAIN'                 * Now we're in main code again
+&BXA_SUBRTP SETC ''                    * Now we're in normal code again
+.*
+.MEND    MEND

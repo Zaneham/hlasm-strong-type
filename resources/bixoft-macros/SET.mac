@@ -1,0 +1,189 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Turn on a value in a code field
+.*
+&LABEL   SET   &CODE                   * Name of code to be SET
+.*                                     * More codes are in SYSLIST
+.*
+.* Alternative syntax: SET field1,field2
+.*
+.* &CODE specifies the name of a DCL-declared code value. Any number of
+.*       arguments may follow, but they all have to be DCL-declared
+.*       value names too.
+.* fld1  Name of an A-type or V-type field
+.* fld2  Name of a field, or a register
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC SET                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_NUMVAL             * Retvalue from CHKREG
+         LCLC  &_LABEL                 * Copy of &LABEL
+         LCLA  &I                      * Index for SYSLIST
+         LCLA  &J                      * Pointer to period in &ARG
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &_LOC                   * Current location
+.*
+.* Check the LABEL parameter
+&_LABEL  SETC  '&LABEL'                *
+.*
+.* Check the CODE parameter
+         AIF   (K'&CODE NE 0).NOERR1   *
+.ERR1A   MNOTE 8,'Missing argument(s)' *
+         MEXIT ,                       *
+.NOERR1  ANOP  ,                       *
+.*
+.* Check field type to determine syntax type
+         AIF   (T'&CODE EQ 'v').SYNTAX1 * Ok: process code value names
+.*
+.* CODE parameter must be of type A, V, or R
+         AIF   (T'&CODE EQ 'A').NOERR3  *
+         AIF   (T'&CODE EQ 'V').NOERR3  *
+         AIF   (T'&CODE EQ 'R').NOERR3A *
+.ERR3A   MNOTE 8,'Cannot SET &CODE: field type not supported'
+         MEXIT ,
+.NOERR3A ANOP  ,
+         AIF   (L'&CODE EQ 4).NOERR3
+         AIF   (L'&CODE EQ 3).NOERR3
+.ERR3B   MNOTE 8,'Cannot SET &CODE: length must be 3 or 4 bytes'
+         MEXIT ,
+.NOERR3  ANOP  ,
+.*
+.* Check second argument
+&ARG     SETC  '&SYSLIST(2)'           * Extract argument
+         AIF   (K'&ARG NE 0).NOERR4    *
+.ERR4A   MNOTE 8,'Pointed field missing'
+         MEXIT ,                       *
+.NOERR4  ANOP  ,                       *
+.*
+.* Check nr of arguments
+         AIF   (N'&SYSLIST LE 2).NOERR5
+.ERR5A   MNOTE 4,'More than 2 arguments: remainder ignored'
+         MEXIT ,                       *
+.NOERR5  ANOP  ,                       *
+.*
+.* Obtain ptr to &ARG
+         CHKREG &ARG,g                 * Is this a valid register?
+         AIF   (&BXA_RC EQ 0).SAVARG   *
+&_LABEL  LA    R0,&ARG                 * Obtain pointer
+&_LABEL  SETC  ''                      * Wipe label after use
+&ARG     SETC  'R0'                    * Pointer now in R0
+.*
+.* Save pointer in &ARG into &CODE field
+.SAVARG  ANOP  ,                       *
+         AIF   (T'&CODE EQ 'A').SAVST  *
+         AIF   (T'&CODE EQ 'V').SAVST  *
+.* Must be type R: unaligned, explicit length
+         AIF   (L'&CODE EQ 3).SAVST3   *
+         AIF   (L'&CODE EQ 4).SAVST4   *
+         MNOTE 12,'Internal error'     *
+         MEXIT ,                       *
+.*
+.* Store pointer into field
+.SAVST   ANOP  ,                       *
+&_LABEL  ST    &ARG,&CODE              * Set up pointer
+         MEXIT ,                       *
+.*
+.SAVST3  ANOP  ,                       *
+&_LABEL  STCM  &ARG,NYYY,&CODE         * Set up 24-bit pointer
+         MEXIT ,                       *
+.*
+.SAVST4  ANOP  ,                       *
+&_LABEL  STCM  &ARG,YYYY,&CODE         * Set up 31-bit pointer
+         MEXIT ,                       *
+.*
+.* Handling of syntax 1: any number of value-names
+.*
+.SYNTAX1 ANOP  ,                       *
+.*
+.* Loop to process all arguments given
+&I       SETA  0                       * I indexes into SYSLIST
+.LOOP1   ANOP  ,                       * Loop thru syslist
+&I       SETA  &I+1                    * Point next argument
+         AIF   (&I GT N'&SYSLIST).LOOP1OK *
+&ARG     SETC  '&SYSLIST(&I)'          * Extract argument
+.* &ARG is a valid code name?
+         AIF   (K'&ARG EQ 0).LOOP1     * Omitted argument: skip
+         AIF   (T'&ARG NE 'v').ERR2A   * Not a code value
+&J       SETA  ('&ARG' INDEX '.')      * Search for a period
+         AIF   (&J EQ 0).LOOP1NP       * Unqualified name
+&_LOC    SETC  '&ARG'(1,&J-1).'.'      * Extract USING name from ARG
+&ARG     SETC  '&ARG'(&J+1,*)          * Extract code value name
+.LOOP1NP ANOP  ,                       *
+         GBLC  &(BXA_BITF_&ARG)        * Declare code location variable
+&_LOC    SETC  '&_LOC'.'&(BXA_BITF_&ARG)' * Create location name
+&J       SETA  L'&_LOC                 * Determine length of field
+         AIF   (&J EQ 1).LOOP1MI       * 1 byte: use Move Immediate
+&_LABEL  MVC   &_LOC,=AL&J.(&ARG)      * Set field to desired value
+&_LABEL  SETC  ''                      * Wipe label after use
+         AGO   .LOOP1                  * And go process next arg
+.LOOP1MI ANOP  ,                       *
+&_LABEL  MVI   &_LOC,&ARG              * Set field to desired value
+&_LABEL  SETC  ''                      * Wipe label after use
+         AGO   .LOOP1                  * And go process next arg
+.ERR2A   ANOP  ,                       *
+&ARG     SETC  (DOUBLE '&ARG')         *
+         MNOTE 8,'&ARG is not a DCL declared code value: skipped'
+         AGO   .LOOP1                  *
+.LOOP1OK ANOP  ,                       *
+         AIF   (K'&_LABEL EQ 0).MEND   * Label has been generated?
+&_LABEL  LABEL ,                       * No: do so now
+.*
+.MEND    MEND

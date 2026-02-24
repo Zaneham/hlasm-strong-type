@@ -1,0 +1,93 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Execute an TRanslate-and-Test instruction with variable length
+.*
+&LABEL   EXTRT &SRC,                   * Source for TRanslate and test *
+               &TABLE,                 * Translate table               *
+               &DECR                   * Decrement indicator
+.*
+.* &SRC   specifies the source field for the translate and test.
+.*        In stead of a length, a register containing the length must
+.*        be specified.
+.* &TABLE specifies the translate table to be used.
+.* &DECR  a value of NODEC indicates that the length in the register
+.*        specified in the TO length field, contains the length of
+.*        the translate and test minus 1 for the EX instruction.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EXTRT                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * USE status of regs 0-15
+.*
+.* Check availability or R1 and R2
+         AIF   (NOT &BXA_USED_REGS(2)).NOERR1
+.ERR1    MNOTE 4,'EXTRT will modify register R1, which is currently in *
+               USE'                    *
+.NOERR1  ANOP  ,                       *
+.*
+         AIF   (NOT &BXA_USED_REGS(3)).NOERR2
+.ERR2    MNOTE 4,'EXTRT will modify register R2, which is currently in *
+               USE'                    *
+.NOERR2  ANOP  ,                       *
+.*
+&LABEL   EXQ   &SRC,&TABLE,TRT,&DECR
+.*
+.MEND    MEND

@@ -1,0 +1,122 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: ELSE
+.* Combines with IF and ENDIF to conditionally execute blocks of code
+.*
+&LABEL   ELSE  ,                       * No arguments allowed
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC ELSE                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_LBL(5)         * Labels
+         GBLA  &BXA_STK_LVL(5)         * Levels
+         LCLC  &OP                     * Last opcode on stack
+         LCLC  &LBL                    * Last label on stack
+         LCLA  &LVL                    * Last level on stack
+         LCLC  &LAB                    * End-of-else label
+         LCLA  &I                      * Stack pointer
+.*
+.* Check label parameter
+         AIF   (K'&LABEL EQ 0).NOERR1
+.ERR1    MNOTE 4,'Label ignored'
+.NOERR1  ANOP
+.*
+.* Check nr of parameters
+         AIF   (N'&SYSLIST EQ 0).NOERR2
+         AIF   (K'&SYSLIST(1) GT 1).ERR2
+         AIF   (N'&SYSLIST EQ 1).NOERR2
+         AIF   (K'&SYSLIST(2) GT 1).ERR2
+         AIF   (N'&SYSLIST EQ 2).NOERR2
+.ERR2    MNOTE 4,'No arguments expected: ignored'
+.NOERR2  ANOP
+.*
+.* Check that current stack-entry designates a then-block
+&I       SETA  &BXA_STK                * Copy stack pointer
+         AIF   (&I LT 1).ERR3A         * Stack underflow
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract opcode from stack
+&LBL     SETC  '&BXA_STK_LBL(&I)'      * and end-of-block label
+         AIF   ('&OP' EQ 'CASE').NOERR3
+         AIF   ('&OP' EQ 'ELSE').ERR3B
+         AIF   ('&OP' EQ 'IF').NOERR3
+         AGO   .ERR3C
+.ERR3A   MNOTE 8,'No preceding IF statement: ignored'
+         MEXIT
+.ERR3B   MNOTE 8,'Duplicate ELSE statement: ignored'
+         MEXIT
+.ERR3C   MNOTE 8,'Cannot use ELSE to terminate a &OP.-block: ignored'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Generate end-of-then label and add a stack-entry
+&LAB     SETC  '_ELSE_&SYSNDX'
+&LVL     SETA  &BXA_STK_LVL(&BXA_STK)  * Copy level
+&I       SETA  &BXA_STK+1              * Point next stack entry
+&BXA_STK_OP(&I)  SETC 'ELSE'           * Indicate ELSE block in progres
+&BXA_STK_LBL(&I) SETC '&LAB'           * End-of-ELSE label for ENDIF
+&BXA_STK_LVL(&I) SETA &LVL             * Level for ENDIF
+&BXA_STK SETA  &I                      * And increment stack pointer
+.*
+.* Generate code
+         B     &LAB                    * Skip else-logic
+&LBL     LABEL ,                       * Start of else-logic
+.*
+.MEND    MEND

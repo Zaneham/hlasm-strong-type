@@ -1,0 +1,261 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Define Remote DATA
+.*
+.* All data defined thru the RDATA macro will be put into a remote
+.* literal pool, which is created by the END-macro, using the RLTORG
+.* macro.
+.*
+&LABEL   RDATA &OPCD,                  * Defining opcode               *
+               &RD_MODE=ADD,           * COND for conditional entries  *
+               &ALIGN=,                * Alignment                     *
+               &MF=X                   * MF should not be specified
+.*
+.* &LABEL specifies the label of the data
+.*        if specified as two dashes (--) no label will be generated
+.* &OPCD  specifies the defining opcode. The following opcodes are
+.*        currently supported:
+.*        - CNOP,DC,DS,EQU
+.*        - SNAPHDR
+.*        - Any other opcode that requires no keyword parmaters
+.**!!     - DCB
+.**!!     For keyword parameters the following applies:
+.**!!     In stead of separating the keyword parameter name and its
+.**!!     value with an equal sign(=), separate them with a slash(/).
+.**!!     E.g.: RDATA DCB,DSORG/PS,RECFM/VBA,.....   etc.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC RDATA                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Define variables
+         GBLC  &BXA_RD_RETVAL          * RD_MODE=COND: orig. data label
+         GBLC  &BXA_RD_LAB(50)         * table of defined remote labels
+         GBLC  &BXA_RD_OPC(50)         * table of defined remote opcd's
+         GBLC  &BXA_RD_ALG(50)         * table of defined remote align
+         GBLC  &BXA_RD_ARG(50)         * table of defined remote data  *
+               *                       *        positional parameters
+.**!!    GBLA  &BXA_RD_NDX(50)         * table of remote indexes
+.**!!    GBLC  &BXA_RD_KEY(50)         * table of remote keywords
+.**!!    GBLC  &BXA_RD_VAL(50)         * table of remote keyword values
+         LCLA  &I,&I1                  * Index into BXA_RD_LAB/OPC/ARG
+.**!!    LCLA  &J                      * Index into BXA_RD_NDX/KEY/VAL
+         LCLA  &S                      * Index into SYSLIST
+         LCLC  &PRM                    * Parameter (1 SYSLIST-entry)
+         LCLC  &ARG                    * Used to build BXA_RD_ARG entry
+.**!!    LCLA  &P                      * Character index into PRM
+.**!!    LCLA  &P1,&P2,&P3             * Character indices into PRM
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL NE 0).NOERR1
+.ERR1    MNOTE 8,'Label for remote data not specified'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check OPCD parameter
+         AIF   (K'&OPCD EQ 0).ERR2A
+         AIF   ('&OPCD' EQ 'CLOSE').NOERR2
+         AIF   ('&OPCD' EQ 'CMDTXT').NOERR2
+         AIF   ('&OPCD' EQ 'CNOP').NOERR2
+         AIF   ('&OPCD' EQ 'DC').NOERR2
+.**!!    AIF   ('&OPCD' EQ 'DCB').NOERR2
+         AIF   ('&OPCD' EQ 'DS').NOERR2
+         AIF   ('&OPCD' EQ 'EQU').NOERR2
+         AIF   ('&OPCD' EQ 'MGCRE').NOERR2
+         AIF   ('&OPCD' EQ 'OPEN').NOERR2
+         AIF   ('&OPCD' EQ 'SNAPHDR').NOERR2
+         AIF   ('&OPCD' EQ 'WTO').NOERR2
+         AGO   .ERR2B
+.ERR2A   MNOTE 8,'Missing opcode for remote data definition'
+         MEXIT
+.ERR2B   MNOTE 4,'Opcode &OPCD not supported by RDATA macro'
+.NOERR2  ANOP
+.*
+.* Check SYSLIST contents
+         AIF   ('&OPCD' EQ 'MGCRE').NOERR3
+         AIF   (N'&SYSLIST LT 2).ERR3A
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'Missing operand(s) for remote data definition'
+.NOERR3  ANOP
+.*
+         AIF   ('&OPCD' NE 'MGCRE').NOERR4
+         AIF   (N'&SYSLIST GE 2).ERR4A
+         AGO   .NOERR4
+.ERR4A   MNOTE 4,'RDATA &OPC does not accept any additional parameters'
+.NOERR4  ANOP
+.*
+.* Check the RD_MODE parameter
+         AIF   ('&RD_MODE' EQ 'ADD').NOERR5
+         AIF   ('&RD_MODE' EQ 'COND').NOERR5
+.ERR5A   MNOTE 8,'RD_MODE must be COND or default to ADD'
+.NOERR5  ANOP
+.*
+.* Check the MF parameter
+         AIF   ('&MF' EQ 'X').NOERR6
+.ERR6A   MNOTE 4,'MF-parameter not needed with RDATA &OPC'
+.NOERR6  ANOP
+.*
+.* Check the ALIGN parameter
+         AIF   (K'&ALIGN EQ 0).NOERR7
+         AIF   ('&ALIGN'  EQ 'D').NOERR7
+         AIF   ('&ALIGN'  EQ 'F').NOERR7
+         AIF   ('&ALIGN'  EQ 'H').NOERR7
+         AIF   ('&ALIGN'  EQ 'X').ERR7B
+         AIF   ('&ALIGN'  EQ 'C').ERR7B
+         AIF   ('&ALIGN'  EQ 'B').ERR7B
+.ERR7A   MNOTE 8,'ALIGN parameter specifies unknown data type'
+         AGO   .NOERR7
+.ERR7B   MNOTE 4,'ALIGN parameter specifies byte-aligned data type'
+.NOERR7  ANOP
+.*
+.* Check that LABEL is not duplicate
+         AIF   ('&LABEL' EQ '--').LOOP1OK
+&I       SETA  1                       * I indexes defined RDATA labels
+.LOOP1   ANOP
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&BXA_RD_LAB).LOOP1OK * End of loop
+         AIF   ('&LABEL' EQ '&BXA_RD_LAB(&I)').LOOP1F
+         AGO   .LOOP1                  * Go compare next entry
+.LOOP1F  ANOP  ,                       * Label found: duplicate
+         MNOTE 4,'Duplicate RDATA label: &LABEL. This occurrence ignore*
+               d'
+         MEXIT
+.LOOP1OK ANOP
+.*
+.* Loop thru SYSLIST to build ARG from available arguments
+&ARG     SETC  ''                      * ARG will contain new entry
+&S       SETA  1                       * Index 1 --> opcode
+.LOOP2   ANOP  ,                       * Loop thru remaining SYSLIST
+&S       SETA  &S+1                    * Point next SYSLIST entry
+         AIF   (&S GT N'&SYSLIST).LOOP2OK
+&PRM     SETC  '&SYSLIST(&S)'          * Extract parameter from syslist
+.* Is this a truly positional parameter, or an intended keyword?
+         AGO   .LOOP3LIT              .**!!
+&P       SETA  0                       * Character index into PRM
+.LOOP3   ANOP
+&P       SETA  &P+1                    * Point to next character
+         AIF   (&P GT K'&PRM).LOOP3LIT * End of string?
+&CH      SETC  '&PRM'(&P,1)            * Extract 1 character
+         AIF   ('&CH' EQ '''').LOOP3LIT * Literal: positional parm
+         AIF   ('&CH' EQ '(').LOOP3LIT * Sublist: positional parm
+         AIF   ('&CH' EQ '/').LOOP3F   * Go process slash
+         AGO   .LOOP3                  * Go process next character
+.LOOP3F  ANOP
+.* Extract keyword name and value from &PRM
+&P1      SETA  &P-1                    * Length of keyword name
+&P2      SETA  &P+1                    * Start of kwyword value
+&P3      SETA  1+K'&PRM-&P2            * Length of kewyword value
+         AIF   (&P1 EQ 0).LOOP3LIT     * Empty keyword name: positional
+         AIF   ('&PRM'(1,&P1) EQ 'MF').LOOP3MF
+&J       SETA  1+N'&BXA_RD_NDX         * Point to empty entry
+&BXA_RD_NDX(&J) SETA &I                * Entry index into BXA_RD_OPC
+&BXA_RD_KEY(&J) SETC '&PRM'(1,&P1)     * Extract keyword name
+&BXA_RD_VAL(&J) SETC '&PRM'(&P2,&P3)   * Extract value (or null)
+         AGO   .LOOP2                  * Go process next SYSLIST entry
+.*
+.LOOP3MF ANOP
+         MNOTE 4,'MF-parameter skipped: not needed with RDATA'
+         AGO   .LOOP2                  * Go process next SYSLIST entry
+.*
+.LOOP3LIT ANOP
+.* PRM is a positional parameter: put into ARG with a comma
+         AIF   (K'&ARG EQ 0).LOOP3FLIT
+&ARG     SETC '&ARG'.','.'&SYSLIST(&S)'
+         AGO   .LOOP2
+.LOOP3FLIT ANOP
+&ARG     SETC '&SYSLIST(&S)'           * First literal into ARG
+         AGO   .LOOP2
+.LOOP2OK ANOP
+.*
+.* Put remote data definition into tables for use by LTORG macro
+&BXA_RD_RETVAL SETC ''                 * Set return value to nothing
+&I       SETA  1+N'&BXA_RD_OPC         * First free entry in tables
+.*
+.* For a labeled literal, we must check that no duplicates exist
+         AIF   ('&LABEL' EQ '--').LOOP4NF * Unlabeled: always ok
+&I1      SETA  0                       * I1 indexes BXA_RD_OPC/ARG
+.LOOP4   ANOP  ,                       * Loop thru BXA_RD_OPC/ARG
+&I1      SETA  &I1+1                   * Point next entry
+         AIF   (&I1 GE &I).LOOP4NF     * End of table reached: no match
+         AIF   ('&BXA_RD_OPC(&I1)' NE '&OPCD').LOOP4 * NE: next entry
+         AIF   ('&BXA_RD_ARG(&I1)' NE '&ARG').LOOP4 * NE: next entry
+         AIF   ('&BXA_RD_ALG(&I1)' NE '&ALIGN').LOOP4 * NE: next entry
+         AIF   ('&BXA_RD_LAB(&I1)' EQ '').LOOP4 * No label: next entry
+.*
+.LOOP4F  ANOP  ,                       * Found match: replace by EQU
+         AIF   ('&RD_MODE' EQ 'ADD').LOOP4AD
+&BXA_RD_RETVAL SETC '&BXA_RD_LAB(&I1)' * Return matched label
+         AGO   .LOOP4OK                * No changes to RD-tables
+.*
+.LOOP4AD ANOP  ,                       * Found match, mode=ADD:
+&BXA_RD_OPC(&I) SETC 'EQU'             * Operation changes to EQU
+&BXA_RD_ARG(&I) SETC '&BXA_RD_LAB(&I1)' *  to the original label
+         AGO   .LOOP4LAB
+.*
+.LOOP4NF ANOP  ,                       * Not found
+&BXA_RD_OPC(&I) SETC '&OPCD'           * Put opcode into table
+&BXA_RD_ARG(&I) SETC '&ARG'            *   and arguments
+&BXA_RD_ALG(&I) SETC '&ALIGN'          *   and alignment too
+.*
+.LOOP4LAB ANOP ,                       * Add label
+         AIF   ('&LABEL' EQ '--').LOOP4OK * Unlabeled?
+&BXA_RD_LAB(&I) SETC '&LABEL'          * Put label into table
+.LOOP4OK ANOP
+.*
+.MEND    MEND

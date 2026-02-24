@@ -1,0 +1,249 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* EXecute a SubRoutine
+.*
+&LABEL   EXSR  &SUBR,                  * Routine to be called          *
+               &COND,                  * Calling condition             *
+               &TYPE,                  * Type of subroutine involved   *
+               &SUBRS=,                * Subroutine names              *
+               &ARSAVE=                * YES or NO
+.*
+.* &SUBR  specifies the label of a SUBR statement or (reg)
+.* &COND  specifies a condition for conditional execution
+.* &TYPE  specifies INTernal subroutine or EXTernal subroutine (CSECT)
+.* &SUBRS specifies the routines that may be invoked when SUBR=(reg)
+.* &ARSAVE specifies whether or not to save/restore access registers
+.*         valid only for TYPE=EXT
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EXSR                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Define variables
+         GBLA  &BXA_NUMVAL             * Return value from CHKREG
+         GBLB  &BXA_PGM                * PGM already expanded?
+         GBLC  &BXA_ENTRY              * Entry type of program
+         GBLC  &BXA_SUBR               * Name of current routine
+         GBLC  &BXA_SUBRTP             * Type of current routine
+         GBLC  &SYSASCE                * ASC environment AR or P
+         LCLC  &ASCMODE                * ASC mode at entry
+         LCLC  &_TYPE                  * Type of subroutine
+         LCLC  &_SUBR1                 * Register in SUBR parameter
+         LCLA  &_SUBR1N                * Register nr of &_SUBR1
+         LCLC  &OPCD                   * Generated opcode mnemonic
+         LCLA  &I                      * Index into SUBRS
+.*
+.* PGM must have been included
+         AIF   (&BXA_PGM).NOERR0
+         MNOTE 8,'PGM macro must be coded before using EXSR'
+.NOERR0  ANOP
+.*
+.* Check SUBR parameter
+         AIF   (K'&SUBR EQ 0).ERR1A    *
+         AIF   ('&SUBR'(1,1) NE '(').NOERR1
+&_SUBR1  SETC  '&SUBR(1)'              * Extract register name
+         CHKREG &_SUBR1                *
+         AIF   (&BXA_RC GT 4).ERR1B    *
+&_SUBR1N SETA  &BXA_NUMVAL             * Save register number
+         AGO   .NOERR1                 *
+.ERR1A   MNOTE 8,'No subroutine name specified'
+         MEXIT ,                       *
+.ERR1B   MNOTE 8,'&_SUBR1 is not a valid register'
+         MEXIT ,                       *
+.NOERR1  ANOP  ,                       *
+.*
+.* Check SUBRS parameter
+         AIF   (K'&SUBRS EQ 0 AND '&SUBR'(1,1) EQ '(').ERR2A
+         AIF   (K'&SUBRS NE 0 AND '&SUBR'(1,1) NE '(').ERR2B
+         AIF   (K'&SUBRS EQ 0).NOERR2
+         AIF   ('&SUBRS'(1,1) NE '(').ERR2C
+         AGO   .NOERR2
+.ERR2A   MNOTE 4,'Missing SUBRS-operand for EXSR (reg)'
+         AGO   .NOERR2
+.ERR2B   MNOTE 4,'SUBRS-operand has no meaning: target of EXSR is not (*
+               register)'
+         AGO   .NOERR2
+.ERR2C   MNOTE 8,'SUBRS-operand must be specified within parentheses'
+.NOERR2  ANOP
+.*
+.* From ESTAE-type routines EXSR cannot be used (yet), because R13 may
+.* or may not be a valid pointer to a save-area. In ESTAE-routines, it
+.* is R11 which addresses our own work-area. The Save-area addressed by
+.* R11 however, cannot be used: it may (or may not) be occupied.
+         AIF   ('&BXA_SUBRTP' NE 'ESTAE').NOERR3
+.ERR3    MNOTE 12,'EXSR cannot be used from within an ESTAE-type routin*
+               e'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check TYPE parameter
+         AIF   ('&TYPE' EQ '').DFT4
+&_TYPE   SETC  '&TYPE'                 * Copy specified value
+         AIF   ('&TYPE' EQ 'EXT').NOERR4
+         AIF   ('&TYPE' EQ 'EXT').NOERR4
+.ERR4    MNOTE 8,'Subroutine type must be INT or EXT (Internal/eXternal*
+               )'
+         MEXIT
+.DFT4    ANOP
+&_TYPE   SETC  'INT'                   * Use INT as default value
+.NOERR4  ANOP
+.*
+.* Check ARSAVE parameter
+         AIF   ('&ARSAVE' EQ '').NOERR5
+         AIF   ('&ARSAVE' EQ 'NO').NOERR5
+         AIF   ('&ARSAVE' NE 'YES').ERR5A
+         AIF   ('&_TYPE' NE 'EXT').ERR5B
+         AGO   .NOERR5
+.ERR5A   MNOTE 8,'ARSAVE parameter must be YES or NO'
+         MEXIT
+.ERR5B   MNOTE 8,'ARSAVE=YES can be specified only for EXTernal subrout*
+               ines'
+         MEXIT
+.NOERR5  ANOP
+.*
+.* For ARSAVE=YES, SUBR must not be R14 or R15
+         AIF   ('&ARSAVE' NE 'YES').NOERR6
+         AIF   ('&SUBR'(1,1) NE '(').NOERR6
+         AIF   (&_SUBR1N LT 14).NOERR6 *
+.ERR6A   MNOTE 8,'Cannot use R14 or R15 to pass routine address'
+         MEXIT ,                       *
+.NOERR6  ANOP  ,                       *
+.*
+.* Define internal macro
+         EXSR0 ,                       * Define EXSR_ADD_ENTRY
+.*
+.* If subroutine not a (reg), add subroutine name to array
+         AIF   ('&SUBR'(1,1) EQ '(').SUBRREG * Skip if target is (reg)
+         EXSR_ADD_ENTRY &SUBR,&_TYPE   * Add entry to arrays
+.SUBRREG ANOP
+.*
+.* Loop thru SUBRS
+&I       SETA  0
+.LOOP1   ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&SUBRS).LOOP1OK
+         EXSR_ADD_ENTRY &SUBRS(&I),&_TYPE
+         AGO   .LOOP1
+.LOOP1OK ANOP
+.*
+.* Generate code
+&LABEL   LABEL
+         AIF   ('&_TYPE' EQ 'INT').INTSR
+         AIF   ('&_TYPE' EQ 'EXT').EXTSR
+         MNOTE 12,'Internal error'
+         MEXIT
+.*
+.* External subroutine handling: always handled in primary mode!
+.EXTSR   ANOP  ,                       * Generate EXSR to external subr
+&ASCMODE SETC  '&SYSASCE'              * Keep current ASC mode setting
+         AIF   ('&ASCMODE' EQ 'P').PRIMARY
+         SETMODE PRIM                  * Switch to primary
+.PRIMARY ANOP  ,                       *
+.*
+.* For conditional requests: generate an enclosing IF
+         AIF   (K'&COND EQ 0).SKIPIF   * Issue IF statement if COND
+         IF    &COND                   *    was specified
+.SKIPIF  ANOP  ,                       *
+.*
+.* Save access registers if ARSAVE=YES was specified
+         AIF   ('&ARSAVE' NE 'YES').SAVEOK
+         BASR  R14,R0                  * Retrieve address + amode
+         LA    R15,_EXSR&SYSNDX-*      * Offset to return address
+         AR    R14,R15                 * Make R14 point to return addr.
+         BAKR  R14,R0                  * Create stack entry
+.SAVEOK  ANOP  ,                       * ARs saved or no save requested
+.*
+.* Copy target address (either a VCON or a register) to R15
+         AIF   ('&SUBR'(1,1) EQ '(').CPYREG
+         L     R15,=V(&SUBR)           * Load address of subroutine
+         AGO   .R15OK                  *
+.CPYREG  ANOP  ,                       *
+         CPY   R15,&SUBR(1),NOWARN     * Copy EPA to R15
+.R15OK   ANOP  ,                       *
+         BASR  R14,R15                 * Invoke external subroutine
+.*
+.* If ARSAVE=YES was specified: restore access registers
+         AIF   ('&ARSAVE' NE 'YES').RESTOK
+         PR    ,                       * Restore regs from stack entry
+_EXSR&SYSNDX LABEL ,                   * Return point for PR
+.RESTOK  ANOP  ,                       *
+.*
+.* For conditional requests: generate ENDIF
+         AIF   (K'&COND EQ 0).SKIPEIF  * Issue ENDIF statement if COND
+         ENDIF ,                       *    was specified
+.SKIPEIF ANOP  ,                       *
+.*
+.* Revert to AR mode if we forced primary mode
+         AIF   ('&ASCMODE' EQ 'P').PRIMOK
+         SETMODE AR                    * Resume AR mode
+.PRIMOK  ANOP
+         MEXIT
+.*
+.INTSR   ANOP  ,                       * Generate call to internal subr
+         AIF   (K'&COND EQ 0 AND '&SUBR'(1,1) EQ '(').BASR
+&OPCD    SETC  'BAS&COND'              * Create conditional BAS opcode
+         &OPCD R14,&SUBR               * Execute subroutine
+         MEXIT ,                       *
+.*
+.* An unconditional EXSR with the target address in a register
+.* should generate a BASR instruction in stead of some BAS-variation
+.BASR    ANOP  ,                       *
+         BASR  R14,&SUBR(1)            * Execute subroutine
+.*
+.MEND    MEND

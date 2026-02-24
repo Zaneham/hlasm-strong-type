@@ -1,0 +1,195 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro handles the stack of DC modifications for use by the
+.* DC macro, which replaces the assembler's DC instruction
+.*
+&LABEL   DCOVR &OPT,                   * Parameters are in &SYSLIST    *
+               &NEWNAM                 * New name for *NEWNAME option
+.*
+.* &LABEL mandatory, except when &OPT=*END
+.*        To specify an override for an unlabeled DC, specify the label
+.*        of the last preceding labeled DC and the relative number of
+.*        the unlabeled statement to be overridden. E.g.: LABEG+3,
+.*        would  mean the third unlabeled DC after the DC with label
+.*        LABEG.
+.* &OPT   specifies one of the following:
+.*        *END cancels all outstanding DCOVR requests
+.*        *DS  changes the DC into a DS, which may in turn be
+.*             overridden using the DSOVR macro
+.*        *SUPPRESS suppresses the definition of &LABEL
+.*        *NEWNAME changes the DC for &LABEL into one for &NEWNAM,
+.*              i.e. Specify *NEWNAME,newname,parmstring
+.*        Other values override the DC-operand string
+.* &NEWNAM Specifies the new name, if &OPT=*NEWNAME
+.*        &NEWNAM may optionally be followed by a parameter string
+.*        If &NEWNAM specifies *NONAME the DC will become unlabeled
+.* &SYSLIST Specifies an operand string, which replaces the complete
+.*        operand string of the original DC statement.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DCOVR                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_DCOVR              * Ptr to last valid
+         GBLC  &BXA_DCOVR_LAB(50)      * Labels
+         GBLC  &BXA_DCOVR_PRM(50)      * Parm strings
+         GBLC  &BXA_DCOVR_NAM(50)      * New names
+         LCLA  &I                      * Index
+         LCLC  &PRMS                   * Parameter string
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL GT 0).NOERR1
+         AIF   ('&OPT' EQ '*END').NOERR1
+.ERR1    MNOTE 8,'Missing label parameter'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check the OPT parameter
+         AIF   (K'&OPT NE 0).NOERR2
+.ERR2A   MNOTE 8,'Missing parameter(s)'
+         MEXIT
+.NOERR2  ANOP  ,
+.*
+.* Check the NEWNAME parameter (must be present if &OPT = *NEWNAME)
+         AIF   ('&OPT' EQ '*NEWNAME' AND K'&NEWNAM EQ 0).ERR3A
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'New name not specified with option *NEWNAME'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check number of parameters
+         AIF   ('&OPT' EQ '*END' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*END').NOERR4
+         AIF   ('&OPT' EQ '*DS' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*DS').NOERR4
+         AIF   ('&OPT' EQ '*SUPPRESS' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*SUPPRESS').NOERR4
+         AGO   .NOERR4
+.ERR4A   MNOTE 4,'More than 1 argument: remainder ignored'
+.NOERR4  ANOP
+.*
+.* Which option requested?
+         AIF   ('&OPT' EQ '*END').END
+         AIF   ('&OPT' EQ '*DS').DS
+         AIF   ('&OPT' EQ '*SUPPRESS').SUPPRESS
+         AIF   ('&OPT' EQ '*NEWNAME').NEWNAME
+.*
+.* Normal: add entries to tables
+&I       SETA  0                       * SYSLIST(1) ff into PRMS
+         AGO   .BLDPRMS
+.*
+.* DS option
+.DS      ANOP ,
+&PRMS    SETC  '&OPT'                  * Set to *DS
+         AGO   .ADDNTRY
+.*
+.* Suppress option
+.SUPPRESS ANOP ,
+&PRMS    SETC  '&OPT'                  * Set to *SUPPRESS
+         AGO   .ADDNTRY
+.*
+.* Newname option
+.NEWNAME ANOP  ,
+&I       SETA  2                       * SYSLIST(3) ff into PRMS
+         AGO   .BLDPRMS
+.*
+.* Build parameter string from SYSLIST entries
+.BLDPRMS ANOP  ,
+&I       SETA  &I+1                    * Point next SYSLIST entry
+         AIF   (&I GT N'&SYSLIST).PRMSOK
+&PRMS    SETC  '&PRMS'.','.'&SYSLIST(&I)'
+         AGO   .BLDPRMS
+.PRMSOK  ANOP  ,
+         AIF   (K'&PRMS EQ 0).ADDNTRY
+&PRMS    SETC  '&PRMS'(2,*)            * Remove leading comma
+.*
+.* Add entry to tables
+.ADDNTRY ANOP  ,
+&I       SETA  &BXA_DCOVR+1            * Next free entry
+&BXA_DCOVR_LAB(&I) SETC '&LABEL'       * Insert label,
+&BXA_DCOVR_PRM(&I) SETC '&PRMS'        *   and parameters
+&BXA_DCOVR_NAM(&I) SETC ''             *   into tables
+         AIF   ('&OPT' NE '*NEWNAME').NAMOK
+&BXA_DCOVR_NAM(&I) SETC '&NEWNAM'      *
+.NAMOK   ANOP  ,
+&BXA_DCOVR SETA &I                     * And update ptr to last valid
+.*
+.* Replace DC-instruction by our DC-macro on the first override
+         AIF   (&BXA_DCOVR GT 1).MEND
+         OPSYNS DC                     * Replace DC by _DC
+         MEXIT
+.*
+.* Ending current DCOVR requests. Issue a message for any unused
+.* entries in BXA_DCOVR tables.
+.END     ANOP
+         AIF   (&BXA_DCOVR EQ 0).MEND * No entries remain
+&I       SETA  0                       * I indexes BXA_DCOVR_xxx
+.LOOP1   ANOP  ,                       * For all current entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_DCOVR).LOOP1OK * At end: quit loop
+         MNOTE 4,'DCOVR for &BXA_DCOVR_LAB(&I) discarded'
+         AGO   .LOOP1
+.LOOP1OK ANOP
+&BXA_DCOVR SETA 0                      * Reset valid counter to 0
+.*
+.* Disable our DC-macro by replacing _DC by original DC-instruction
+         OPSYNS _DC                    * Reset DC-instruction
+.*
+.MEND    MEND

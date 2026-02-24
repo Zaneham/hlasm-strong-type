@@ -1,0 +1,182 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's DROP statement
+.*
+         DROP  ,                       * Reg(s) and/or label(s)
+.*
+.* &SYSLIST specifies the labels and/or registers to drop.
+.*          if empty all registers will be dropped.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DROP                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLB  &SP_SHOWALL             * SHOWALL option
+         GBLC  &BXA_USELBL(50)         * Used labels ...
+         GBLA  &BXA_USEREG(50)         *   and associated registers
+         GBLC  &BXA_USEFLD(50)         *   and base field names
+         GBLA  &BXA_USENDX0(5)         * Low valid pointers
+         GBLA  &BXA_USENDX1(5)         * High valid pointers
+         GBLA  &BXA_USENDX             * Pointer for USENDX0/USENDX1
+         LCLA  &N                      * Pointer for BXA_USE...
+         LCLA  &REG                    * Register number
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &ARGS                   * Arguments from SYSLIST
+         LCLA  &I                      * Index into &SYSLIST
+         LCLA  &J                      * Nr of non-empty arguments
+         LCLA  &R                      * Index into &BXA_USED_REGS
+         LCLC  &USEDREGS               * Used regs on labeled USING
+         LCLC  &USEDREG                * 1 index from USEDREGS
+.*
+.* Include DROP_REG on first invocation
+         DROP0
+.*
+.* Check base registers to be dropped (if any)
+         AIF   (N'&SYSLIST EQ 0).DROPALL * Drop for all USINGs?
+.*
+.* Check all arguments in SYSLIST, add validated ones to &ARGS
+&I       SETA  0                       * Check SYSLIST arguments
+.LOOP1   ANOP  ,                       * For all remaining arguments
+&I       SETA  &I+1                    * Point next argument
+         AIF   (&I GT N'&SYSLIST).NOERR1 * At end: all args checked ok
+&ARG     SETC  '&SYSLIST(&I)'          * Extract argument from SYSLIST
+         AIF   (K'&ARG EQ 0).LOOP1     * Skip omitted argument
+&J       SETA  &J+1                    * Increment nr of args checked
+         CHKREG &ARG                   * A register was specified?
+         AIF   (&BXA_RC EQ 8).LOOP1LBL * No: check for known labels
+         AIF   (&BXA_RC EQ 0).LOOP1REG * Ok: defined register
+.*
+.* &BXA_RC = 4: a literal number 0-15 was specified
+&REG     SETA  &ARG                    * Extract register number
+&R       SETA  &REG+1                  * Add 1 to obtain index
+         DROP_REG ,&R                  * Remove from USE... tables
+         AIF   (&BXA_RC EQ 4).LOOP1    * Register USE: omit from ARGS
+&ARGS    SETC  '&ARGS'.','.'&ARG'      * Add entry to ARGS
+         AGO   .LOOP1                  * and go check next argument
+.*
+.* NUMVAL = 0: a defined register was specified
+.LOOP1REG ANOP  ,                      * Check EQUated register
+         GBLC  &(BXA_REGT_&ARG)        * Declare type field for reg
+         GBLA  &(BXA_REGN_&ARG)        * Declare number field for reg
+&REG     SETA  &(BXA_REGN_&ARG)        * Extract register number
+         AIF   ('&(BXA_REGT_&ARG)' NE 'g').ERR1A * Invalid reg type
+&R       SETA  &REG+1                  * Increment to obtain index
+         DROP_REG ,&R                  * Remove from USE... tables
+         AIF   (&BXA_RC EQ 4).LOOP1    * Register USE: omit from ARGS
+&ARGS    SETC  '&ARGS'.','.'&ARG'      * Add entry to ARGS
+         AGO   .LOOP1
+.*
+.* RC = 8: a label must have been specified, cannot be a register USE
+.LOOP1LBL ANOP
+&N       SETA  &BXA_USENDX0(&BXA_USENDX) * Search tables for entries
+.LOOP2   ANOP  ,                       *    with the specified label
+&N       SETA  &N+1                    *    to mark the regs available.
+.LOOP2NI ANOP  ,                       * Loop with No Increment
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP2OK * At end: done
+         AIF   ('&BXA_USELBL(&N)' NE '&ARG').LOOP2 * Skip mismatch
+&R       SETA  &BXA_USEREG(&N)         * Obtain index
+         DROP_REG &ARG,&R,&N           * Remove this entry from tables
+         AGO   .LOOP2NI                * Loop, no increment: last entry*
+                                       *   moved here by DROP_REG
+.LOOP2OK ANOP  ,
+&ARGS    SETC  '&ARGS'.','.'&ARG'      * Add entry to ARGS
+         AGO   .LOOP1                  * Process next SYSLIST entry
+.*
+.ERR1A   MNOTE 8,'Specified argument &SYSLIST(&I) is not a general purp*
+               ose register'
+         AGO   .LOOP1
+.NOERR1  ANOP
+.*
+.* Remove leading comma from ARGS
+         AIF   (&J EQ 0).DROPALL       * Only commas supplied?
+         AIF   (K'&ARGS EQ 0).ARGSOK   * Any non-register USEs?
+&ARGS    SETC  '&ARGS'(2,*)            * Remove leading comma
+.ARGSOK  ANOP
+.*
+.* Rebuild BXA_USED_REGS from BXA_USEREG table
+.* Skip any USING for PSA,R0
+&BXA_USED_REGS(1) SETB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+&N       SETA  &BXA_USENDX0(&BXA_USENDX) * Search tables to mark
+.LOOP3   ANOP  ,                       *    all used registers
+&N       SETA  &N+1                    *    unavailable.
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP3OK * At end: done
+&R       SETA  &BXA_USEREG(&N)         * Obtain index
+         AIF   (&R EQ 1 AND '&BXA_USEFLD(&N)' EQ 'PSA').LOOP3
+&BXA_USED_REGS(&R) SETB 1              * Set designated register in use
+         AGO   .LOOP3                  *
+.LOOP3OK ANOP  ,                       *
+.*
+.* Generate _DROP statement, unless only register USEs were specified
+         AIF   (K'&ARGS EQ 0).REPORT
+         _DROP &ARGS
+         AGO   .REPORT
+.*
+.* Generate _DROP statement (no arguments)
+.DROPALL ANOP  ,   reg 0 1 2 3 4 5 6 7 8 9 A B C D E F dropped
+&BXA_USED_REGS(1) SETB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+&BXA_USENDX1(&BXA_USENDX) SETA &BXA_USENDX0(&BXA_USENDX)
+         _DROP
+.*
+.REPORT  ANOP  ,                       * Report using status
+         AIF   (NOT &SP_SHOWALL).MEND * Only if SHOWALL requested
+         USEDREGS
+.*
+.MEND    MEND

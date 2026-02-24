@@ -1,0 +1,300 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Access Control Block
+.*
+&LABEL   MAPACB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPACB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPACB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ACB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPACB).MEND
+&BXA_MAC_MAPACB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ACB
+&BXA_CB_ACB SETC 'ACB'
+.*
+.* ACBID - ACB IDENTIFIER
+ACBIDVAL EQUOVR ,,v,ACBID
+.*
+.* ACBSTYP - ACB SUBTYPE
+ACBSVSAM EQUOVR ,,v,ACBSTYP
+ACBSVRP  EQUOVR ,,v,ACBSTYP
+ACBSCNTL EQUOVR ,,v,ACBSTYP
+ACBSVTAM EQUOVR ,,v,ACBSTYP
+ACBS3540 EQUOVR ,,v,ACBSTYP
+.*
+.* ACBMACR1 - MACRF FIRST BYTE
+ACBKEY   EQUOVR ,,b,ACBMACR1
+ACBADR   EQUOVR ,,b,ACBMACR1
+ACBADD   EQUOVR ,,b,ACBMACR1
+ACBCNV   EQUOVR ,,b,ACBMACR1
+ACBBLK   EQUOVR ,,b,ACBMACR1
+ACBSEQ   EQUOVR ,,b,ACBMACR1
+ACBDIR   EQUOVR ,,b,ACBMACR1
+ACBIN    EQUOVR ,,b,ACBMACR1
+ACBOUT   EQUOVR ,,b,ACBMACR1
+ACBUBF   EQUOVR ,,b,ACBMACR1
+.*
+.* ACBMACR2 - MACRF SECOND BYTE
+ACBNTRUN EQUOVR ,,b,ACBMACR2
+ACBCCANY EQUOVR ,,b,ACBMACR2
+ACBBWO   EQUOVR ,,b,ACBMACR2
+ACBSKP   EQUOVR ,,b,ACBMACR2
+ACBLOGON EQUOVR ,,b,ACBMACR2
+ACBRST   EQUOVR ,,b,ACBMACR2
+ACBDSN   EQUOVR ,,b,ACBMACR2
+ACBAIX   EQUOVR ,,b,ACBMACR2
+.*
+.* ACBMACR3 - MACRF THIRD BYTE
+ACBNLW   EQUOVR ,,b,ACBMACR3
+ACBLSR   EQUOVR ,,b,ACBMACR3
+ACBGSR   EQUOVR ,,b,ACBMACR3
+ACBICI   EQUOVR ,,b,ACBMACR3
+ACBDFR   EQUOVR ,,b,ACBMACR3
+ACBSIS   EQUOVR ,,b,ACBMACR3
+ACBNCFX  EQUOVR ,,b,ACBMACR3
+ACBMODE  EQUOVR ,,b,ACBMACR3
+.*
+.* ACBMACR4 - ACB MACRF BYTE 4
+ACBRLS   EQUOVR ,,b,ACBMACR4
+ACBSNP   EQUOVR ,,b,ACBMACR4
+.*
+.* ACBRECFM - RECORD FORMAT
+ACBRECAF EQUOVR ,,b,ACBRECFM
+.*
+.* ACBCCTYP - CONTROL CHARACTER TYPE
+ACBTRCID EQUOVR ,,b,ACBCCTYP
+ACBDLIXI EQUOVR ,,b,ACBCCTYP
+ACBCCASA EQUOVR ,,b,ACBCCTYP
+ACBCCMCH EQUOVR ,,b,ACBCCTYP
+ACBCCDSI EQUOVR ,,b,ACBCCTYP
+.*
+.* ACBFLGS - MISC VSAM FLAGS
+ACBNOJCL EQUOVR ,,b,ACBFLGS
+ACBRDI   EQUOVR ,,b,ACBFLGS
+ACBCNRD  EQUOVR ,,b,ACBFLGS
+.*
+.* ACBDSOR1 - DSORG FIRST BYTE
+ACBCRNCK EQUOVR ,,b,ACBDSOR1
+ACBCRNRE EQUOVR ,,b,ACBDSOR1
+ACBDVIND EQUOVR ,,b,ACBDSOR1
+ACBOPTJ  EQUOVR ,,b,ACBDSOR1
+.*
+.* ACBDSOR2 - DSORG SECOND BYTE
+ACBDORGA EQUOVR ,,b,ACBDSOR2
+.*
+.* ACBAMETH - ACCESS METHOD TYPE
+ACBVTAM  EQUOVR ,,v,ACBAMETH
+ACBSUBS  EQUOVR ,,v,ACBAMETH
+ACBTCAM  EQUOVR ,,v,ACBAMETH
+ACBRCI   EQUOVR ,,v,ACBAMETH
+ACBRTAM  EQUOVR ,,v,ACBAMETH
+ACBJAM   EQUOVR ,,v,ACBAMETH
+ACBVSAM  EQUOVR ,,v,ACBAMETH
+.*
+.* ACBOFLGS - OPEN / CLOSE FLAGS
+ACBR31B  EQUOVR ,,b,ACBOFLGS
+ACBR31C  EQUOVR ,,b,ACBOFLGS
+ACBEOV   EQUOVR ,,b,ACBOFLGS
+ACBOPEN  EQUOVR ,,b,ACBOFLGS
+ACBDSERR EQUOVR ,,b,ACBOFLGS
+ACBRECOV EQUOVR ,,b,ACBOFLGS
+ACBEXFG  EQUOVR ,,b,ACBOFLGS
+ACBLOCK  EQUOVR ,,b,ACBOFLGS
+ACBIOSFG EQUOVR ,,b,ACBOFLGS
+ACBBUSY  EQUOVR ,,b,ACBOFLGS
+.*
+.* ACBERFLG - ERROR FLAGS
+ACBOALR  EQUOVR ,,v,ACBERFLG
+ACBCALR  EQUOVR ,,v,ACBERFLG
+.*
+.* ACBINFL1 - FIRST IND FLAGS
+ACBJEPS  EQUOVR ,,b,ACBINFL1
+ACBIJRQE EQUOVR ,,b,ACBINFL1
+ACBCAT   EQUOVR ,,b,ACBINFL1
+ACBSCRA  EQUOVR ,,b,ACBINFL1
+ACBUCRA  EQUOVR ,,b,ACBINFL1
+ACBVVIC  EQUOVR ,,b,ACBINFL1
+ACBSDS   EQUOVR ,,b,ACBINFL1
+ACBBYPSS EQUOVR ,,b,ACBINFL1
+.*
+.* ACBINFL2 - 2ND IND FLAGS
+ACBSWARN EQUOVR ,,b,ACBINFL2
+ACBSOPEN EQUOVR ,,b,ACBINFL2
+ACBCBIC  EQUOVR ,,b,ACBINFL2
+ACBCATX  EQUOVR ,,b,ACBINFL2
+ACBCASRS EQUOVR ,,b,ACBINFL2
+ACBISHRD EQUOVR ,,b,ACBINFL2
+ACBSHROP EQUOVR ,,b,ACBINFL2
+ACBSHR02 EQUOVR ,,b,ACBINFL2
+ACBSHR01 EQUOVR ,,b,ACBINFL2
+.*
+         MNOTE *,'Including IFGACB mapping macro'
+         IFGACB DSECT=YES
+         EQUOVR *END
+*
+IFGACB   DSECT ,                       * Resume ACB dsect
+ACB      EQU   IFGACB                  * Name for USINGs
+         ORG   ,                       *
+ACB_LEN  EQU   *-ACB                   * Length of ACB
+.*
+.* Adding overrides for 3540 extension
+.* ACB35IND - 3540 INDICATORS
+ACBFEED  EQUOVR ,,b,ACB35IND
+ACBSECUR EQUOVR ,,b,ACB35IND
+.*
+         MNOTE *,'Including IFGACB35 mapping macro'
+IFGACB   DSECT ,                       * Resume ACB dsect
+         ORG   ACB+ACB_LEN             * At end of base ACB
+         IFGACB35 ,                    *
+         EQUOVR *END
+*
+IFGACB   DSECT ,                       * Resume ACB dsect
+         ORG   ,                       *
+ACB3540_LEN EQU *-ACB                  * Length of 3540 ACB
+.*
+.* Adding overrides for VTAM extension
+.* ACBOPT1 - ACB OPTION FLAGS
+ACBKPFRR EQUOVR ,,b,ACBOPT1
+ACBSRBEX EQUOVR ,,b,ACBOPT1
+ACBSRBSP EQUOVR ,,b,ACBOPT1
+ACBPLUSC EQUOVR ,,b,ACBOPT1
+ACBPSINS EQUOVR ,,b,ACBOPT1
+ACBNQNAM EQUOVR ,,b,ACBOPT1
+ACBNMMST EQUOVR ,,b,ACBOPT1
+ACBVFRR  EQUOVR ,,b,ACBOPT1
+.*
+.* ACBOPT2 - ACB OPTION FLAGS
+ACBAFDX  EQUOVR ,,b,ACBOPT2
+ACBPFMON EQUOVR ,,b,ACBOPT2
+ACBCMIP  EQUOVR ,,b,ACBOPT2
+ACBEXFRR EQUOVR ,,b,ACBOPT2
+.*
+.* ACBERFLG ERROR CODES SPECIFIC TO VTAM
+ACBNORM  EQUOVR ,,v,ACBERFLG
+ACBONVRT EQUOVR ,,v,ACBERFLG
+ACBCAQNR EQUOVR ,,v,ACBERFLG
+ACBCDSNR EQUOVR ,,v,ACBERFLG
+ACBRNOCF EQUOVR ,,v,ACBERFLG
+ACBOANAT EQUOVR ,,v,ACBERFLG
+ACBOAHLT EQUOVR ,,v,ACBERFLG
+ACBOAVFY EQUOVR ,,v,ACBERFLG
+ACBOANSN EQUOVR ,,v,ACBERFLG
+ACBOAPAA EQUOVR ,,v,ACBERFLG
+ACBOAPNM EQUOVR ,,v,ACBERFLG
+ACBOVINA EQUOVR ,,v,ACBERFLG
+ACBOAPSE EQUOVR ,,v,ACBERFLG
+ACBOUNDF EQUOVR ,,v,ACBERFLG
+ACBOAPLE EQUOVR ,,v,ACBERFLG
+ACBOPWSE EQUOVR ,,v,ACBERFLG
+ACBOPWLE EQUOVR ,,v,ACBERFLG
+ACBRNOOF EQUOVR ,,v,ACBERFLG
+ACBOAVSE EQUOVR ,,v,ACBERFLG
+ACBOAVLE EQUOVR ,,v,ACBERFLG
+ACBTVTCL EQUOVR ,,v,ACBERFLG
+ACBESME  EQUOVR ,,v,ACBERFLG
+ACBOPSNE EQUOVR ,,v,ACBERFLG
+ACBOPSNC EQUOVR ,,v,ACBERFLG
+ACBOPSMM EQUOVR ,,v,ACBERFLG
+ACBMOPEN EQUOVR ,,v,ACBERFLG
+ACBNAUTH EQUOVR ,,v,ACBERFLG
+ACBOACT  EQUOVR ,,v,ACBERFLG
+ACBCBUSY EQUOVR ,,v,ACBERFLG
+ACBTANAE EQUOVR ,,v,ACBERFLG
+ACBTNBSE EQUOVR ,,v,ACBERFLG
+ACBTNBOE EQUOVR ,,v,ACBERFLG
+ACBTRTTE EQUOVR ,,v,ACBERFLG
+.*
+         MNOTE *,'Including ISTACBEX mapping macro'
+IFGACB   DSECT ,                       * Resume ACB dsect
+         ORG   ACB+ACB_LEN             * At end of base ACB
+         ISTACBEX ,                    *
+         EQUOVR *END
+*
+IFGACB   DSECT ,                       * Resume ACB dsect
+         ORG   ,                       *
+VTAMACB_LEN EQU *-ACB                  * Length of VTAM ACB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

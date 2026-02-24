@@ -1,0 +1,281 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps a Request Block
+.*
+&LABEL   MAPRB &DSECT=YES,             * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPRB                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPRB          * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'RB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPRB).MEND
+&BXA_MAC_MAPRB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_RB
+&BXA_CB_RB SETC 'RB'
+.*
+.* RBTMFLD - INDICATORS FOR TIMER ROUTINES.
+RBTMQUE  EQUOVR ,,b,RBTMFLD
+RBTMTOD  EQUOVR ,,b,RBTMFLD
+RBRSV005 EQUOVR ,,b,RBTMFLD
+RBWLIM   EQUOVR ,,b,RBTMFLD
+RBTMCMP  EQUOVR ,,b,RBTMFLD
+RBTMIND2 EQUOVR ,,b,RBTMFLD
+RBTMIND3 EQUOVR ,,b,RBTMFLD
+RBTREQ   EQUOVR ,,v,RBTMFLD
+RBWREQ   EQUOVR ,,b,RBTMFLD
+RBRREQ   EQUOVR ,,b,RBTMFLD
+.*
+.* RBSTAB1 - FIRST BYTE OF STATUS AND ATTRIBUTE BITS
+RBFTCKPT EQUOVR ,,b,RBSTAB1
+XRBCKPT  EQUOVR ,,b,RBSTAB1
+.*
+.* RBSTAB2 - SECOND BYTE OF STATUS AND ATTRIBUTE BITS
+RBTCBNXT EQUOVR ,,b,RBSTAB2
+XRBTCBP  EQUOVR ,,b,RBSTAB2
+RBFACTV  EQUOVR ,,b,RBSTAB2
+XRBACTV  EQUOVR ,,b,RBSTAB2
+RBFDYN   EQUOVR ,,b,RBSTAB2
+XRBFRRB  EQUOVR ,,b,RBSTAB2
+RBECBWT  EQUOVR ,,b,RBSTAB2
+XRBWAIT  EQUOVR ,,b,RBSTAB2
+.*
+.* RBOPSWB1 - OLD PSW BYTE 1
+RBOPER   EQUOVR ,,b,RBOPSWB1
+.*
+.* RBOPSWB2 - OLD PSW BYTE 2  (MDC304)
+RBOPSWPS EQUOVR ,,b,RBOPSWB2
+.*
+.* RBOPSWA - OLD PSW BYTES 5-8 (ADDRESS)
+RBOPSWM  EQUOVR ,,b,RBOPSWA
+.*
+.* RBRSV019 - RESERVED
+RBRSV020 EQUOVR ,,b,RBRSV019
+RBRSV021 EQUOVR ,,b,RBRSV019
+RBRSV022 EQUOVR ,,b,RBRSV019
+RBRSV023 EQUOVR ,,b,RBRSV019
+RBRSV024 EQUOVR ,,b,RBRSV019
+RBRSV025 EQUOVR ,,b,RBRSV019
+RBRSV026 EQUOVR ,,b,RBRSV019
+RBRSV027 EQUOVR ,,b,RBRSV019
+.*
+.* RBRSV028 - RESERVED
+RBRSV029 EQUOVR ,,b,RBRSV028
+RBRSV030 EQUOVR ,,b,RBRSV028
+RBRSV031 EQUOVR ,,b,RBRSV028
+RBRSV032 EQUOVR ,,b,RBRSV028
+RBRSV033 EQUOVR ,,b,RBRSV028
+RBRSV034 EQUOVR ,,b,RBRSV028
+RBRSV035 EQUOVR ,,b,RBRSV028
+RBRSV036 EQUOVR ,,b,RBRSV028
+.*
+.* RBRSV041 - RESERVED
+RBRSV042 EQUOVR ,,b,RBRSV041
+RBRSV043 EQUOVR ,,b,RBRSV041
+RBRSV044 EQUOVR ,,b,RBRSV041
+RBRSV045 EQUOVR ,,b,RBRSV041
+RBRSV046 EQUOVR ,,b,RBRSV041
+RBRSV047 EQUOVR ,,b,RBRSV041
+RBRSV048 EQUOVR ,,b,RBRSV041
+RBRSV049 EQUOVR ,,b,RBRSV041
+.*
+.* RBKEYSTA - THE KEY AND STATE OF THE IRB ROUTINE
+RBKEY    EQUOVR ,,b,RBKEYSTA
+RBCIRB   EQUOVR ,,b,RBKEYSTA
+RBSTATE  EQUOVR ,,b,RBKEYSTA
+.*
+.* RBFLAGS2 - SECOND FLAG BYTE
+RBXWAITA EQUOVR ,,b,RBFLAGS2
+RBRSV056 EQUOVR ,,b,RBFLAGS2
+RBRSV057 EQUOVR ,,b,RBFLAGS2
+RBRSV058 EQUOVR ,,b,RBFLAGS2
+RBRSV059 EQUOVR ,,b,RBFLAGS2
+RBRSV060 EQUOVR ,,b,RBFLAGS2
+RBRSV061 EQUOVR ,,b,RBFLAGS2
+RBRSV062 EQUOVR ,,b,RBFLAGS2
+.*
+.* RBFLAGS1 - FLAG BYTE
+RBSLOCK  EQUOVR ,,b,RBFLAGS1
+RBXWAIT  EQUOVR ,,b,RBFLAGS1
+RBABEND  EQUOVR ,,b,RBFLAGS1
+RBXWPRM  EQUOVR ,,b,RBFLAGS1
+RBASIR   EQUOVR ,,b,RBFLAGS1
+RBLONGWT EQUOVR ,,b,RBFLAGS1
+RBSCB    EQUOVR ,,b,RBFLAGS1
+RBSSSYN  EQUOVR ,,b,RBFLAGS1
+.*
+.* RBFLAGS3 - FLAG BYTE. SERIALIZATION:LOCAL LOCK
+RBWTECB  EQUOVR ,,b,RBFLAGS3
+.*
+.* RBSTAB1 - FIRST BYTE OF STATUS AND ATTRIBUTE BITS
+RBFTP    EQUOVR ,,b,RBSTAB1
+RBFTPRB  EQUOVR ,,v,RBSTAB1
+RBFTTIRB EQUOVR ,,b,RBSTAB1
+RBFTIRB  EQUOVR ,,b,RBSTAB1
+RBFTSIRB EQUOVR ,,b,RBSTAB1
+RBFTSVRB EQUOVR ,,b,RBSTAB1
+RBTRSVRB EQUOVR ,,b,RBSTAB1
+RBFNSVRB EQUOVR ,,b,RBSTAB1
+RBWAITP  EQUOVR ,,b,RBSTAB1
+RBATNXIT EQUOVR ,,b,RBSTAB1
+RBPMSVRB EQUOVR ,,b,RBSTAB1
+.*
+.* RBSTAB2 - SECOND BYTE OF STATUS AND ATTRIBUTE BITS
+RBATTN   EQUOVR ,,b,RBSTAB2
+RBETXR   EQUOVR ,,b,RBSTAB2
+RBUSIQE  EQUOVR ,,b,RBSTAB2
+RBIQETP  EQUOVR ,,b,RBSTAB2
+RBRQENR  EQUOVR ,,v,RBSTAB2
+RBIRBAER EQUOVR ,,b,RBSTAB2
+RBIQENR  EQUOVR ,,b,RBSTAB2
+RBIRBAIQ EQUOVR ,,b,RBSTAB2
+.*
+.* RBEP - ENTRY POINT ADDRESS OF ASYNCHRONOUSLY EXECUTED ROUTINE
+RBEPM    EQUOVR ,,b,RBEP
+.*
+.* RBEPLBYT - BITS 0-6 = BITS 24-30 OF EP ADDR         *
+RBEPPD   EQUOVR ,,b,RBEPLBYT
+.*
+.* RBRSV138 - RESERVED
+RBRSV139 EQUOVR ,,b,RBRSV138
+RBRSV140 EQUOVR ,,b,RBRSV138
+RBRSV141 EQUOVR ,,b,RBRSV138
+RBRSV142 EQUOVR ,,b,RBRSV138
+RBRSV143 EQUOVR ,,b,RBRSV138
+RBRSV144 EQUOVR ,,b,RBRSV138
+RBRSV145 EQUOVR ,,b,RBRSV138
+RBRSV146 EQUOVR ,,b,RBRSV138
+.*
+.* RBSFLGS1 - FIRST FLAG BYTE
+RBSSTAI  EQUOVR ,,b,RBSFLGS1
+RBSSTAR  EQUOVR ,,b,RBSFLGS1
+RBSDUMMY EQUOVR ,,b,RBSFLGS1
+RBSESTAE EQUOVR ,,b,RBSFLGS1
+RBRSV162 EQUOVR ,,b,RBSFLGS1
+RBSASYNC EQUOVR ,,b,RBSFLGS1
+RBSIOPRC EQUOVR ,,b,RBSFLGS1
+RBSNOIOP EQUOVR ,,b,RBSFLGS1
+RBSHALT  EQUOVR ,,b,RBSFLGS1
+.*
+.* RBSFLGS2 - SECOND FLAG BYTE
+RBSAMODE EQUOVR ,,b,RBSFLGS2
+RBSXCTL2 EQUOVR ,,b,RBSFLGS2
+RBRSV164 EQUOVR ,,b,RBSFLGS2
+RBSINUSE EQUOVR ,,b,RBSFLGS2
+RBRSV165 EQUOVR ,,b,RBSFLGS2
+RBRSV166 EQUOVR ,,b,RBSFLGS2
+RBSKEY0  EQUOVR ,,b,RBSFLGS2
+RBSSUPER EQUOVR ,,b,RBSFLGS2
+.*
+.* RBSFLG3 - OPTION FLAGS
+RBRSV167 EQUOVR ,,b,RBSFLG3
+RBSTERMI EQUOVR ,,b,RBSFLG3
+RBSRECRD EQUOVR ,,b,RBSFLG3
+RBSCNCEL EQUOVR ,,b,RBSFLG3
+RBSPRNTR EQUOVR ,,b,RBSFLG3
+RBSBRNTR EQUOVR ,,b,RBSFLG3
+RBSTERMO EQUOVR ,,b,RBSFLG3
+RBRSV168 EQUOVR ,,b,RBSFLG3
+.*
+.* RBCDFLGS - CONTROL FLAGS
+RBNOCELL EQUOVR ,,b,RBCDFLGS
+RBRSV009 EQUOVR ,,b,RBCDFLGS
+RBCDATCH EQUOVR ,,b,RBCDFLGS
+RBCDSAVE EQUOVR ,,b,RBCDFLGS
+RBCDNODE EQUOVR ,,b,RBCDFLGS
+RBCDSYNC EQUOVR ,,b,RBCDFLGS
+RBCDXCTL EQUOVR ,,b,RBCDFLGS
+RBCDLOAD EQUOVR ,,b,RBCDFLGS
+.*
+         MNOTE *,'Including IHARB mapping macro'
+         IHARB DSECT=YES,              * Generate RB                   *
+               LIST=YES                * with unchanged PRINT option
+         EQUOVR *END
+*
+RBPRFX   DSECT ,                       * Reset to RB DSECT
+         ORG
+RBPRFX_LEN EQU RBBASIC-RBPRFX          * Length of RB prefix area
+RB_LEN   EQU   *-RBBASIC               * Length of RB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

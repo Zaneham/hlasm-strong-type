@@ -1,0 +1,441 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates an EQU for an available register
+.*
+.* &BXA_RC     will contain 0 if successful
+.*                          4 if successful with warnings
+.*                          8 if unsuccessful
+.* &BXA_NUMVAL will contain assigned register number
+.*
+&LABEL   EQUREG &SEARCH=HIGH,          * HIGH, LOW, or (reg,reg,...)   *
+               &R0=NO,                 * R0 allowed YES/NO             *
+               &TEMP=NO,               * R1, R14, R15 allowed YES/NO   *
+               &PAIR=NO,               * Allocate 1 or 2 registers     *
+               &AR=,                   * Name of access register       *
+               &ODD=,                  * Name of odd reg, or (reg,areg)*
+               &WARN=YES               * YES/NO issue messages
+.*
+.* &LABEL  If specified, an EQU for this label will be generated
+.* &SEARCH Specifies the search sequence. If none of the specified
+.*         registers is available, registers 2-15 and 1 will be tried
+.*         in sequence. If R0=YES was specified registers 2-15 and 0-1
+.*         will be used in stead.
+.* &R0     YES indicates that R0 may be used in the default search
+.* &TEMP   YES indicates that R1, R14, and R15 may be used in the
+.*         default search
+.* &PAIR   YES indicates that a pair of registers is to be allocated
+.*         For a pair the even register will be assigned to the name
+.*         specified in LABEL, and &BXA_NUMVAL will also contain the
+.*         number of the even register.
+.* &ODD    Specifies, for a register pair, the name to assign to the
+.*         odd register. If specified as a pair of names in parentheses
+.*         the first name will be equated to the odd register, the
+.*         second name will be equated to the odd access register.
+.* &WARN   Specifies whether or not messages are to be issued when
+.*         allocation fails
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EQUREG                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &SP_SHOWALL             * Showall option in sysparm
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLA  &BXA_NUMVAL             * Retvalue from CHKREG
+         LCLA  &I                      * Index for SEARCH
+         LCLA  &R                      * Register index value
+         LCLA  &REG                    * Register number
+         LCLA  &REGS(16)               * Register search sequence
+         LCLC  &SRCH(16)               * Register search sequence
+         LCLC  &ARG                    * Argument from SEARCH
+         LCLA  &RC                     * Temp. for returncode
+         LCLB  &PASS2                  * On for second search of &REGS
+         LCLC  &_ODD1                  * First ODD-subparm
+         LCLC  &_ODD2                  * Second ODD-subparm
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST EQ 0).NOERR2
+         AIF   (K'&SYSLIST(1) NE 0).ERR2A
+         AIF   (N'&SYSLIST EQ 1).NOERR2
+         AIF   (K'&SYSLIST(2) NE 0).ERR2A
+         AIF   (N'&SYSLIST EQ 2).NOERR2
+.ERR2A   MNOTE 4,'Not expecting any positional parameters: ignored'
+&RC      SETA  4
+.NOERR2  ANOP
+.*
+.* Check R0-parameter
+         AIF   ('&R0' EQ 'NO').NOERR3
+         AIF   ('&R0' EQ 'YES').NOERR3
+.ERR3    MNOTE 4,'R0 must be either YES or NO'
+&RC      SETA  4
+.NOERR3  ANOP
+.*
+.* Check the SEARCH parameter
+         AIF   (K'&SEARCH EQ 0).NOERR4
+         AIF   ('&SEARCH' EQ 'HIGH').NOERR4
+         AIF   ('&SEARCH' EQ 'LOW').NOERR4
+         AIF   ('&SEARCH'(1,1) NE '(').ERR4A
+         AIF   (N'&SEARCH EQ 0).ERR4B
+&I       SETA  0                       * I indexes Search
+&R       SETA  0                       * R indexes REGS
+.LOOP4   ANOP  ,                       * Check all entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SEARCH).LOOP4OK
+&ARG     SETC  '&SEARCH(&I)'           * Extract 1 entry
+         CHKREG &ARG,g                 * GPR?
+         AIF   (&BXA_RC EQ 8).ERR4C    * Invalid register: error
+&R       SETA  &R+1                    * Point free entry in REGS
+&REGS(&R) SETA &BXA_NUMVAL+1           * Put reg.index into REGS
+&SRCH(&R) SETC '&ARG'                  * Put reg.name into SRCH
+         AIF   (&BXA_NUMVAL EQ 0 AND '&R0' NE 'YES').ERR4D
+         AGO   .LOOP4
+.ERR4A   MNOTE 4,'SEARCH parameter neither HIGH, LOW, nor in parenthese*
+               s: ignored'
+&RC      SETA  4
+         AGO   .NOERR4
+.ERR4B   MNOTE 4,'SEARCH parameter contains no values: ignored'
+&RC      SETA  4
+         AGO   .NOERR4
+.ERR4C   ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 4,'SEARCH contains invalid argument: &ARG is not a regis*
+               ter'
+&RC      SETA  4
+         AGO   .LOOP4
+.ERR4D   ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 4,'SEARCH contains &ARG (register 0), but R0=YES has not*
+                been specified'
+&RC      SETA  4
+         AGO   .LOOP4
+.LOOP4OK ANOP
+.NOERR4  ANOP
+.*
+.* Check the PAIR parameter
+         AIF   ('&PAIR' EQ 'NO').NOERR5
+         AIF   ('&PAIR' EQ 'YES').NOERR5
+.ERR5    MNOTE 8,'PAIR-parameter must be YES, NO, or omitted'
+         MEXIT
+.NOERR5  ANOP  ,
+.*
+.* Check TEMP-parameter
+         AIF   ('&TEMP' EQ 'NO').NOERR6
+         AIF   ('&TEMP' EQ 'YES').NOERR6
+.ERR6    MNOTE 4,'TEMP must be either YES or NO'
+&RC      SETA  4
+.NOERR6  ANOP
+.*
+.* Check AR-parameter
+         AIF   (K'&AR EQ 0).NOERR7
+         AIF   (K'&LABEL EQ 0).ERR7
+         AGO   .NOERR7
+.ERR7    MNOTE 4,'AR-parameter specified, but label is missing'
+&RC      SETA  4
+.NOERR7  ANOP
+.*
+.* Check ODD parameter
+         AIF   (K'&ODD EQ 0).NOERR8
+         AIF   ('&PAIR' EQ 'YES').NOERR8A
+.ERR8A   MNOTE 4,'PAIR=YES was not specified: ODD-parameter ignored'
+         AGO   .NOERR8                 *
+.NOERR8A ANOP  ,                       *
+         AIF   (K'&LABEL NE 0).NOERR8B
+.ERR8B   MNOTE 4,'LABELE was not specified: ODD-parameter ignored'
+         AGO   .NOERR8                 *
+.NOERR8B ANOP  ,                       *
+&_ODD1   SETC  '&ODD'                  * Assume only 1 parm
+         AIF   ('&ODD'(1,1) NE '(').NOERR8 * Ok: not parenthesized
+         AIF   (N'&ODD LT 1).ERR8C     * Empty sublist
+&_ODD1   SETC  '&ODD(1)'               *
+         AIF   (N'&ODD LT 2).NOERR8    * Only 1 subparm
+&_ODD2   SETC  '&ODD(2)'               *
+         AIF   (N'&ODD NE 2).ERR8D     * Too many subparms
+         AGO   .NOERR8                 *
+.ERR8C   MNOTE 4,'Empty sublist in ODD-parameter: ignored'
+         AGO   .NOERR8                 *
+.ERR8D   MNOTE 4,'More than two entries in ODD-parameter: remainder ign*
+               ored'
+.NOERR8  ANOP  ,
+.*
+.* Check the WARN parameter
+         AIF   ('&WARN' EQ 'YES').NOERR9
+         AIF   ('&WARN' EQ 'NO').NOERR9
+.ERR9    MNOTE 4,'WARN parameter must be YES or NO: YES assumed'
+.NOERR9  ANOP  ,
+.*
+.* Check REGS to find the first available register
+.SEARCH  ANOP  ,                       * (re)start search of &REGS
+&I       SETA  0                       * I is index to REGS
+.LOOP1   ANOP  ,                       *
+&I       SETA  &I+1                    * Point next SEARCH value
+         AIF   (&I GT N'&REGS).LOOP1NF * No register found
+&R       SETA  (&REGS(&I))             * Retrieve register index
+         AIF   (&BXA_USED_REGS(&R)).LOOP1 * Not available: try next one
+.* Available register found
+         AIF   ('&PAIR' NE 'YES').ALLOCOK
+         AIF   ('EOEOEOEOEOEOEOEO'(&R,1) NE 'E').LOOP1 * Skip odd reg.
+&R       SETA  &R+1                    * Associated odd reg. index
+         AIF   (&BXA_USED_REGS(&R)).LOOP1 * Not available: try next one
+.* Even and odd registers both available
+&R       SETA  &R-1                    * Index of even register
+         AGO   .ALLOCOK                *
+.LOOP1NF ANOP  ,                       *
+         AIF   (&PASS2).NOALLOC        * Allocation failed!
+         AIF   ('&SEARCH' EQ 'LOW').SRCHLOW
+         AIF   ('&SEARCH' EQ 'HIGH').SRCHHIG
+         AGO   .SRCHHIG                * Default to HIGH !
+.*
+.* Find first available register for SEARCH=LOW
+.* First try to allocate a register from a pair that already has one
+.* register in use, if this fails, try to allocate any register.
+.SRCHLOW ANOP  ,                       *
+         AIF   ('&PAIR' EQ 'YES').LOWPAIR *
+.*
+.* Check for availability of R0
+         AIF   ('&R0' NE 'YES').LOWNOT0 * Skip if R0 not eligible
+         AIF   (&BXA_USED_REGS(1)).LOWNOT0 * R0 already in USE
+.* OK: R0 available
+&REGS(1) SETA  1                       * Index of R0
+&SRCH(1) SETC  'R0'                    * Name of R0
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOWNOT0 ANOP  ,
+.*
+.* Check for availability of R1
+         AIF   ('&TEMP' NE 'YES').LOWNOT1 * Skip if R1 not eligible
+         AIF   (&BXA_USED_REGS(2)).LOWNOT1 * R1 already in USE
+         AIF   (NOT &BXA_USED_REGS(1)).LOWNOT1 * R0 not in USE
+.* OK: R1 available AND R0 in use
+&REGS(1) SETA  2                       * Index of R1
+&SRCH(1) SETC  'R1'                    * Name of R1
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOWNOT1 ANOP  ,
+.*
+.* Find a pair from R2-R15 of which one register is in use
+&R       SETA  1                       * R = index of eligible register
+.LOOP2   ANOP  ,                       * Search half of a pair
+&R       SETA  &R+2                    * Point index of even register
+         AIF   (&R GE 15 AND '&TEMP' NE 'YES').LOOP2OK * Quit after R13
+         AIF   (&R GE 17).LOOP2OK      * Quit after R15
+.* Try even reg, if odd one is in use, and vice versa
+&I       SETA  &R+1                    * Index for odd register
+         AIF   (&BXA_USED_REGS(&R) AND NOT &BXA_USED_REGS(&I)).LOOP2AO
+         AIF   (NOT &BXA_USED_REGS(&R) AND &BXA_USED_REGS(&I)).LOOP2AE
+         AGO   .LOOP2                  * Try next pair
+.LOOP2AE ANOP  ,                       * Allocate even register
+&REGS(1) SETA  &R                      * Index of even register
+&R       SETA  &R-1                    * Register number
+&SRCH(1) SETC  'R&R'                   * Name of even register
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOOP2AO ANOP  ,                       * Allocate odd register
+&REGS(1) SETA  &I                      * Index of odd register
+&SRCH(1) SETC  'R&R'                   * Name of odd register
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOOP2OK ANOP  ,
+.*
+.* No half-used pair found: allocate any single reg or a pair
+.LOWPAIR ANOP  ,
+&R       SETA  1                       * Point free entry in REGS
+         AIF   ('&R0' NE 'YES').LOWNOR0 * R0 eligible?
+&REGS(&R) SETA 1                       * Index for R0
+&SRCH(&R) SETC 'R0'                    * Name of R0
+&R       SETA  &R+1                    * Point next free index
+.LOWNOR0 ANOP  ,                       *
+         AIF   ('&TEMP' NE 'YES').LOWNOR1 * R1 eligible?
+&REGS(&R) SETA 2                       * Index for R1
+&SRCH(&R) SETC 'R1'                    * Name of R1
+&R       SETA  &R+1                    * Point next free index
+.LOWNOR1 ANOP  ,                       *
+&REGS(&R) SETA 3,4,5,6,7,8,9,10,11,12,13,14 * Add reg indexes R2-R13
+&SRCH(&R) SETC 'R2','R3','R4','R5','R6','R7','R8','R9','R10','R11',    *
+               'R12','R13'             * and their names
+&R       SETA  &R+12                   * Point next free index
+         AIF   ('&TEMP' NE 'YES').LOWNOR14 * R14&15 eligible?
+&REGS(&R) SETA 15,16                   * Indexes for R14 and R15
+&SRCH(&R) SETC 'R14','R15'             * Names of R14 and R15
+.LOWNOR14 ANOP ,                       *
+&PASS2  SETB   1                       * Indicate second search
+        AGO    .SEARCH                 * And go search &REGS table
+.*
+.* Find first available register for SEARCH=HIGH (or default)
+.* First try to allocate a register from a pair that already has one
+.* register in use, if this fails, try to allocate any register.
+.SRCHHIG ANOP  ,                       *
+         AIF   ('&PAIR' EQ 'YES').HIGPAIR *
+.*
+.* Check for availability of R0
+         AIF   ('&R0' NE 'YES').HIGNOT0 * Skip if R0 not eligible
+         AIF   (&BXA_USED_REGS(1)).HIGNOT0 * R0 already in USE
+.* OK: R0 available
+&REGS(1) SETA  1                       * Index of R0
+&SRCH(1) SETC  'R0'                    * Name of R0
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.HIGNOT0 ANOP  ,
+.*
+.* Check for availability of R1
+         AIF   ('&TEMP' NE 'YES').HIGNOT1 * Skip if R1 not eligible
+         AIF   (&BXA_USED_REGS(2)).HIGNOT1 * R1 already in USE
+         AIF   (NOT &BXA_USED_REGS(1)).HIGNOT1 * R0 not in USE
+.* OK: R1 available AND R0 in use
+&REGS(1) SETA  2                       * Index of R1
+&SRCH(1) SETC  'R1'                    * Name of R1
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.HIGNOT1 ANOP  ,
+.*
+.* Find a pair from R15-R2 of which one register is in use
+&R       SETA  17                      * R = index of eligible register
+         AIF   ('&TEMP' EQ 'YES').LOOP3 * Start search at R15
+&R       SETA  15                      * Skip R14/R15 if ineligible
+.LOOP3   ANOP  ,                       * Search half of a pair
+&R       SETA  &R-2                    * Point index of even register
+         AIF   (&R LE 1).LOOP3OK       * Quit after R2
+.* Try even reg, if odd one is in use, and vice versa
+&I       SETA  &R+1                    * Index for odd register
+         AIF   (&BXA_USED_REGS(&R) AND NOT &BXA_USED_REGS(&I)).LOOP3AO
+         AIF   (NOT &BXA_USED_REGS(&R) AND &BXA_USED_REGS(&I)).LOOP3AE
+         AGO   .LOOP3                  * Try next pair
+.LOOP3AE ANOP  ,                       * Allocate even register
+&REGS(1) SETA  &R                      * Index of even register
+&R       SETA  &R-1                    * Register number
+&SRCH(1) SETC  'R&R'                   * Name of even register
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOOP3AO ANOP  ,                       * Allocate odd register
+&REGS(1) SETA  &I                      * Index of odd register
+&SRCH(1) SETC  'R&R'                   * Name of odd register
+&I       SETA  1                       * Point to this entry
+         AGO   .ALLOCOK                *
+.LOOP3OK ANOP  ,
+.*
+.* No half-used pair found: allocate any single reg or a pair
+.HIGPAIR ANOP  ,
+&R       SETA  1                       * Point free entry in REGS
+         AIF   ('&TEMP' NE 'YES').HIGNOR14 * R14&15 eligible?
+&REGS(&R) SETA 16,15                   * Indexes for R14 and R15
+&SRCH(&R) SETC 'R15','R14'             * Names of R14 and R15
+&R       SETA  &R+2                    * Point next free index
+.HIGNOR14 ANOP ,                       *
+&REGS(&R) SETA 14,13,12,11,10,9,8,7,6,5,4,3 * Add reg indexes R13-R2
+&SRCH(&R) SETC 'R13','R12','R11','R10','R9','R8','R7','R6','R5','R4',  *
+               'R3','R2'               * and their names
+&R       SETA  &R+12                   * Point next free index
+         AIF   ('&TEMP' NE 'YES').HIGNOR1 * R1 eligible?
+&REGS(&R) SETA 2                       * Index for R1
+&SRCH(&R) SETC 'R1'                    * Name of R1
+&R       SETA  &R+1                    * Point next free index
+.HIGNOR1 ANOP  ,                       *
+         AIF   ('&R0' NE 'YES').HIGNOR0 * R0 eligible?
+&REGS(&R) SETA 1                       * Index for R0
+&SRCH(&R) SETC 'R0'                    * Name of R0
+.HIGNOR0 ANOP  ,                       *
+&PASS2  SETB   1                       * Indicate second search
+        AGO    .SEARCH                 * And go search &REGS table
+.*
+.* Available register (or pair) located
+.ALLOCOK ANOP  ,
+         AIF   (NOT &SP_SHOWALL).NOMNOTE
+         AIF   ('&PAIR' NE 'YES').MNOTE1
+         MNOTE *,'Register pair &SRCH(&I) allocated'
+         AGO   .NOMNOTE
+.MNOTE1  ANOP  ,
+         MNOTE *,'Register &SRCH(&I) allocated'
+.NOMNOTE ANOP  ,
+         AIF   (K'&LABEL EQ 0).NOEQU   * Gen EQU for assigned reg?
+&LABEL   EQU   &SRCH(&I)               * Assign available register
+         AIF   (K'&_ODD1 EQ 0).NOEQUO  * Gen EQU for odd register?
+&REG     SETA  &REGS(&I)               * Register number for odd reg
+&_ODD1   EQU   R&REG                   * Assign name of odd register
+.NOEQUO  ANOP  ,                       *
+         AIF   (K'&AR EQ 0).NOEQUAR    * Gen EQU for access register?
+&REG     SETA  &REGS(&I)-1             * Register number
+&AR      EQU   AR&REG                  * Assign access register too
+.NOEQUAR ANOP  ,                       *
+         AIF   (K'&_ODD2 EQ 0).NOEQU   * Gen EQU for odd AR?
+&REG     SETA  &REGS(&I)               * Register number for odd reg
+&_ODD2   EQU   AR&REG                  * And assign odd access register
+.NOEQU   ANOP  ,                       *
+.*
+.* Set up returncode and return value
+&BXA_NUMVAL SETA &REGS(&I)-1           * Create reg.nr from index
+&BXA_RC  SETA  &RC                     * Set returncode
+         MEXIT
+.*
+.* An available register was not found
+.NOALLOC ANOP  ,
+         AIF   ('&WARN' EQ 'NO').EXIT8
+         AIF   ('&PAIR' NE 'YES').NOREG1
+         MNOTE 8,'No register pair is currently available'
+         AGO   .RETRC8
+.NOREG1  ANOP  ,
+         MNOTE 8,'No register is currently available'
+.*
+.RETRC8  ANOP  ,
+         USEDREGS DETAILS
+.*
+.* Set up returncode and return value
+.EXIT8   ANOP  ,
+&BXA_NUMVAL SETA 0                     * No register: default to zero
+&BXA_RC  SETA  8                       * Indicate error to caller
+.*
+.MEND    MEND

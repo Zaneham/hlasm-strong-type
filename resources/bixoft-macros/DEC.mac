@@ -1,0 +1,171 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Decrement a register
+.*
+&LABEL   DEC   &REG,                   * Register to be decremented    *
+               &COUNT                  * Amount to decrement or (reg)
+.*
+.* &REG   specifies the register to be decremented
+.* &COUNT specifies the amount by which the register is to be
+.*        decremented. May be specified as:
+.*      - Literal or symbolic value: must evaluate to a value between 0
+.*        and 4095 inclusive.
+.*      - (reg): must specify a valid register, 0 not allowed
+.*      - (value,reg): both of the above apply
+.*      - nothing: defaults to 1
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DEC                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare locals
+         LCLC  &_REG,&_COUNTR
+.*
+.* Check Reg parameter
+&_REG    SETC  '&REG'
+         AIF   (K'&REG NE 0).NOERR1A
+.ERR1A   MNOTE 8,'No register specified'
+.NOERR1A ANOP
+         AIF   ('&REG'(1,1) NE '(').NOERR1
+         AIF   (N'&REG EQ 0).ERR1B
+         AIF   (N'&REG GT 1).ERR1C
+&_REG    SETC  '&REG(1)'
+         AGO   .NOERR1
+.ERR1B   MNOTE 8,'No register specified within sublist'
+         AGO   .NOERR1
+.ERR1C   MNOTE 8,'More than 1 register specified within sublist'
+.NOERR1  ANOP
+.*
+.* Check Count parameter
+         AIF   (K'&COUNT EQ 0).NOERR2
+         AIF   ('&COUNT'(1,1) NE '(').NOERR2
+         AIF   (N'&COUNT EQ 0).ERR2A
+         AIF   (N'&COUNT GT 2).ERR2B
+         AGO   .NOERR2
+.ERR2A   MNOTE 8,'No amount to decrement specified in sublist'
+         AGO   .NOERR2
+.ERR2B   MNOTE 8,'Too many arguments specified in sublist'
+.NOERR2  ANOP
+.*
+.* If COUNT omitted, default to 1, using BCTR
+.* If COUNT specifies a register, use SR
+.* Otherwise generate a LA and a SR
+         AIF   (K'&COUNT EQ 0).BCTR
+         AIF   ('&COUNT'(1,1) NE '(').LIT
+         AIF   (N'&COUNT EQ 1).SR
+.*
+.* Decrement by a constant value, and a register. Make sure we don't
+.*  inadvertently corrupt a used register.
+&_COUNTR SETC 'R0'
+         AIF  ('&_REG' EQ '0').R1
+         AIF  ('&_REG' EQ '00').R1
+         AIF  ('&_REG' EQ 'R0').R1
+         AIF  ('&_REG' EQ 'R00').R1
+         AIF  ('&COUNT(2)' EQ '0').R1
+         AIF  ('&COUNT(2)' EQ '00').R1
+         AIF  ('&COUNT(2)' EQ 'R0').R1
+         AIF  ('&COUNT(2)' EQ 'R00').R1
+         AGO  .LA
+.R1      ANOP
+.* R0 is in use: put COUNT-value into R1
+&_COUNTR SETC 'R1'
+         AIF  ('&_REG' EQ '1').R15
+         AIF  ('&_REG' EQ '01').R15
+         AIF  ('&_REG' EQ 'R1').R15
+         AIF  ('&_REG' EQ 'R01').R15
+         AIF  ('&COUNT(2)' EQ '1').R15
+         AIF  ('&COUNT(2)' EQ '01').R15
+         AIF  ('&COUNT(2)' EQ 'R1').R15
+         AIF  ('&COUNT(2)' EQ 'R01').R15
+         AGO  .LA
+.R15     ANOP
+.* R0 and R1 both in use: put COUNT-value into R15
+&_COUNTR SETC 'R15'
+.LA      ANOP
+&LABEL   LA    &_COUNTR,&COUNT         * Load decrement value
+         SR    &_REG,&_COUNTR          * And decrement register
+         SR    &_REG,&COUNT(2)         * And decrement register
+         MEXIT
+.*
+.* Decrement by a constant value, make sure we don't inadvertently
+.*  corrupt register 0.
+.LIT     ANOP
+&_COUNTR SETC 'R0'
+         AIF  ('&_REG' EQ '0').LITR0
+         AIF  ('&_REG' EQ '00').LITR0
+         AIF  ('&_REG' EQ 'R0').LITR0
+         AIF  ('&_REG' EQ 'R00').LITR0
+         AGO  .LITLA
+.LITR0   ANOP
+.* R0 is to be decremented: put COUNT-value into R1
+&_COUNTR SETC 'R1'
+.LITLA   ANOP
+&LABEL   LA    &_COUNTR,&COUNT         * Load decrement value
+         SR    &_REG,&_COUNTR          * And decrement register
+         MEXIT
+.*
+.* Decrement with some register-held value
+.SR      ANOP
+&LABEL   SR    &_REG,&COUNT(1)         * Decrement register
+         MEXIT
+.*
+.BCTR    ANOP
+&LABEL   BCTR  &_REG,R0                * Decrement by 1
+.*
+.MEND    MEND

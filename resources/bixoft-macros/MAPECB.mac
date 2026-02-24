@@ -1,0 +1,151 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Event Control Block
+.*
+&LABEL   MAPECB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPECB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPECB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ECB').EMBED
+         AIF   ('&CB' EQ 'ECBE').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPECB).MEND
+&BXA_MAC_MAPECB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ECB
+         GBLC  &BXA_CB_ECBE
+&BXA_CB_ECB SETC 'ECB'
+&BXA_CB_ECBE SETC 'ECB'
+.*
+.* ECBCC - COMPLETION CODE BYTE
+ECBCC    DSOVR X
+ECBWAIT  EQUOVR ,,b,ECBCC
+ECBPOST  EQUOVR ,,b,ECBCC
+ECBUNWT  EQUOVR ,,v,ECBCC
+ECBNORM  EQUOVR ,,v,ECBCC
+ECBPERR  EQUOVR ,,v,ECBCC
+ECBDAEA  EQUOVR ,,v,ECBCC
+ECBABEND EQUOVR ,,v,ECBCC
+ECBINCPT EQUOVR ,,v,ECBCC
+ECBREPRG EQUOVR ,,v,ECBCC
+ECBEHALT EQUOVR ,,v,ECBCC
+ECBERPAB EQUOVR ,,v,ECBCC
+ECBERPER EQUOVR ,,v,ECBCC
+ECBSETEO EQUOVR ,,v,ECBCC
+ECBDMQDS EQUOVR ,,v,ECBCC
+ECBSEQER EQUOVR ,,v,ECBCC
+ECBINVMD EQUOVR ,,v,ECBCC
+ECBWKOVR EQUOVR ,,v,ECBCC
+ECBNOMSG EQUOVR ,,v,ECBCC
+ECBDTRAQ EQUOVR ,,v,ECBCC
+ECBEOQ   EQUOVR ,,v,ECBCC
+ECBRAQMT EQUOVR ,,v,ECBCC
+.*
+.* ECBCCCNT - ZEROES OR REMAINDER OF COMPLETION CODE
+ECBCCCNT DSOVR 0XL3
+.*
+.* ECBBYTE3 - THIRD BYTE OF ECBEVTBA
+ECBEXTND EQUOVR ,,v,ECBBYTE3
+ECBEVNT  EQUOVR ,,v,ECBBYTE3
+.*
+.* ECBEVAL - FUNCTION CODE
+ECBEEXIT EQUOVR ,,v,ECBEVAL
+.*
+.* ECBEFLG1 - FLAG BYTE
+ECBEMODE EQUOVR ,,b,ECBEFLG1
+.*
+         MNOTE *,'Including IHAECB mapping macro'
+         IHAECB DSECT=YES,             * Include DSECT statement       *
+               EXT=YES                 *   and ECB extension
+         DSOVR *END                    *
+         EQUOVR *END                   *
+.*
+ECB      DSECT
+         ORG
+ECB_LEN  EQU   *-ECB                   * Length of ECB
+ECBE     DSECT
+         ORG
+ECBE_LEN EQU   *-ECBE                  * Length of ECB extension
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

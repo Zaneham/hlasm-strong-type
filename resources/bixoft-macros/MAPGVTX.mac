@@ -1,0 +1,131 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the GRS Vector Table eXtension
+.*
+&LABEL   MAPGVTX &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPGVTX                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPGVTX        * Map has been generated?
+         GBLC  &BXA_PGM_TITLE          * Title for the listing
+         GBLB  &SP_SHOWALL             * Show all statements?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'GVTX').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPGVTX).MEND
+&BXA_MAC_MAPGVTX SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_GVTX
+&BXA_CB_GVTX SETC 'GVTX'
+.*
+.* GVTX_MIG_FLAGS - Migration Bit Flags
+GVTX_STARMIGRATIONINPROGRESS EQUOVR ,,b,GVTX_MIG_FLAGS
+GVTX_STARMIGINITIATOR        EQUOVR ,,b,GVTX_MIG_FLAGS
+GVTX_SYSFAILUREINMIGRATION   EQUOVR ,,b,GVTX_MIG_FLAGS
+GVTX_NO_STARMIG_BACKOFF      EQUOVR ,,b,GVTX_MIG_FLAGS
+GVTX_STARMIG_LEFT_SYSGRS     EQUOVR ,,b,GVTX_MIG_FLAGS
+GVTX_STARMIG_POPULATION      EQUOVR ,,b,GVTX_MIG_FLAGS
+.*
+.* GVTX_STARSETGRSRNLFLAGS - Dynamic RNL flags
+GVTX_STARSETGRSRNLINPROGRESS EQUOVR ,,b,GVTX_STARSETGRSRNLFLAGS
+GVTX_STARSETGRSRNLINITIATOR  EQUOVR ,,b,GVTX_STARSETGRSRNLFLAGS
+GVTX_READYTOCUTOVER          EQUOVR ,,b,GVTX_STARSETGRSRNLFLAGS
+GVTX_CANCELBYINITIATOR       EQUOVR ,,b,GVTX_STARSETGRSRNLFLAGS
+.*
+         MNOTE *,'Including ISGGVTX mapping macro'
+         ISGGVTX ,
+         EQUOVR *END
+*
+.* GVTX_LEN defined in ISGGVTX between OS/390 V2R6 and z/OS V1R5
+.* GVTX     DSECT ,                       * Resume GVTX DSECT
+.*          ORG
+.* GVTX_LEN EQU   *-GVTX                  * Length of GVTX
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+         TITLE '&BXA_PGM_TITLE'
+         AIF   (&SP_SHOWALL).TITLE
+.* Generate comment line in stead of a MNOTE line
+*
+         AGO   .TITLEOK
+.TITLE   ANOP
+         MNOTE *,'Previous STMT: TITLE ''&BXA_PGM_TITLE'''
+.TITLEOK ANOP
+.*
+.MEND    MEND

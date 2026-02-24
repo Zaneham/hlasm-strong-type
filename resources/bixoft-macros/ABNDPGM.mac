@@ -1,0 +1,148 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates an out-of-line routine that abends the program
+.*   with a specified return code, normally the failing address
+.* The generated routine will normally be called thru the ABND-macro.
+.*
+&LABEL   ABNDPGM &CODE=,               * User Abend code               *
+               &REASON=R14             * Reasoncode (dft: reg 14)
+.*
+.* &CODE specifies the user abend code to generate on the ABEND macro.
+.* &REASON specifies the register that contains the reason code,
+.*         normally the failing address. When omitted defaults to R14.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Return code from CHKLIC
+         CHKLIC ABNDPGM                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Define variables
+         GBLC  &SYSASCE                * Current ASC environment
+         GBLC  &BXA_SUBR               * Current subroutine name
+         GBLC  &BXA_ABNDPGM(50)        * Usable targets
+         GBLB  &SP_SHOWALL             * SYSPARM option
+         LCLA  &I                      * Index into BXA_ABNDPGM
+         LCLC  &SAV_ASCE               * Saved ASC environment value
+.*
+.* Check the LABEL parameter
+         AIF   (K'&LABEL NE 0).NOERR0
+.ERR0    MNOTE 8,'LABEL parameter not specified'
+.NOERR0  ANOP
+.*
+.* Check the CODE parameter
+         AIF   (K'&CODE NE 0).NOERR1
+.ERR1    MNOTE 8,'CODE parameter not specified'
+.NOERR1  ANOP
+.*
+.* Check the Subroutine name
+         AIF   ('&BXA_SUBR' EQ '*MAIN').NOERR2
+.ERR2    MNOTE 8,'ABNDPGM must not be issued within a subroutine'
+.NOERR2  ANOP
+.*
+.* Check the reason parameter
+         AIF   ('&REASON' EQ 'R15').ERR3
+         AIF   ('&REASON' EQ 'RF').ERR3
+         AIF   ('&REASON' EQ '15').ERR3
+         AGO   .NOERR3
+.ERR3    MNOTE 8,'Reasoncode cannot be passed in register 15'
+.NOERR3  ANOP
+.*
+.* Add &LABEL (if specified) to BXA_ABNDPGM table
+         AIF   (K'&LABEL EQ 0).LOOP1OK * If empty skip loop
+&I       SETA  0
+.LOOP1   ANOP
+&I       SETA  &I+1                    * Point to next element
+         AIF   (&I GT N'&BXA_ABNDPGM).LOOP1AD * Not in table: Add elm
+         AIF   ('&ABEND' EQ '&BXA_ABNDPGM(&I)').LOOP1OK * Found: done
+         AGO   .LOOP1                  * Go search remainder of table
+.LOOP1AD ANOP  ,                       * &I points beyond last used elm
+&BXA_ABNDPGM(&I) SETC '&LABEL'         * Put label into next element
+.LOOP1OK ANOP
+.*
+* Out-of-line code for generating a user abend
+&LABEL   LABEL ,                       * User abend routine
+         PUSH  USING                   * Save USNIG status
+         DROP  ,                       * No valid USINGs anymore
+         LR    R12,R15                 * Copy entry point address
+         USE   &LABEL,R12              * R12 contains routine address
+.*
+.* Switch to primary mode
+&SAV_ASCE SETC '&SYSASCE'              * Save ASC-environment
+         SAC   0                       * Switch to primary mode
+         SYSSTATE ASCENV=P             * Indicate primary mode
+*
+         LA    &REASON,0(,&REASON)     * Remove garbage bit(s)
+         ABEND &CODE,                  * Internal error                *
+               REASON=(&REASON),       *   reasoncode=failing address  *
+               DUMP,                   *   create a dump               *
+               DUMPOPT=_&LABEL._OPT    *   as specified
+*
+_&LABEL._OPT LABEL F                   * Re-align on fullword
+         SNAP  DCB=0,                  * Use standard DCB              *
+               PDATA=(PSW,REGS),       * Just PSW and Registers        *
+               SDATA=SUM,              * And a summary dump            *
+               MF=L
+*
+         POP   USING                   * Restore using status
+         EJECT ,                       * Force heading with USINGs
+.*
+.* Reset to original ASC mode
+         AIF   ('&SAV_ASCE' EQ 'P').MEND
+         SYSSTATE ASCENV=&SAV_ASCE
+.*
+.MEND    MEND

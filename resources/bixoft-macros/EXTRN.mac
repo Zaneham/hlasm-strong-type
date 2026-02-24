@@ -1,0 +1,147 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's EXTRN statement
+.*
+&LABEL   EXTRN ,                       * Control block names are in    *
+                                       *    &SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EXTRN                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_EXTRNOVR           * Ptr to last valid
+         GBLC  &BXA_EXTRNOVR_LAB(50)   * Labels
+         GBLC  &BXA_EXTRNOVR_NAM(50)   * New names
+         LCLC  &NAM                    * New name for current entry
+         LCLB  &RESET                  * On if last entry removed
+         LCLA  &I                      * Index for override tables
+         LCLA  &S                      * Index for &SYSLIST
+         LCLC  &EXTRN                  * 1 EXTRN name from SYSLIST
+         LCLC  &EXTRNS                 * Modified list of EXTRN names
+         LCLC  &WXTRNS                 * List of WXTRN names
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL EQ 0).NOERR1
+.ERR1    MNOTE 8,'Label parameter not valid for EXTRN statement'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Build &EXTRNS and &WXTRNS from &SYSLIST
+&S       SETA  0                       * S indexes &SYSLIST
+.LOOP1   ANOP  ,                       * For all entries in SYSLIST
+&S       SETA  &S+1                    * Point next entry
+         AIF   (&S GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&EXTRN   SETC  '&SYSLIST(&S)'          * Extract external name
+&I       SETA  0                       * I indexes override tables
+.LOOP2   ANOP  ,                       * Search for matching name
+&I       SETA  &I+1                    * Point next override entry
+         AIF   (&I GT &BXA_EXTRNOVR).LOOP2NF * Not found
+         AIF   ('&EXTRN' NE '&BXA_EXTRNOVR_LAB(&I)').LOOP2 * Mismatch
+.* Found override entry, remove it from override tables
+&NAM     SETC  '&BXA_EXTRNOVR_NAM(&I)' * Extract *option or new name
+         AIF   (&I EQ &BXA_EXTRNOVR).NOCOPY
+&BXA_EXTRNOVR_LAB(&I) SETC '&BXA_EXTRNOVR_LAB(&BXA_EXTRNOVR)'
+&BXA_EXTRNOVR_NAM(&I) SETC '&BXA_EXTRNOVR_NAM(&BXA_EXTRNOVR)'
+.NOCOPY  ANOP  ,                       *
+&BXA_EXTRNOVR SETA &BXA_EXTRNOVR-1     * Remove copied entry
+         AIF   (&BXA_EXTRNOVR GT 0).NORESET
+&RESET   SETB  1                       *
+.NORESET ANOP  ,                       *
+.*
+.* Check for suppress option
+         AIF   ('&NAM' EQ '*SUPPRESS').LOOP1 * No action needed
+.*
+.* Check for weak external option
+         AIF   ('&NAM' EQ '*WXTRN').LOOP2WX * No action needed
+.*
+.* Must be a *NEWNAME option
+&EXTRNS  SETC  '&EXTRNS'.','.'&NAM'    * Add new name to EXTRNS
+         AGO   .LOOP1                  * Go process next SYSLIST entry
+.*
+.* *WXTRN specified: add entry to &WXTRNS
+.LOOP2WX ANOP  ,                       *
+&WXTRNS  SETC  '&WXTRNS'.','.'&EXTRN'  * Add name to WXTRNS
+         AGO   .LOOP1                  * Go process next SYSLIST entry
+.*
+.* No override found
+.LOOP2NF ANOP  ,                       * No override:
+&EXTRNS  SETC  '&EXTRNS'.','.'&EXTRN'  *   add name to EXTRNS
+         AGO   .LOOP1                  * Go process next SYSLIST entry
+.LOOP1OK ANOP  ,                       *
+.*
+.* Remove leading comma from EXTRNS and/or WXTRNS
+         AIF   (K'&EXTRNS EQ 0).EXTRNSOK * No EXTRNs left
+&EXTRNS  SETC  '&EXTRNS'(2,*)          * Remove leading comma
+.EXTRNSOK ANOP ,                       *
+         AIF   (K'&WXTRNS EQ 0).WXTRNSOK * No weak externals created
+&WXTRNS  SETC  '&WXTRNS'(2,*)          * Remove leading comma
+.WXTRNSOK ANOP ,                       *
+.*
+.* Generate _EXTRN and/or WXTRN statements
+         AIF   (K'&EXTRNS EQ 0).NOEXTRN * No EXTRNs left
+         _EXTRN &EXTRNS                *
+.NOEXTRN ANOP  ,                       *
+         AIF   (K'&WXTRNS EQ 0).NOWXTRN * No WXTRNs created
+         WXTRN &WXTRNS                 *
+.NOWXTRN ANOP  ,                       *
+.*
+         AIF   (NOT &RESET).MEND       *
+         OPSYNS _EXTRN                 * Reset EXTRN opcode
+.*
+.MEND    MEND

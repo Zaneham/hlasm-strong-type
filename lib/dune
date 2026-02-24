@@ -1,0 +1,5 @@
+(library
+ (name hlasm_lsp)
+ (libraries yojson))
+
+(ocamllex lexer)

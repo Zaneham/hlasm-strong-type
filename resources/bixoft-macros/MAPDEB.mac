@@ -1,0 +1,362 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Extent Block
+.*
+&LABEL   MAPDEB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDEB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDEB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DEB').EMBED
+         AIF   ('&CB' EQ 'DEBACSMD').EMBED
+         AIF   ('&CB' EQ 'DEBDASD').EMBED
+         AIF   ('&CB' EQ 'DEBSUBNM').EMBED
+         AIF   ('&CB' EQ 'DEBXTN').EMBED
+         AIF   ('&CB' EQ 'DEB2XTN').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDEB).MEND
+&BXA_MAC_MAPDEB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DEB
+         GBLC  &BXA_CB_DEBACSMD
+         GBLC  &BXA_CB_DEBDASD
+         GBLC  &BXA_CB_DEBSUBNM
+         GBLC  &BXA_CB_DEBXTN
+         GBLC  &BXA_CB_DEB2XTN
+&BXA_CB_DEB SETC 'DEB'
+&BXA_CB_DEBACSMD SETC 'DEB'
+&BXA_CB_DEBDASD SETC 'DEB'
+&BXA_CB_DEBSUBNM SETC 'DEB'
+&BXA_CB_DEBXTN SETC 'DEB'
+&BXA_CB_DEB2XTN SETC 'DEB'
+.*
+.* DEBEOEAB - FLAG BYTE
+DEBEOENP EQUOVR ,,b,DEBEOEAB
+.*
+.* DEBSIOAB - FLAG BYTE
+DEBPGFX  EQUOVR ,,b,DEBSIOAB
+DEBSIOX  EQUOVR ,,b,DEBSIOAB
+DEBIOVR  EQUOVR ,,b,DEBSIOAB
+DEBFIX   EQUOVR ,,b,DEBSIOAB
+DEBSIONP EQUOVR ,,b,DEBSIOAB
+.*
+.* DEBPCIAB - FLAG BYTE
+DEBRSV24 EQUOVR ,,b,DEBPCIAB
+DEBRSV25 EQUOVR ,,b,DEBPCIAB
+DEBRSV26 EQUOVR ,,b,DEBPCIAB
+DEBRSV27 EQUOVR ,,b,DEBPCIAB
+DEBPCINP EQUOVR ,,b,DEBPCIAB
+.*
+.* DEBCEAB - FLAG BYTE
+DEBESMVR EQUOVR ,,b,DEBCEAB
+DEBRSV29 EQUOVR ,,b,DEBCEAB
+DEBRSV30 EQUOVR ,,b,DEBCEAB
+DEBRSV31 EQUOVR ,,b,DEBCEAB
+DEBCENP  EQUOVR ,,b,DEBCEAB
+.*
+.* DEBXCEAB - FLAG BYTE
+DEBRSV32 EQUOVR ,,b,DEBXCEAB
+DEBRSV33 EQUOVR ,,b,DEBXCEAB
+DEBRSV34 EQUOVR ,,b,DEBXCEAB
+DEBRSV35 EQUOVR ,,b,DEBXCEAB
+DEBXCENP EQUOVR ,,b,DEBXCEAB
+.*
+.* DEBAMTYP - ACCESS METHOD TYPE
+DEBAMNON EQUOVR ,,v,DEBAMTYP
+DEBAMVSM EQUOVR ,,b,DEBAMTYP
+DEBAMXCP EQUOVR ,,b,DEBAMTYP
+DEBAMTCM EQUOVR ,,b,DEBAMTYP
+DEBAMGAM EQUOVR ,,b,DEBAMTYP
+DEBAMTAM EQUOVR ,,b,DEBAMTYP
+DEBAMBPM EQUOVR ,,b,DEBAMTYP
+DEBAMSAM EQUOVR ,,b,DEBAMTYP
+DEBAMBDM EQUOVR ,,b,DEBAMTYP
+DEBAMISM EQUOVR ,,b,DEBAMTYP
+DEBAMSUB EQUOVR ,,b,DEBAMTYP
+DEBAMVTM EQUOVR ,,b,DEBAMTYP
+DEBAMTAP EQUOVR ,,b,DEBAMTYP
+.*
+.* DEBAMID - VTAM/TCAM DEB ID FLAG
+DEBTAMID EQUOVR ,,v,DEBAMID
+DEBVAMID EQUOVR ,,v,DEBAMID
+.*
+.* DEBOFLGS - DATA SET STATUS FLAGS
+DEBDISP  EQUOVR ,,b,DEBOFLGS
+DEBDSOLD EQUOVR ,,b,DEBOFLGS
+DEBDSMOD EQUOVR ,,b,DEBOFLGS
+DEBDSNEW EQUOVR ,,b,DEBOFLGS
+DEBEOF   EQUOVR ,,b,DEBOFLGS
+DEBRLSE  EQUOVR ,,b,DEBOFLGS
+DEBDCB   EQUOVR ,,b,DEBOFLGS
+DEBSPLIT EQUOVR ,,b,DEBOFLGS
+DEBLABEL EQUOVR ,,b,DEBOFLGS
+DEBRERR  EQUOVR ,,b,DEBOFLGS
+.*
+.* DEBOPATB - FLAGS INDICATING BOTH THE METHOD OF I/O PROCESSING
+DEBABEND EQUOVR ,,b,DEBOPATB
+DEBZERO  EQUOVR ,,b,DEBOPATB
+DEBPOSIT EQUOVR ,,b,DEBOPATB
+DEBRERED EQUOVR ,,b,DEBOPATB
+DEBLEAVE EQUOVR ,,b,DEBOPATB
+DEBACCS  EQUOVR ,,b,DEBOPATB
+DEBINPUT EQUOVR ,,v,DEBOPATB
+DEBOUTPT EQUOVR ,,b,DEBOPATB
+DEBXTEND EQUOVR ,,b,DEBOPATB
+DEBINOUT EQUOVR ,,b,DEBOPATB
+DEBOUTIN EQUOVR ,,b,DEBOPATB
+DEBOTINX EQUOVR ,,b,DEBOPATB
+DEBRDBCK EQUOVR ,,b,DEBOPATB
+DEBUPDAT EQUOVR ,,b,DEBOPATB
+.*
+.* DEBFLGS1 - FLAG FIELD
+DEBPWCKD EQUOVR ,,b,DEBFLGS1
+DEBEOFDF EQUOVR ,,b,DEBFLGS1
+DEBRSIOA EQUOVR ,,b,DEBFLGS1
+DEBEXCPA EQUOVR ,,b,DEBFLGS1
+DEBCINDI EQUOVR ,,b,DEBFLGS1
+DEBF1CEV EQUOVR ,,b,DEBFLGS1
+DEBAPFIN EQUOVR ,,b,DEBFLGS1
+DEBXTNIN EQUOVR ,,b,DEBFLGS1
+.*
+.* DEBFLGS2 - FLAG FIELD TWO
+DEBIOPAV EQUOVR ,,b,DEBFLGS2
+.* DEBFGRV1 EQUOVR ,,b,DEBFLGS2        * last seen in OS/390 V2R6
+.* DEBFGRV2 EQUOVR ,,b,DEBFLGS2        * last seen in OS/390 V2R6
+.* DEBFGRV3 EQUOVR ,,b,DEBFLGS2        * last seen in OS/390 V2R6
+DEBVRLS  EQUOVR ,,b,DEBFLGS2
+DEBDSCMP EQUOVR ,,b,DEBFLGS2
+DEBDSNCP EQUOVR ,,b,DEBFLGS2
+DEBFGRV6 EQUOVR ,,b,DEBFLGS2
+.* DEBFGRV7 EQUOVR ,,b,DEBFLGS2        * last seen in OS/390 V2R6
+.*
+.* DEBSDVM - DEVICE MODIFIER.
+DEBMTDN4 EQUOVR ,,v,DEBSDVM
+DEBMTDN3 EQUOVR ,,v,DEBSDVM
+DEBMTDN2 EQUOVR ,,v,DEBSDVM
+DEBM7DN0 EQUOVR ,,v,DEBSDVM
+DEBM7DN1 EQUOVR ,,v,DEBSDVM
+DEBM7DN2 EQUOVR ,,v,DEBSDVM
+DEBMSTWI EQUOVR ,,v,DEBSDVM
+DEBMTRF0 EQUOVR ,,v,DEBSDVM
+DEBMTRF1 EQUOVR ,,v,DEBSDVM
+DEBMTWI  EQUOVR ,,v,DEBSDVM
+DEBMINHS EQUOVR ,,v,DEBSDVM
+DEBMCOMP EQUOVR ,,v,DEBSDVM
+DEBCMPAC EQUOVR ,,v,DEBSDVM
+DEBM3424 EQUOVR ,,v,DEBSDVM
+DEBM9348 EQUOVR ,,v,DEBSDVM
+DEBMINHE EQUOVR ,,v,DEBSDVM
+DEBM6250 EQUOVR ,,v,DEBSDVM
+DEBM1600 EQUOVR ,,v,DEBSDVM
+DEBM4TRK EQUOVR ,,v,DEBSDVM
+DEBM2TRK EQUOVR ,,v,DEBSDVM
+DEBM1TRK EQUOVR ,,v,DEBSDVM
+.*
+.* DEBEAMFG - FLAG BYTE
+DEBMULTI EQUOVR ,,b,DEBEAMFG
+DEBDSOPN EQUOVR ,,b,DEBEAMFG
+DEBVAMSG EQUOVR ,,b,DEBEAMFG
+DEBSECVL EQUOVR ,,b,DEBEAMFG
+DEBRV004 EQUOVR ,,b,DEBEAMFG
+DEBRV005 EQUOVR ,,b,DEBEAMFG
+DEBRV006 EQUOVR ,,b,DEBEAMFG
+DEBRV007 EQUOVR ,,b,DEBEAMFG
+.*
+.* DEBRPSID - ROTATIONAL POSITION SENSING (RPS) DEVICE INDICATORS
+DEBRPSP  EQUOVR ,,b,DEBRPSID
+DEBRPSI  EQUOVR ,,b,DEBRPSID
+DEBRPSO  EQUOVR ,,b,DEBRPSID
+DEBRPSAP EQUOVR ,,b,DEBRPSID
+DEBRSV09 EQUOVR ,,b,DEBRPSID
+DEBRSV10 EQUOVR ,,b,DEBRPSID
+DEBRSV11 EQUOVR ,,b,DEBRPSID
+DEBRSV12 EQUOVR ,,b,DEBRPSID
+.*
+.* DEBVOLBT - FIRST BYTE OF DEBVOLSQ
+DEBEXFUL EQUOVR ,,b,DEBVOLBT
+DEBRSV36 EQUOVR ,,b,DEBVOLBT
+DEBRSV37 EQUOVR ,,b,DEBVOLBT
+DEBRSV38 EQUOVR ,,b,DEBVOLBT
+DEBRSV39 EQUOVR ,,b,DEBVOLBT
+DEBRSV40 EQUOVR ,,b,DEBVOLBT
+DEBRSV41 EQUOVR ,,b,DEBVOLBT
+DEBRSV42 EQUOVR ,,b,DEBVOLBT
+.*
+.* DEBXFLG1 - FLAG BYTE
+DEBXCDCB EQUOVR ,,b,DEBXFLG1
+DEBXTSKC EQUOVR ,,b,DEBXFLG1
+DEBXDSSI EQUOVR ,,b,DEBXFLG1
+DEBXWIND EQUOVR ,,b,DEBXFLG1
+DEBXACIS EQUOVR ,,b,DEBXFLG1
+DEBXNFLS EQUOVR ,,b,DEBXFLG1
+DEBXSYSB EQUOVR ,,b,DEBXFLG1
+DEBXRACE EQUOVR ,,b,DEBXFLG1
+.*
+.* DEBXFLG2 - FLAG BYTE
+DEBXRSAP EQUOVR ,,b,DEBXFLG2
+DEBBYP   EQUOVR ,,b,DEBXFLG2
+DEBCHCMP EQUOVR ,,b,DEBXFLG2
+DEBXENQA EQUOVR ,,b,DEBXFLG2
+DEBXENQS EQUOVR ,,b,DEBXFLG2
+DEBXIMSC EQUOVR ,,b,DEBXFLG2
+DEBXCASV EQUOVR ,,b,DEBXFLG2
+DEBXMVLF EQUOVR ,,b,DEBXFLG2
+.*
+.* DEBDEFG1 - FLAG BYTE
+DEBNSHED EQUOVR ,,b,DEBDEFG1
+DEBXVDEF EQUOVR ,,b,DEBDEFG1
+.*
+.* DEBGATTR - GLOBAL ATTRIBUTES
+DEBECKD  EQUOVR ,,b,DEBGATTR
+DEBGAEX1 EQUOVR ,,b,DEBGATTR
+DEBGAEX2 EQUOVR ,,b,DEBGATTR
+DEBSTRTP EQUOVR ,,b,DEBGATTR
+DEBGA345 EQUOVR ,,b,DEBGATTR
+DEBGA1   EQUOVR ,,b,DEBGATTR
+DEBGA2   EQUOVR ,,b,DEBGATTR
+DEBGA3   EQUOVR ,,b,DEBGATTR
+DEBNCACH EQUOVR ,,v,DEBGATTR
+DEBBCACH EQUOVR ,,b,DEBGATTR
+DEBICACH EQUOVR ,,b,DEBGATTR
+DEBSCACH EQUOVR ,,b,DEBGATTR
+DEBXRFLG EQUOVR ,,b,DEBGATTR
+DEBRLC   EQUOVR ,,b,DEBGATTR
+DEBNRD   EQUOVR ,,b,DEBGATTR
+DEBINHFW EQUOVR ,,b,DEBGATTR
+.*
+.* DEBGATTX - GLOBAL ATTRIB EXTENDED 2
+DEBRMODE EQUOVR ,,v,DEBGATTX
+DEBRDATA EQUOVR ,,b,DEBGATTX
+DEBSKEY  EQUOVR ,,b,DEBGATTX
+DEBDFTR0 EQUOVR ,,b,DEBGATTX
+.*
+.* DEBXFLG3 - FLAG BYTE
+DEBXTRNC EQUOVR ,,b,DEBXFLG3
+DEBXNSEG EQUOVR ,,b,DEBXFLG3
+DEBXSMSG EQUOVR ,,b,DEBXFLG3
+DEBXCAP  EQUOVR ,,b,DEBXFLG3
+.*
+.* DEBXAMBF - DEFINES THE USE OF DEBXAMB
+DEBXABSS EQUOVR ,,b,DEBXAMBF
+DEBXARBA EQUOVR ,,b,DEBXAMBF
+DEBXAOEF EQUOVR ,,b,DEBXAMBF
+.*
+.* DEBXAFLG - "ATTRIBUTE EXTENSION" FLAGS
+DEBXADS  EQUOVR ,,b,DEBXAFLG
+DEBXAINP EQUOVR ,,b,DEBXAFLG
+DEBXAOUT EQUOVR ,,b,DEBXAFLG
+DEBXAOFO EQUOVR ,,b,DEBXAFLG
+.*
+.* DEB2XFG1 - FIRST FLAG BYTE
+DEB2XOSM EQUOVR ,,b,DEB2XFG1
+.*
+         MNOTE *,'Including IEZDEB mapping macro'
+.*
+         IEZDEB LIST=YES               * Do not issue PRINT OFF
+         EQUOVR *END
+*
+DEB      DSECT ,                       * Reset to DEB
+         ORG
+DEB_LEN  EQU   *-DEB                   * Length of DEB
+*
+DEBACSMD DSECT ,                       * Reset to DEBACSMD
+         ORG
+DEBACSMD_LEN EQU *-DEBACSMD            * Length of DEBACSMD
+*
+DEBDASD  DSECT ,                       * Reset to DEBDASD
+         ORG
+DEBDASD_LEN EQU *-DEBDASD              * Length of DEBDASD
+*
+DEBSUBNM DSECT ,                       * Reset to DEBSUBNM
+         ORG
+DEBSUBNM_LEN EQU *-DEBSUBNM            * Length of DEBSUBNM
+*
+DEBXTN   DSECT ,                       * Reset to DEBXTN
+         ORG
+DEBXTN_LEN EQU *-DEBXTN                * Length of DEBXTN
+*
+DEB2XTN  DSECT ,                       * Reset to DEB2XTN
+         ORG
+DEB2XTN_LEN EQU *-DEB2XTN              * Length of DEB2XTN
+*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

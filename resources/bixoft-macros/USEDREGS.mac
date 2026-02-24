@@ -1,0 +1,132 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro lists all registers currently in use
+.*
+         USEDREGS &OPT                 * DETAILS or nothing
+.*
+.* &OPT  If specified as DETAILS, active entries from the
+.*       BXA_USELBL and BXA_USEREG tables will be shown
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC USEDREGS               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLC  &BXA_USELBL(50)         * Used labels ...
+         GBLC  &BXA_USEFLD(50)         *   and fields...
+         GBLA  &BXA_USEREG(50)         *   and associated registers
+         GBLA  &BXA_USENDX0(5)         * Low valid pointers
+         GBLA  &BXA_USENDX1(5)         * High valid pointers
+         GBLA  &BXA_USENDX             * Pointer for USENDX0/USENDX1
+         LCLA  &N                      * Pointer for BXA_USE...
+         LCLA  &REG                    * Register number
+         LCLC  &LBL                    * Label from table
+         LCLC  &FLD                    * Field name from table
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &ARGS                   * Arguments from SYSLIST
+         LCLA  &I                      * Index into &SYSLIST
+         LCLA  &R                      * Index into &BXA_USED_REGS
+         LCLC  &USEDREGS               * Used regs on labeled USING
+         LCLC  &USEDREG                * 1 index from USEDREGS
+.*
+.* Check the OPT parameter
+         AIF   (K'&OPT EQ 0).NOERR1
+         AIF   ('&OPT' EQ 'DETAILS').NOERR1
+.ERR1A   MNOTE 8,'&OPT is an unsupported option: ignored'
+.NOERR1  ANOP
+.*
+.* Create list of registers currently in use
+&ARGS    SETC  ''                      * Empty list of regs
+&I       SETA  0                       * Index BXA_USED_REGS
+.LOOPR   ANOP  ,                       * For all registers
+&I       SETA  &I+1                    * Point next register
+         AIF   (&I GT 16).LOOPROK      * At end: issue message
+         AIF   (NOT &BXA_USED_REGS(&I)).LOOPR * Unused reg: no action
+&R       SETA  &I-1                    * Obtain register number
+&ARGS    SETC  '&ARGS'.',R'.'&R'       * Add register to list
+         AGO   .LOOPR                  * And go check next register
+.LOOPROK ANOP
+         AIF   (K'&ARGS GT 0).LOOPRN0
+&ARGS    SETC  ',None'
+.LOOPRN0 ANOP  ,                       * ARGS not empty
+&ARGS    SETC  '&ARGS'(2,*)            * Remove leading comma
+         MNOTE *,'Registers in use: &ARGS'
+.*
+.* If DETAILS not specified: we're done
+         AIF   ('&OPT' NE 'DETAILS').LOOP2OK
+&N       SETA  &BXA_USENDX0(&BXA_USENDX)
+.LOOP2   ANOP
+&N       SETA  &N+1
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP2OK
+&REG     SETA  &BXA_USEREG(&N)-1       * Create reg.nr. from index
+&FLD     SETC  '&BXA_USEFLD(&N)'       * Copy fieldname
+&LBL     SETC  '&BXA_USELBL(&N)'       * Copy label
+         AIF   (K'&LBL GE 8).LOOP2M    * Go issue message
+&LBL     SETC  '&LBL'.(8-K'&LBL)' '    * Fill up to 8 chars
+.LOOP2M  ANOP  ,                       *
+         AIF   (K'&FLD GT 0).LOOP2M2   * With field: issue msg 2
+         MNOTE *,'&LBL USE R&REG'      * Report register use
+         AGO   .LOOP2                  *
+.LOOP2M2 ANOP  ,                       * Message 2:
+         MNOTE *,'&LBL USE &FLD.,R&REG' * Report normal use
+         AGO   .LOOP2                  *
+.LOOP2OK ANOP  ,                       *
+.*
+.MEND    MEND

@@ -1,0 +1,314 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Prefixed Storage Area (Virtual 1st page)
+.* Since the PSA is always addressable thru R0, a USING is
+.* included in the expansion, setting the PSA addressable troughout
+.* the program.
+.*
+&LABEL   MAPPSA &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPPSA                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPPSA         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'PSA').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPPSA).MEND
+&BXA_MAC_MAPPSA SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_PSA
+&BXA_CB_PSA SETC 'PSA'
+.*
+.* FLCSVILC - SVC INSTRUCTION LENGTH COUNTER - NUMBER OF BYTES
+FLCSILCB EQUOVR ,,b,FLCSVILC
+.*
+.* FLCPIILC - PROGRAM INTERRUPT LENGTH COUNTER
+FLCPILCB EQUOVR ,,b,FLCPIILC
+.*
+.* PSAPICOD - 8-BIT INTERRUPT CODE.
+PSAPIPER EQUOVR ,,b,PSAPICOD
+PSAPIMC  EQUOVR ,,b,PSAPICOD
+PSAPIPC  EQUOVR ,,b,PSAPICOD
+.*
+.* FLCTEA - TRANSLATION EXCEPTION ADDRESS.
+FLCTEAXM EQUOVR ,,b,FLCTEA
+.*
+.* FLCTEAB3 - LAST BYTE OF TEA.
+FLCSOPI  EQUOVR ,,b,FLCTEAB3
+FLCTSTDP EQUOVR ,,v,FLCTEAB3
+FLCTSTDA EQUOVR ,,b,FLCTEAB3
+FLCTSTDS EQUOVR ,,b,FLCTEAB3
+FLCTSTDH EQUOVR ,,b,FLCTEAB3
+.*
+.* PSASUP1 - FIRST BYTE OF PSASUPER
+PSAIO    EQUOVR ,,b,PSASUP1
+PSASVC   EQUOVR ,,b,PSASUP1
+PSAEXT   EQUOVR ,,b,PSASUP1
+PSAPI    EQUOVR ,,b,PSASUP1
+PSALOCK  EQUOVR ,,b,PSASUP1
+PSADISP  EQUOVR ,,b,PSASUP1
+PSATCTL  EQUOVR ,,b,PSASUP1
+PSATYPE6 EQUOVR ,,b,PSASUP1
+.*
+.* PSASUP2 - SECOND BYTE OF PSASUPER
+PSAIPCRI EQUOVR ,,b,PSASUP2
+PSASVCR  EQUOVR ,,b,PSASUP2
+PSASVCRR EQUOVR ,,b,PSASUP2
+PSAACR   EQUOVR ,,b,PSASUP2
+PSARTM   EQUOVR ,,b,PSASUP2
+PSALCR   EQUOVR ,,b,PSASUP2
+.*
+.* PSASUP3 - THIRD BYTE OF PSASUPER
+PSAIOSUP EQUOVR ,,b,PSASUP3
+PSASPR   EQUOVR ,,b,PSASUP3
+PSAESTA  EQUOVR ,,b,PSASUP3
+PSARSM   EQUOVR ,,b,PSASUP3
+PSAULCMS EQUOVR ,,b,PSASUP3
+PSASLIP  EQUOVR ,,b,PSASUP3
+.*
+.* PSASUP4 - FOURTH BYTE OF PSASUPER
+PSALDWT  EQUOVR ,,b,PSASUP4
+PSASMF   EQUOVR ,,b,PSASUP4
+PSAESAR  EQUOVR ,,b,PSASUP4
+.*
+.* PSAPTYPE - PROCESSOR TYPE INDICATOR
+PSAAXP   EQUOVR ,,b,PSAPTYPE
+.*
+.* PSAILS - INTERRUPT HANDLER LINKAGE STACK INDICATORS.
+PSAILSIO EQUOVR ,,b,PSAILS
+PSAILSEX EQUOVR ,,b,PSAILS
+PSAILSPC EQUOVR ,,b,PSAILS
+PSAILSDS EQUOVR ,,b,PSAILS
+PSAILSRS EQUOVR ,,b,PSAILS
+PSAILSOR EQUOVR ,,b,PSAILS
+PSAILST6 EQUOVR ,,b,PSAILS
+PSAILSLK EQUOVR ,,b,PSAILS
+.*
+.* PSAFLAGS - SYSTEM FLAGS
+PSAAEIT  EQUOVR ,,b,PSAFLAGS
+.*
+.* PSAMPSW - SETLOCK MODEL PSW
+PSAPIOM  EQUOVR ,,b,PSAMPSW+1
+PSAPEXM  EQUOVR ,,b,PSAMPSW+1
+.*
+.* PSARSML - RSM GLOBAL FUNCTION/RECOVERY
+PSARSMEX EQUOVR ,,b,PSARSML
+.*
+.* PSATRCEL - TRACE BUFFER MANAGEMENT LOCK
+PSATRCEX EQUOVR ,,b,PSATRCEL
+.*
+.* PSAIOSL - IOS LOCK
+PSAIOSEX EQUOVR ,,b,PSAIOSL
+.*
+.* PSACLHS1 - FIRST BYTE OF PSACLHS. (MDC384)
+PSACPULI EQUOVR ,,b,PSACLHS1
+PSASUM   EQUOVR ,,b,PSACLHS1
+PSARSMLI EQUOVR ,,b,PSACLHS1
+PSATRCEI EQUOVR ,,b,PSACLHS1
+PSAIOSI  EQUOVR ,,b,PSACLHS1
+.*
+.* PSACLHS2 - SECOND BYTE OF PSACLHS. (MDC385)
+PSARSMCI EQUOVR ,,b,PSACLHS2
+PSARSMGI EQUOVR ,,b,PSACLHS2
+PSAVFIXI EQUOVR ,,b,PSACLHS2
+PSAASMGI EQUOVR ,,b,PSACLHS2
+PSARSMSI EQUOVR ,,b,PSACLHS2
+.*
+.* PSACLHS3 - THIRD BYTE OF PSACLHS  (MDC386)
+PSARSMXI EQUOVR ,,b,PSACLHS3
+PSARSMAI EQUOVR ,,b,PSACLHS3
+PSAVPAGI EQUOVR ,,b,PSACLHS3
+PSADSPLI EQUOVR ,,b,PSACLHS3
+PSAASMLI EQUOVR ,,b,PSACLHS3
+PSASALLI EQUOVR ,,b,PSACLHS3
+PSAIOSLI EQUOVR ,,b,PSACLHS3
+PSARSMDI EQUOVR ,,b,PSACLHS3
+.*
+.* PSACLHS4 - FOURTH BYTE OF PSACLHS  (MDC392)
+PSAIOULI EQUOVR ,,b,PSACLHS3
+PSATPALI EQUOVR ,,b,PSACLHS3
+PSASRMLI EQUOVR ,,b,PSACLHS3
+PSACMSLI EQUOVR ,,b,PSACLHS3
+PSALCLLI EQUOVR ,,b,PSACLHS3
+.*
+.* PSAINTE - FLAGS FOR CPU TIMER  (MDC466)
+PSANUIN  EQUOVR ,,b,PSAINTE
+.*
+.* PSAPCFB1 - FUNCTION VALUE  (MDC484)
+PSAPCMC  EQUOVR ,,v,PSAPCFB1
+PSAPCPF  EQUOVR ,,v,PSAPCFB1
+PSAPCPS  EQUOVR ,,v,PSAPCFB1
+PSAPCAD  EQUOVR ,,v,PSAPCFB1
+PSAPCTR  EQUOVR ,,v,PSAPCFB1
+PSAPCPC  EQUOVR ,,v,PSAPCFB1
+PSAPCTRC EQUOVR ,,v,PSAPCFB1
+PSAPCAF  EQUOVR ,,v,PSAPCFB1
+PSAPCLS  EQUOVR ,,v,PSAPCFB1
+PSAPCART EQUOVR ,,v,PSAPCFB1
+PSAPCDPF EQUOVR ,,v,PSAPCFB1
+PSAPCDAR EQUOVR ,,v,PSAPCFB1
+PSAPCPRT EQUOVR ,,v,PSAPCFB1
+PSAPCMAX EQUOVR ,,v,PSAPCFB1
+.*
+.* PSAPCFB2 - FUNCTION FLAGS  (MDC491)
+PSAPCTRR EQUOVR ,,b,PSAPCFB2
+PSAPCMT  EQUOVR ,,b,PSAPCFB2
+.*
+.* PSAPCFB3 - RECURSION FLAGS  (MDC494)
+PSAPCP1  EQUOVR ,,b,PSAPCFB3
+PSAPCP2  EQUOVR ,,b,PSAPCFB3
+PSAPCDE  EQUOVR ,,b,PSAPCFB3
+PSAPCLV  EQUOVR ,,b,PSAPCFB3
+PSAPCP3  EQUOVR ,,b,PSAPCFB3
+PSAPCP4  EQUOVR ,,b,PSAPCFB3
+PSAPCPFR EQUOVR ,,b,PSAPCFB3
+PSAPCAVR EQUOVR ,,b,PSAPCFB3
+.*
+.* PSAPCFB4 - RECURSION FLAGS
+PSAPCDNV EQUOVR ,,b,PSAPCFB4
+PSAPCLSR EQUOVR ,,b,PSAPCFB4
+.*
+.* PSAMFLGS - SECOND BYTE OF PSAMODEW (MDC604)
+PSANSS   EQUOVR ,,b,PSAMFLGS
+PSAPRSRB EQUOVR ,,b,PSAMFLGS
+.*
+.* PSAMODE - SYSTEM MODE INDICATOR
+PSATASKM EQUOVR ,,v,PSAMODE
+PSASRBM  EQUOVR ,,b,PSAMODE
+PSAWAITM EQUOVR ,,b,PSAMODE
+PSADISPM EQUOVR ,,b,PSAMODE
+PSAPSRBM EQUOVR ,,b,PSAMODE
+.*
+.* PSALHEB0 - BYTE 0 OF THE CURRENT LOCK HELD
+PSABLSDI EQUOVR ,,b,PSALHEB0
+PSAXDSI  EQUOVR ,,b,PSALHEB0
+PSAXRESI EQUOVR ,,b,PSALHEB0
+PSAXQI   EQUOVR ,,b,PSALHEB0
+PSAESETI EQUOVR ,,b,PSALHEB0
+PSAIXSCI EQUOVR ,,b,PSALHEB0
+PSAIXSHI EQUOVR ,,b,PSALHEB0
+PSAIXDSI EQUOVR ,,b,PSALHEB0
+.*
+.* PSALHEB1 - BYTE 1 OF THE CURRENT LOCK HELD
+PSAIXLLI EQUOVR ,,b,PSALHEB1
+PSAULUTI EQUOVR ,,b,PSALHEB1
+PSAIXLRI EQUOVR ,,b,PSALHEB1
+PSAWLMRI EQUOVR ,,b,PSALHEB1
+PSAWLMQI EQUOVR ,,b,PSALHEB1
+PSACNTXI EQUOVR ,,b,PSALHEB1
+PSAREGSI EQUOVR ,,b,PSALHEB1
+.*
+.* PSACR0CB - CR0 CONTROL BYTE USED BY PROTPSA MACRO
+PSAENABL EQUOVR ,,b,PSACR0CB
+PSADSABL EQUOVR ,,v,PSACR0CB
+.*
+.* PSACR0SV - CR0 SAVE AREA USED BY PROTPSA MACRO
+PSACR0EN EQUOVR ,,b,PSACR0SV
+PSACR0FP EQUOVR ,,b,PSACR0SV
+PSACR0VI EQUOVR ,,b,PSACR0SV
+.*
+.* PSARCR0 - RESTART FLIH CR0 SAVE AREA
+PSARPEN  EQUOVR ,,b,PSARCR0
+.*
+.* PSASCFB - SUPERVISOR CONTROL FLAG BYTE.
+PSAIOPR  EQUOVR ,,b,PSASCFB
+PSAIORTY EQUOVR ,,b,PSASCFB
+.*
+.* PSATRACE - SYSTEM TRACE FLAGS.
+PSATROFF EQUOVR ,,b,PSATRACE
+.*
+.* PSASFLGS - Schedule flags
+PSASCHDA EQUOVR ,,b,PSASFLGS
+PSAMCHA  EQUOVR ,,b,PSASFLGS
+PSARSTA  EQUOVR ,,b,PSASFLGS
+PSAEGRA  EQUOVR ,,b,PSASFLGS
+PSARTMA  EQUOVR ,,b,PSASFLGS
+.*
+         MNOTE *,'Including IHAPSA mapping macro'
+         IHAPSA DSECT=YES,             * Generate as a DSECT           *
+               LIST=YES                * with unchanged PRINT-settings
+         EQUOVR *END
+*
+         ORG
+PSA_LEN  EQU   *-PSA                   * Length of PSA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

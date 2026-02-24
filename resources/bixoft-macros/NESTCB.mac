@@ -1,0 +1,147 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro creates a nested control block within another one
+.*
+&LABEL   NESTCB &CB,                   * Nested control block id       *
+               &TYPE,                  * Type - defaults to hex        *
+               &PRFX,                  * Prefix to use if label blank  *
+               &INIT=,                 * Initialization value          *
+               &LEN=                   * Length in parentheses
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC NESTCB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_LABEL                 *
+         LCLC  &_INIT                  *
+         LCLC  &_LEN                   * Length as a modifier
+         LCLA  &I                      *
+.*
+.* Check the CB parameter
+         AIF   (K'&CB GT 0).NOERR1
+.ERR1    MNOTE 8,'CB parameter omitted'
+.NOERR1  ANOP
+.*
+.* Check the TYPE parameter
+         AIF   ('&TYPE' EQ 'X').NOERR2
+         AIF   ('&TYPE' EQ 'C').NOERR2
+         AIF   ('&TYPE' EQ 'F').NOERR2
+         AIF   ('&TYPE' EQ 'H').NOERR2
+         AIF   ('&TYPE' EQ 'D').NOERR2
+         AIF   ('&TYPE' EQ 'B').NOERR2
+.ERR2    MNOTE 8,'Type parameter specifies invalid literal type'
+.NOERR2  ANOP
+.*
+.* Prefix and label must not both be omitted
+         AIF   (K'&LABEL GT 0).NOERR3
+         AIF   (K'&PRFX GT 0).NOERR3
+.ERR3    MNOTE 8,'Label is blank and prefix is omitted'
+.NOERR3  ANOP
+.*
+.* Check the LEN parameter
+         AIF   (K'&LEN EQ 0).NOERR4
+         AIF   (K'&LEN LT 3).ERR4
+         AIF   ('&LEN'(1,1) NE '(').ERR4
+         AIF   ('&LEN'(K'&LEN,1) NE ')').ERR4
+         AGO   .NOERR4
+.ERR4    MNOTE 8,'LEN parameter not specified in parentheses'
+.NOERR4  ANOP
+.*
+.* Decide which label to generate
+&_LABEL  SETC  '&LABEL'
+         AIF   (K'&_LABEL NE 0).LABELOK
+&_LABEL  SETC  '&PRFX'.'&CB'
+.LABELOK ANOP
+.*
+.* Extract correct length value
+&_LEN    SETC  '&LEN'
+         AIF   (K'&_LEN NE 0).LENOK
+&_LEN    SETC  '(&CB._LEN)'
+.LENOK   ANOP
+&_LEN    SETC  'L&_LEN'                * Add L for length modifier
+.*
+.* DSECT requires DS, CSECT or RSECT requires DC
+         AIF   ('&SYSSTYP' EQ 'DSECT').GENDS
+         AIF   ('&SYSSTYP' EQ 'CSECT').GENDC
+         AIF   ('&SYSSTYP' EQ 'RSECT').GENDC
+         MNOTE 12,'Internal error &&SYSSTYP=&SYSSTYP'
+         MEXIT ,
+.*
+.* Generate a DS statement
+.GENDS   ANOP  ,                       *
+&_LABEL  DS    &TYPE.&_LEN             *
+         MEXIT ,                       *
+.*
+.* Generate a DC with appropriate initialization
+.GENDC   ANOP  ,                       *
+&_INIT   SETC  '&INIT'                 *
+         AIF   (K'&_INIT NE 0).INITOK  *
+&_INIT   SETC  '00'                    *
+         AIF   ('&TYPE' NE 'C').INITOK *
+&_INIT   SETC  ' '                     *
+.INITOK  ANOP  ,                       *
+.*
+.* Check the init string format
+         AIF   ('&_INIT'(1,1) EQ '''').INITOK2
+&_INIT   SETC  (DOUBLE '&_INIT')       *
+&_INIT   SETC  ''''.'&_INIT'.''''      *
+.INITOK2 ANOP  ,                       *
+&_LABEL  DC    &TYPE.&_LEN.&_INIT      *
+.*
+.MEND    MEND

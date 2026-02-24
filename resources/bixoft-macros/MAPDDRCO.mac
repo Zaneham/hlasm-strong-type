@@ -1,0 +1,264 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the IOS Dynamic Device Reconfiguration COMmunication
+.*                     table
+.*
+&LABEL   MAPDDRCO &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDDRCO               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDDRCO       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DDRCOM').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDDRCO).MEND
+&BXA_MAC_MAPDDRCO SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DDRCOM
+&BXA_CB_DDRCOM SETC 'DDRCO'
+.*
+.* DDRSRC - SOURCE OF DDR REQUEST
+DDROPER   EQUOVR ,,b,DDRSRC
+DDRSYS    EQUOVR ,,b,DDRSRC
+DDRPAGE   EQUOVR ,,b,DDRSRC
+.*
+.* DDRSTAT - REQUEST STATUS
+DDRACTV   EQUOVR ,,b,DDRSTAT
+DDRQUE    EQUOVR ,,b,DDRSTAT
+DDRHAMA   EQUOVR ,,b,DDRSTAT
+DDRRMV    EQUOVR ,,b,DDRSTAT
+DDRPRG    EQUOVR ,,b,DDRSTAT
+DDRSIRB   EQUOVR ,,b,DDRSTAT
+DDRBYPTM  EQUOVR ,,b,DDRSTAT
+.*
+.* DDRDSTAT - DEVICE TYPE AND FLAGS
+DDRBUFL   EQUOVR ,,b,DDRDSTAT
+DDRDA     EQUOVR ,,b,DDRDSTAT
+DDRMT     EQUOVR ,,b,DDRDSTAT
+DDRUR     EQUOVR ,,b,DDRDSTAT
+DDRRCYLE  EQUOVR ,,b,DDRDSTAT
+DDRTRPOS  EQUOVR ,,b,DDRDSTAT
+DDRMTEND  EQUOVR ,,b,DDRDSTAT
+.*
+.* DDRROWN - REQUEST RESOURCES
+DDRRTENQ  EQUOVR ,,b,DDRROWN
+DDRRUENQ  EQUOVR ,,b,DDRROWN
+DDRRDENQ  EQUOVR ,,b,DDRROWN
+DDRRYENQ  EQUOVR ,,b,DDRROWN
+DDRDEN    EQUOVR ,,b,DDRROWN
+DDRJES3L  EQUOVR ,,b,DDRROWN
+DDRFIRST  EQUOVR ,,b,DDRROWN
+.*
+.* DDRTER1 - TERMINATION REASON CODE
+DDRTNF    EQUOVR ,,v,DDRTER1
+DDRTEP    EQUOVR ,,v,DDRTER1
+DDRTOC    EQUOVR ,,v,DDRTER1
+DDRTBR    EQUOVR ,,v,DDRTER1
+DDRTCO    EQUOVR ,,v,DDRTER1
+DDRTIU    EQUOVR ,,v,DDRTER1
+DDRTCE    EQUOVR ,,v,DDRTER1
+DDRTID    EQUOVR ,,v,DDRTER1
+DDRTCU    EQUOVR ,,v,DDRTER1
+DDRTJE    EQUOVR ,,v,DDRTER1
+DDRTEXC   EQUOVR ,,v,DDRTER1
+DDRTAIP   EQUOVR ,,v,DDRTER1
+DDRTREP   EQUOVR ,,v,DDRTER1
+DDRTRD    EQUOVR ,,v,DDRTER1
+DDRTRR    EQUOVR ,,v,DDRTER1
+DDRTLF    EQUOVR ,,v,DDRTER1
+DDRTIOA   EQUOVR ,,v,DDRTER1
+DDRTMSG   EQUOVR ,,v,DDRTER1
+.*
+.* DDRINV1 - INVALID REASON CODE
+DDRIMP    EQUOVR ,,v,DDRINV1
+DDRIUF    EQUOVR ,,v,DDRINV1
+DDRINS    EQUOVR ,,v,DDRINV1
+DDRIIN    EQUOVR ,,v,DDRINV1
+DDRINO    EQUOVR ,,v,DDRINV1
+DDRINA    EQUOVR ,,v,DDRINV1
+DDRIDT    EQUOVR ,,v,DDRINV1
+DDRIJ3    EQUOVR ,,v,DDRINV1
+DDRIONL   EQUOVR ,,v,DDRINV1
+DDRIDYST  EQUOVR ,,v,DDRINV1
+DDRIVOLI  EQUOVR ,,v,DDRINV1
+DDRIIOA   EQUOVR ,,v,DDRINV1
+DDRIOPD   EQUOVR ,,v,DDRINV1
+DDRIPAG   EQUOVR ,,v,DDRINV1
+.*
+.* DDRINV2 - VALIDATE'S PARM FIELD
+DDRVFM    EQUOVR ,,v,DDRINV2
+DDRVCM    EQUOVR ,,v,DDRINV2
+DDRVUS    EQUOVR ,,v,DDRINV2
+.*
+.* DDRIOF1 - I/O PARM FLAGS FIELD 1
+DDRREAD   EQUOVR ,,v,DDRIOF1
+DDRRUN    EQUOVR ,,v,DDRIOF1
+DDRRDBK   EQUOVR ,,v,DDRIOF1
+DDRXA4    EQUOVR ,,v,DDRIOF1
+DDRBSF    EQUOVR ,,v,DDRIOF1
+DDRFSF    EQUOVR ,,v,DDRIOF1
+DDRNOP    EQUOVR ,,v,DDRIOF1
+DDRSNS    EQUOVR ,,v,DDRIOF1
+DDRLOAD   EQUOVR ,,v,DDRIOF1
+.*
+.* DDRIOF2 - I/O PARM FLAGS FIELD 2
+DDRWHICH  EQUOVR ,,b,DDRIOF2
+DDRITAKE  EQUOVR ,,b,DDRIOF2
+DDRILAB   EQUOVR ,,b,DDRIOF2
+DDRIMNT   EQUOVR ,,b,DDRIOF2
+DDRICNT   EQUOVR ,,b,DDRIOF2
+DDRTCNTL  EQUOVR ,,b,DDRIOF2
+.*
+.* DDRMSGOP - OPERATOR RESPONSE
+DDRWTOR   EQUOVR ,,v,DDRMSGOP
+DDRYES    EQUOVR ,,v,DDRMSGOP
+DDRNO     EQUOVR ,,v,DDRMSGOP
+DDRCUA    EQUOVR ,,v,DDRMSGOP
+.*
+.* DDRMSGCD - MESSAGE NUMBER CODE
+DDRM500I  EQUOVR ,,v,DDRMSGCD
+DDRM500D  EQUOVR ,,v,DDRMSGCD
+DDRM502E  EQUOVR ,,v,DDRMSGCD
+DDRM503I  EQUOVR ,,v,DDRMSGCD
+DDRM505I  EQUOVR ,,v,DDRMSGCD
+DDRM509I  EQUOVR ,,v,DDRMSGCD
+DDRM509D  EQUOVR ,,v,DDRMSGCD
+DDRM511A  EQUOVR ,,v,DDRMSGCD
+DDRM512I  EQUOVR ,,v,DDRMSGCD
+DDRM513I  EQUOVR ,,v,DDRMSGCD
+DDRM515I  EQUOVR ,,v,DDRMSGCD
+DDRM514I  EQUOVR ,,v,DDRMSGCD
+DDRM501I  EQUOVR ,,v,DDRMSGCD
+DDRM516I  EQUOVR ,,v,DDRMSGCD
+DDRM517I  EQUOVR ,,v,DDRMSGCD
+DDRM518I  EQUOVR ,,v,DDRMSGCD
+DDRM519I  EQUOVR ,,v,DDRMSGCD
+.*
+.* DDRMSGPC - (0-7) MESSAGE CODES
+DDRPNO    EQUOVR ,,v,DDRMSGPC
+DDRPFM    EQUOVR ,,v,DDRMSGPC
+DDRPTO    EQUOVR ,,v,DDRMSGPC
+DDRPVL    EQUOVR ,,v,DDRMSGPC
+DDRPLT    EQUOVR ,,v,DDRMSGPC
+DDRPSN    EQUOVR ,,v,DDRMSGPC
+DDRPTM    EQUOVR ,,v,DDRMSGPC
+DDRLIB    EQUOVR ,,v,DDRMSGPC
+DDRPIC    EQUOVR ,,v,DDRMSGPC
+DDRPDV    EQUOVR ,,v,DDRMSGPC
+DDRPRC    EQUOVR ,,v,DDRMSGPC
+.*
+.* DDRLABEL - TAPE FROM LABEL TYPE
+DDRLAL    EQUOVR ,,b,DDRLABEL
+DDRLBLP   EQUOVR ,,b,DDRLABEL
+DDRLNL    EQUOVR ,,b,DDRLABEL
+DDRLNSL   EQUOVR ,,b,DDRLABEL
+DDRLSD    EQUOVR ,,b,DDRLABEL
+DDRLNOP   EQUOVR ,,b,DDRLABEL
+.*
+.* DDRREC1 - RECORDER FLAGS
+DDRRECON  EQUOVR ,,v,DDRREC1
+DDRR91    EQUOVR ,,v,DDRREC1
+DDRRBLF   EQUOVR ,,v,DDRREC1
+.*
+.* DDRREC2 - RECORDER PARM LIST
+DDRRFMTO  EQUOVR ,,b,DDRREC2
+.*
+.* DDRFLAGS - MISC FLAGS
+DDRINTER  EQUOVR ,,b,DDRFLAGS
+DDRIOA    EQUOVR ,,b,DDRFLAGS
+.*
+.* DDRFTPT3 - THIRD FOOTPRINT BYTE
+DDRDW0IN  EQUOVR ,,b,DDRFTPT3
+DDRIOSIN  EQUOVR ,,b,DDRFTPT3
+DDRIOSOT  EQUOVR ,,b,DDRFTPT3
+DDRJES3C  EQUOVR ,,b,DDRFTPT3
+DDRSCHED  EQUOVR ,,b,DDRFTPT3
+.*
+         MNOTE *,'Including IHADDR mapping macro'
+         IHADDR ,                      *
+         EQUOVR *END
+*
+DDRCOM   DSECT ,                       * Return to DDRCOM
+         ORG
+DDRCOM_LEN EQU *-DDRCOM                * Length of DDRCOM
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,138 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro checks if the argument given is a register
+.*
+.* &BXA_RC will contain 0 if &REG is an EQUated register
+.* &BXA_RC will contain 4 if &REG is a valid number 0-15
+.* &BXA_RC will contain 8 if &REG is not a valid register
+.* &BXA_NUMVAL will contain the register number if &BXA_RC is 0 or 4
+.*
+         CHKREG &REG,                  * Value to be tested            *
+               &TYPE                   * Type of register required
+.*
+.* &REG   Name or number to be tested for valid register number
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CHKREG                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_NUMVAL             * Register number
+         LCLA  &I
+.*
+.* Check the TYPE parameter
+         AIF   (K'&TYPE EQ 0).NOERR1
+         AIF   ('&TYPE' EQ 'g').NOERR1
+         AIF   ('&TYPE' EQ 'a').NOERR1
+         AIF   ('&TYPE' EQ 'f').NOERR1
+         AIF   ('&TYPE' EQ 'c').NOERR1
+.ERR1A   MNOTE 8,'TYPE of register must be g, a, f, or c'
+.NOERR1  ANOP
+.*
+.* To be a valid register, &REG must either be a literal number
+.* or an EQUated register. The former must be tested explicitly,
+.* the latter can be tested against the register type tables.
+         AIF   (K'&REG EQ 0).RETURN8   * No register: invalid
+&I       SETA  ('&REG' FIND '+-*/(.,)') * Complex or simple expression?
+         AIF   (&I GT 0).RETURN8       * Not a simple expression
+&I       SETA  ('&REG' FIND '''')      * Contains a quote?
+         AIF   (&I GT 0).LITERAL       * Yes, must be a literal
+&I       SETA  ('0123456789' FIND '&REG'(1,1)) * Decimal constant?
+         AIF   (&I GT 0).LITERAL       * Yes, must be a literal
+.*
+.* REG is a valid EQU-name. Check its type.
+         GBLC  &(BXA_REGT_&REG)        * Declare type field of &REG
+         AIF   ('&(BXA_REGT_&REG)' EQ '').RETURN8 * Not a register
+         AIF   (K'&TYPE EQ 0).RETURN0  * No explicit type: return ok
+         AIF   ('&(BXA_REGT_&REG)' EQ '&TYPE').RETURN0 * Type ok
+         AGO   .RETURN8                * Register is of wrong type
+.*
+.* &reg appears to be a literal. Check whether it designates a valid
+.* register between 0 and 15. (0, 2, 4, or 6 for floating point reg.)
+.LITERAL ANOP  ,                       *
+         CHKLIT &REG                   * Valid literal?
+         AIF   (&BXA_RC NE 0).RETURN8  * No invalid
+         AIF   (&BXA_NUMVAL LT 0).RETURN8 * Negative regs dont exist
+         AIF   (&BXA_NUMVAL GT 15).RETURN8 * 15 is max register number
+         AIF   ('&TYPE' NE 'f').RETURN4 * This is a valid register
+         AIF   (&BXA_NUMVAL EQ 0).RETURN4 * Check that this is an
+         AIF   (&BXA_NUMVAL EQ 2).RETURN4 *   existing floating point
+         AIF   (&BXA_NUMVAL EQ 4).RETURN4 *   register number.
+         AIF   (&BXA_NUMVAL EQ 6).RETURN4 *
+         AGO   .RETURN8                * Return invalid
+.*
+.* Register specified is not a valid register
+.RETURN8 ANOP
+&BXA_NUMVAL SETA 0                     * No valid register
+&BXA_RC  SETA 8                        * Return error
+         MEXIT
+.*
+.* Register specified is a numeric literal number 0-15
+.* &BXA_NUMVAL already contains the register number
+.RETURN4 ANOP
+&BXA_RC  SETA 4                        * Return warning
+         MEXIT
+.*
+.* Register specified is a declared register (of any type)
+.RETURN0 ANOP
+         GBLA  &(BXA_REGN_&REG)        * Declare type field of &REG
+&BXA_NUMVAL SETA &(BXA_REGN_&REG)      * Return register number
+&BXA_RC  SETA 0
+.*
+.MEND    MEND

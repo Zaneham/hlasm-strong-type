@@ -1,0 +1,116 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro creates the DROP_REG macro
+.*
+         DROP0 ,                       *
+.*
+.* Declare variables
+         GBLB  &BXA_DROP               * Macro expanded before?
+.*
+.* Include DROP_REG on first invocation
+         AIF   (&BXA_DROP).MEND
+&BXA_DROP SETB 1
+         PUSH  PRINT,NOPRINT
+         PRINT OFF,NOPRINT
+.*
+.* Following macro removes a single entry from the
+.* &BXA_USELBL, &BXA_USEREG, and &BXA_USEFLD tables
+         MACRO
+         DROP_REG &LAB,&NDX,&I=0
+.*
+.* &LAB is label to search/remove
+.* &NDX is register index to search/remove
+.* &I   is index in BXA_USE... tables
+.* Returncode will be set as follows:
+.* 0 - all information removed, no register USE
+.* 4 - information removed for a register USE
+.* 8 - no found: no information removed
+.*
+         GBLC  &BXA_USELBL(50)         * Used labels ...
+         GBLA  &BXA_USEREG(50)         *   and associated registers
+         GBLC  &BXA_USEFLD(50)         *   and associated base fields
+         GBLA  &BXA_USENDX0(5)         * Low valid pointers
+         GBLA  &BXA_USENDX1(5)         * High valid pointers
+         GBLA  &BXA_USENDX             * Pointer for USENDX0/USENDX1
+         GBLA  &BXA_RC                 * returncode
+         LCLA  &N                      * Index for BXA_USE...
+         LCLA  &R                      * Register index value
+         LCLC  &REG                    * Register
+.*
+.* If index not specified: find entry for register specified
+.* Skip any entry for USING PSA,R0 (doesnt use reg & cannot be dropped)
+&N       SETA  &I
+         AIF   (&N GT 0).LOOP1OK
+.LOOP1   ANOP  ,
+&N       SETA  &N+1
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP1NF
+         AIF   ('&BXA_USELBL(&N)' NE '&LAB').LOOP1
+         AIF   (&BXA_USEREG(&N) NE &NDX).LOOP1
+         AIF   (&NDX EQ 1 AND '&BXA_USEFLD(&N)' EQ 'PSA').LOOP1
+         AGO   .LOOP1OK
+.LOOP1NF ANOP
+&N       SETA  &NDX-1                  * Obtain register number
+&REG     SETC  'R&N'
+         MNOTE 8,'No unlabeled USING active for &REG'
+&BXA_RC  SETA  8
+         MEXIT
+.*
+.LOOP1OK ANOP  ,                       * &N now points removable entry
+.* Determine returncode value before removing entry: 0 or 4
+&BXA_RC  SETA  0                       * Found entry: rc=0
+         AIF   ('&BXA_USEFLD(&N)' NE '').RCOK * Except for:
+&BXA_RC  SETA  4                       * Register USE: rc=4
+.RCOK    ANOP
+.* Overwrite entry with current last in table, then remove last
+&R       SETA  &BXA_USENDX1(&BXA_USENDX) * Point last entry
+         AIF   (&N EQ &R).NOCOPY       * Copy to self not useful
+&BXA_USELBL(&N) SETC '&BXA_USELBL(&R)' * Copy label
+&BXA_USEREG(&N) SETA &BXA_USEREG(&R)   * Copy register
+&BXA_USEFLD(&N) SETC '&BXA_USEFLD(&R)' * Copy base field/location
+.NOCOPY  ANOP  ,                       * Copy done
+&BXA_USENDX1(&BXA_USENDX) SETA &R-1    * Decrement last valid
+.*
+.MEND    MEND
+         POP   PRINT,NOPRINT
+.*
+.MEND    MEND

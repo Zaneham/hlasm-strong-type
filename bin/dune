@@ -1,0 +1,3 @@
+(executable
+ (name main)
+ (libraries hlasm_lsp lsp jsonrpc yojson))

@@ -1,0 +1,132 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for DAE Event NotiFication parameter list
+.*
+&LABEL   MAPADYEN &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPADYEN               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPADYEN       * Map has been generated?
+         GBLC  &BXA_PGM_TITLE          * Title for the listing
+         GBLB  &SP_SHOWALL             * Show all statements?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ADYENF').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPADYEN).MEND
+&BXA_MAC_MAPADYEN SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ADYENF
+&BXA_CB_ADYENF SETC 'ADYEN'
+.*
+.* ADYENFACRONYM - Eyecatcher C'ENFD'
+.* ADYENFEYECATCHER EQUOVR ,,v,ADYENFACRONYM * Value exceeds X'FFFF'
+.*
+.* ADYENFVERSION - Version (1,2,3...)
+ADYENFVERSION1       EQUOVR ,,v,ADYENFVERSION
+ADYENFVERSIONCURRENT EQUOVR ,,v,ADYENFVERSION
+.*
+.* ADYENFRECTYPE - Function code, listed below.
+ADYENFRECTYPETHRESHOLD EQUOVR ,,v,ADYENFRECTYPE
+.*
+.* ADYENFFLAGS - Flags
+ADYENFFLAGSTRUNCATED EQUOVR ,,b,ADYENFFLAGS
+.*
+.* ADYENFSYMPTOMSTRINGLEN - Symptom String length
+ADYENFMAXSYMPTOMSTRING EQUOVR ,,v,ADYENFSYMPTOMSTRINGLEN
+.*
+         MNOTE *,'Including ADYENF mapping macro'
+         ADYENF ,
+.*
+ADYENF   DSECT ,                       * Resume ADYENF DSECT
+         ORG   ,                       *
+* ADYENF_LEN EQU *-ADYENF              * Size defined in ADYENF macro
+.*
+.* Return to our original CSECT name
+.* Since ADYENF changes the listing's title: reset title too
+&SYSECT  &SYSSTYP
+         TITLE '&BXA_PGM_TITLE'
+         AIF   (&SP_SHOWALL).TITLE
+.* Generate comment line in stead of a MNOTE line
+*
+         AGO   .TITLEOK
+.TITLE   ANOP
+         MNOTE *,'Previous STMT: TITLE ''&BXA_PGM_TITLE'''
+.TITLEOK ANOP
+.*
+.MEND    MEND

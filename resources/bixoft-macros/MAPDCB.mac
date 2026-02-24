@@ -1,0 +1,798 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Control Block
+.* The DCB must be located below 16M
+.*
+&LABEL   MAPDCB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDCB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDCB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'BDW').EMBED
+         AIF   ('&CB' EQ 'DCB').EMBED
+         AIF   ('&CB' EQ 'RDW').EMBED
+         AIF   ('&CB' EQ 'SDW').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDCB).MEND
+&BXA_MAC_MAPDCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_BDW
+         GBLC  &BXA_CB_DCB
+         GBLC  &BXA_CB_RDW
+         GBLC  &BXA_CB_SDW
+&BXA_CB_BDW SETC 'DCB'
+&BXA_CB_DCB SETC 'DCB'
+&BXA_CB_RDW SETC 'DCB'
+&BXA_CB_SDW SETC 'DCB'
+.*
+.* To be able to refer to DCBDEVT on overridden EQU statements, the
+.* field must be defined prior to the assignment of code-values to
+.* EQUated symbols. The following DSOVR statements move its
+.* definition to an appropriate place.
+DCBDVTBA+2 DSOVR *NEWNAME,DCBDEVT      * Name second unlabeled DS after*
+                                       * the DCBDVTBA label
+DCBDEVT  DSOVR *NEWNAME,*NONAME        * Remove label from the original*
+                                       * DCBDEVT-defining statement
+.*
+.* Declare code-values for device types
+DCBDV311 EQUOVR ,,v,DCBDEVT
+DCBDV301 EQUOVR ,,v,DCBDEVT
+DCBDV303 EQUOVR ,,v,DCBDEVT
+DCBDV345 EQUOVR ,,v,DCBDEVT
+DCBDV321 EQUOVR ,,v,DCBDEVT
+DCBD1305 EQUOVR ,,v,DCBDEVT
+DCBDV305 EQUOVR ,,v,DCBDEVT
+DCBDV314 EQUOVR ,,v,DCBDEVT
+DCBDV330 EQUOVR ,,v,DCBDEVT
+DCBDV340 EQUOVR ,,v,DCBDEVT
+DCBDV350 EQUOVR ,,v,DCBDEVT
+DCBDV375 EQUOVR ,,v,DCBDEVT
+DCBDV331 EQUOVR ,,v,DCBDEVT
+DCBDV380 EQUOVR ,,v,DCBDEVT
+DCBDV390 EQUOVR ,,v,DCBDEVT
+.*
+.* Declare code-values for tape recording technique
+DCBMTE   EQUOVR ,,v,DCBTRTCH
+DCBMTT   EQUOVR ,,v,DCBTRTCH
+DCBMTC   EQUOVR ,,v,DCBTRTCH
+DCBMTET  EQUOVR ,,v,DCBTRTCH
+DCBCMPAC EQUOVR ,,v,DCBTRTCH
+DCBNOPAC EQUOVR ,,v,DCBTRTCH
+.*
+.* Declare code-values for device types
+DCBDVMT  EQUOVR ,,v,DCBDEVT
+DCBDVMT2 EQUOVR ,,v,DCBDEVT
+DCBDVMT3 EQUOVR ,,v,DCBDEVT
+DCBDVMT4 EQUOVR ,,v,DCBDEVT
+.*
+.* Declare code-values for tape density
+DCBMTDN0 EQUOVR ,,v,DCBDEN
+DCBMTDN1 EQUOVR ,,v,DCBDEN
+DCBMTDN2 EQUOVR ,,v,DCBDEN
+DCBMTDN3 EQUOVR ,,v,DCBDEN
+DCBMTDN4 EQUOVR ,,v,DCBDEN
+.*
+.* Declare bit-fields for paper tape translate table
+DCBPTCDN EQUOVR ,,b,DCBCODE
+DCBPTCDI EQUOVR ,,b,DCBCODE
+DCBPTCDF EQUOVR ,,b,DCBCODE
+DCBPTCDB EQUOVR ,,b,DCBCODE
+DCBPTCDC EQUOVR ,,b,DCBCODE
+DCBPTCDA EQUOVR ,,b,DCBCODE
+DCBPTCDT EQUOVR ,,b,DCBCODE
+.*
+.* Declare code-values for device types
+DCBDVPTP EQUOVR ,,v,DCBDEVT
+.*
+.* Declare bit-fields for paper tape flags
+DCBPTIC  EQUOVR ,,b,DCBPTFLG
+DCBPTECT EQUOVR ,,b,DCBPTFLG
+DCBPTECR EQUOVR ,,b,DCBPTFLG
+DCBPTUCT EQUOVR ,,b,DCBPTFLG
+DCBPTERR EQUOVR ,,b,DCBPTFLG
+.*
+.* Declare code-values for printer spacing
+DCBPRSP0 EQUOVR ,,v,DCBPRTSP
+DCBPRSP1 EQUOVR ,,v,DCBPRTSP
+DCBPRSP2 EQUOVR ,,v,DCBPRTSP
+DCBPRSP3 EQUOVR ,,v,DCBPRTSP
+.*
+.* Declare code-values for device types
+DCBDVPR1 EQUOVR ,,v,DCBDEVT
+DCBDVPR2 EQUOVR ,,v,DCBDEVT
+DCBDVPR3 EQUOVR ,,v,DCBDEVT
+DCBDVPR4 EQUOVR ,,v,DCBDEVT
+DCBDVPRT EQUOVR ,,v,DCBDEVT
+DCBDVPR5 EQUOVR ,,v,DCBDEVT
+.*
+.* Declare code-values for printer overflow
+DCBPRC9  EQUOVR ,,v,DCBPRTOV
+DCBPRC12 EQUOVR ,,v,DCBPRTOV
+.*
+.* Declare bit-fields for printer byte
+DCBTRCID EQUOVR ,,b,DCBPRBYT
+.*
+.* Declare bit-fields for stacker select
+DCBMODEC EQUOVR ,,b,DCBSTACK
+DCBMODEE EQUOVR ,,b,DCBSTACK
+DCBMODEO EQUOVR ,,b,DCBSTACK
+DCBMODER EQUOVR ,,b,DCBSTACK
+DCBSTCK2 EQUOVR ,,b,DCBSTACK
+DCBSTCK1 EQUOVR ,,b,DCBSTACK
+.*
+.* Declare code-values for device types
+DCBDVCR0 EQUOVR ,,v,DCBDEVT
+DCBDVCP0 EQUOVR ,,v,DCBDEVT
+DCBDVCRP EQUOVR ,,v,DCBDEVT
+DCBDVCR1 EQUOVR ,,v,DCBDEVT
+DCBDVCPR EQUOVR ,,v,DCBDEVT
+DCBDVCR2 EQUOVR ,,v,DCBDEVT
+DCBDVCP1 EQUOVR ,,v,DCBDEVT
+.*
+.* Declare function indicator bits
+DCBFNCBI EQUOVR ,,b,DCBFUNC
+DCBFNCBR EQUOVR ,,b,DCBFUNC
+DCBFNCBP EQUOVR ,,b,DCBFUNC
+DCBFNCBW EQUOVR ,,b,DCBFUNC
+DCBFNCBD EQUOVR ,,b,DCBFUNC
+DCBFNCBX EQUOVR ,,b,DCBFUNC
+DCBFNCBT EQUOVR ,,b,DCBFUNC
+.*
+.* Declare bit-fields for WTT flags
+DCBBQWRU EQUOVR ,,b,DCBBQFLG
+DCBBQIAM EQUOVR ,,b,DCBBQFLG
+DCBBQWRS EQUOVR ,,b,DCBBQFLG
+DCBBQWRE EQUOVR ,,b,DCBBQFLG
+.*
+.* Declare bit-fields for optical reader flags
+DCBEOPFG EQUOVR ,,b,DCBORFLG
+.*
+.* Declare bit-fields for optical reader byte
+DCBORSYN EQUOVR ,,b,DCBORBYT
+DCBOREOF EQUOVR ,,b,DCBORBYT
+DCBORBFP EQUOVR ,,b,DCBORBYT
+.*
+.* Declare code-values for device types
+DCBDVOR5 EQUOVR ,,v,DCBDEVT
+DCBDVOR7 EQUOVR ,,v,DCBDEVT
+DCBDVOR8 EQUOVR ,,v,DCBDEVT
+DCBDVOR9 EQUOVR ,,v,DCBDEVT
+.*
+.* Declare error indicator bits
+DCBORNRM EQUOVR ,,b,DCBEIB
+DCBORREJ EQUOVR ,,b,DCBEIB
+DCBORERR EQUOVR ,,b,DCBEIB
+DCBORECK EQUOVR ,,b,DCBEIB
+DCBORWLR EQUOVR ,,b,DCBEIB
+DCBORHPR EQUOVR ,,b,DCBEIB
+DCBORDCK EQUOVR ,,b,DCBEIB
+.*
+.* Declare bit-fields for indicator and counter byte
+DCBMRDCT EQUOVR ,,b,DCBMRIND
+DCBMRSCU EQUOVR ,,b,DCBMRIND
+DCBMRPLO EQUOVR ,,b,DCBMRIND
+DCBMRPLS EQUOVR ,,b,DCBMRIND
+DCBMRERP EQUOVR ,,b,DCBMRIND
+DCBMRERS EQUOVR ,,b,DCBMRIND
+.*
+.* Declare bit-fields for magnetic reader flag byte
+DCBMRSCC EQUOVR ,,b,DCBMRFLG
+DCBMRDBG EQUOVR ,,b,DCBMRFLG
+DCBMRDRU EQUOVR ,,b,DCBMRFLG
+DCBMRDR  EQUOVR ,,b,DCBMRFLG
+DCBMRPCC EQUOVR ,,b,DCBMRFLG
+DCBMRDWT EQUOVR ,,b,DCBMRFLG
+DCBMRUE  EQUOVR ,,b,DCBMRFLG
+.*
+.* Declare code-values for device types
+DCBDVMR  EQUOVR ,,v,DCBDEVT
+DCBDVORS EQUOVR ,,v,DCBDEVT
+DCBDVMRS EQUOVR ,,v,DCBDEVT
+DCBDVDRI EQUOVR ,,v,DCBDEVT
+.*
+.* Declare code-values for device types
+DCBDVTRM EQUOVR ,,v,DCBDEVT
+.*
+.* Declare bit-fields for data set organisation
+DCBDSGIS EQUOVR ,,b,DCBDSRG1
+DCBDSGPS EQUOVR ,,b,DCBDSRG1
+DCBDSGDA EQUOVR ,,b,DCBDSRG1
+DCBDSGCX EQUOVR ,,b,DCBDSRG1
+DCBDSGPO EQUOVR ,,b,DCBDSRG1
+DCBDSGU  EQUOVR ,,b,DCBDSRG1
+.*
+DCBDSGGS EQUOVR ,,b,DCBDSRG2
+DCBDSGTX EQUOVR ,,b,DCBDSRG2
+DCBDSGTQ EQUOVR ,,b,DCBDSRG2
+DCBACBM  EQUOVR ,,b,DCBDSRG2
+DCBDSGTR EQUOVR ,,b,DCBDSRG2
+.*
+.* Declare bit fields for QSAM LRI update processing
+DCB1DVDS EQUOVR ,,b,DCBQSLM
+DCBUPDCM EQUOVR ,,b,DCBQSLM
+DCBUPDBT EQUOVR ,,b,DCBQSLM
+DCBUPDT  EQUOVR ,,b,DCBQSLM
+DCBNUPD  EQUOVR ,,b,DCBQSLM
+DCBSVDEB EQUOVR ,,b,DCBQSLM
+.*
+.* Declare hierarchy bit
+DCBH1    EQUOVR ,,b,DCBHIARC
+DCBH0    EQUOVR ,,b,DCBHIARC
+.*
+.* Declare bit-fields for buffering technique
+DCBBFT   EQUOVR ,,b,DCBBFTEK
+DCBBFTA  EQUOVR ,,b,DCBBFTEK
+DCBBFTR  EQUOVR ,,b,DCBBFTEK
+DCBBFTS  EQUOVR ,,b,DCBBFTEK
+DCBBFTKR EQUOVR ,,b,DCBBFTEK
+DCBBFTE  EQUOVR ,,b,DCBBFTEK
+DCBBFTKD EQUOVR ,,b,DCBBFTEK
+DCBBFTK  EQUOVR ,,b,DCBBFTEK
+DCBBXLRI EQUOVR ,,b,DCBBFTEK
+.*
+.* Declare bit-fields for buffering alignment
+DCBBFA   EQUOVR ,,b,DCBBFALN
+DCBBFAD  EQUOVR ,,b,DCBBFALN
+DCBBFAF1 EQUOVR ,,b,DCBBFALN
+DCBBFAF2 EQUOVR ,,b,DCBBFALN
+.*
+.* Declare bit-fields for record format
+DCBRECLA EQUOVR ,,b,DCBRECFM
+DCBRECD  EQUOVR ,,b,DCBRECFM
+DCBRECL  EQUOVR ,,b,DCBRECFM
+DCBRECF  EQUOVR ,,b,DCBRECFM
+DCBRECV  EQUOVR ,,b,DCBRECFM
+DCBRECU  EQUOVR ,,b,DCBRECFM
+DCBRECTO EQUOVR ,,b,DCBRECFM
+DCBRECBR EQUOVR ,,b,DCBRECFM
+DCBRECSB EQUOVR ,,b,DCBRECFM
+DCBRECCC EQUOVR ,,b,DCBRECFM
+DCBRECCA EQUOVR ,,b,DCBRECFM
+DCBRECCM EQUOVR ,,b,DCBRECFM
+DCBRECKL EQUOVR ,,b,DCBRECFM
+.*
+.* Declare bit-fields for error recording option
+DCBERPT  EQUOVR ,,b,DCBERROP
+DCBERPC  EQUOVR ,,b,DCBERROP
+DCBERPW  EQUOVR ,,b,DCBERROP
+DCBERPR  EQUOVR ,,b,DCBERROP
+DCBERPN  EQUOVR ,,b,DCBERROP
+.*
+.* Declare bits for program-controlled interruption handling
+DCBPCIX1 EQUOVR ,,b,DCBPCI
+DCBPCIX2 EQUOVR ,,b,DCBPCI
+DCBPCIA1 EQUOVR ,,b,DCBPCI
+DCBPCIA2 EQUOVR ,,b,DCBPCI
+DCBPCIN1 EQUOVR ,,b,DCBPCI
+DCBPCIN2 EQUOVR ,,b,DCBPCI
+DCBPCIR1 EQUOVR ,,b,DCBPCI
+DCBPCIR2 EQUOVR ,,b,DCBPCI
+.*
+.* Declare communication priority bits
+DCBCPR   EQUOVR ,,b,DCBCPRI
+DCBCPE   EQUOVR ,,b,DCBCPRI
+DCBCPS   EQUOVR ,,b,DCBCPRI
+.*
+.* Declare bit-fields for status byte
+DCBAUTOI EQUOVR ,,b,DCBTRSTA
+DCBAUTOD EQUOVR ,,b,DCBTRSTA
+DCBINITL EQUOVR ,,b,DCBTRSTA
+DCBRSTRT EQUOVR ,,b,DCBTRSTA
+DCBIPLED EQUOVR ,,b,DCBTRSTA
+DCBBAKUP EQUOVR ,,b,DCBTRSTA
+DCBNIDLE EQUOVR ,,b,DCBTRSTA
+DCBCHNGL EQUOVR ,,b,DCBTRSTA
+.*
+.* Declare open flags
+DCBOFLWR EQUOVR ,,b,DCBOFLGS
+DCBOFIOD EQUOVR ,,b,DCBOFLGS
+DCBOFLRB EQUOVR ,,b,DCBOFLGS
+DCBOFEOV EQUOVR ,,b,DCBOFLGS
+DCBOFOPN EQUOVR ,,b,DCBOFLGS
+DCBOFPPC EQUOVR ,,b,DCBOFLGS
+DCBOFTM  EQUOVR ,,b,DCBOFLGS
+DCBOFUEX EQUOVR ,,b,DCBOFLGS
+DCBOLOCK EQUOVR ,,b,DCBOFLGS
+DCBOFIOF EQUOVR ,,b,DCBOFLGS
+DCBOBUSY EQUOVR ,,b,DCBOFLGS
+.*
+.* Declare IOS flags
+DCBIBEC  EQUOVR ,,b,DCBIFLG
+DCBIFNEP EQUOVR ,,v,DCBIFLG
+DCBEX    EQUOVR ,,b,DCBIFLG
+DCBIFPEC EQUOVR ,,b,DCBIFLG
+DCBIBPCT EQUOVR ,,b,DCBIFLG
+DCBIFC9  EQUOVR ,,b,DCBIFLG
+DCBIFC12 EQUOVR ,,b,DCBIFLG
+DCBIBIOE EQUOVR ,,b,DCBIFLG
+DCBIFER  EQUOVR ,,v,DCBIFLG
+DCBIFNE1 EQUOVR ,,b,DCBIFLG
+DCBIFTIM EQUOVR ,,b,DCBIFLG
+DCBIFNE2 EQUOVR ,,b,DCBIFLG
+DCBIFNE3 EQUOVR ,,b,DCBIFLG
+.*
+.* Declare bit-fields for macro reference
+DCBMRECP EQUOVR ,,b,DCBMACR1
+DCBMRFE  EQUOVR ,,b,DCBMACR1
+DCBMRGET EQUOVR ,,b,DCBMACR1
+DCBMRPTQ EQUOVR ,,b,DCBMACR1
+DCBMRAPG EQUOVR ,,b,DCBMACR1
+DCBMRRD  EQUOVR ,,b,DCBMACR1
+DCBMRWRQ EQUOVR ,,b,DCBMACR1
+DCBMRCI  EQUOVR ,,b,DCBMACR1
+DCBMRMVG EQUOVR ,,b,DCBMACR1
+DCBMRRDK EQUOVR ,,b,DCBMACR1
+DCBMRLCG EQUOVR ,,b,DCBMACR1
+DCBMRRDI EQUOVR ,,b,DCBMACR1
+DCBMRABC EQUOVR ,,b,DCBMACR1
+DCBMRPT1 EQUOVR ,,b,DCBMACR1
+DCBMRSBG EQUOVR ,,b,DCBMACR1
+DCBMRDBF EQUOVR ,,b,DCBMACR1
+DCBPGFXA EQUOVR ,,b,DCBMACR1
+DCBMRCRL EQUOVR ,,b,DCBMACR1
+DCBMRCHK EQUOVR ,,b,DCBMACR1
+DCBMRRDX EQUOVR ,,b,DCBMACR1
+DCBMRDMG EQUOVR ,,b,DCBMACR1
+DCBMRCK  EQUOVR ,,b,DCBMACR1
+.*
+DCBMRSTL EQUOVR ,,b,DCBMACR2
+DCBMRPUT EQUOVR ,,b,DCBMACR2
+DCBMRGTQ EQUOVR ,,b,DCBMACR2
+DCBMRWRT EQUOVR ,,b,DCBMACR2
+DCBMRRDQ EQUOVR ,,b,DCBMACR2
+DCBMRMVP EQUOVR ,,b,DCBMACR2
+DCBMRWRK EQUOVR ,,b,DCBMACR2
+DCBMR5WD EQUOVR ,,b,DCBMACR2
+DCBMRLDM EQUOVR ,,b,DCBMACR2
+DCBMRLCP EQUOVR ,,b,DCBMACR2
+DCBMRIDW EQUOVR ,,b,DCBMACR2
+DCBMR4WD EQUOVR ,,b,DCBMACR2
+DCBMRPT2 EQUOVR ,,b,DCBMACR2
+DCBMRTMD EQUOVR ,,b,DCBMACR2
+DCBMRUIP EQUOVR ,,b,DCBMACR2
+DCBMR3WD EQUOVR ,,b,DCBMACR2
+DCBMRCTL EQUOVR ,,b,DCBMACR2
+DCBMRSTK EQUOVR ,,b,DCBMACR2
+DCBMRAWR EQUOVR ,,b,DCBMACR2
+DCBMR1WD EQUOVR ,,b,DCBMACR2
+DCBMRSWA EQUOVR ,,b,DCBMACR2
+DCBMRDMD EQUOVR ,,b,DCBMACR2
+DCBMRSTI EQUOVR ,,b,DCBMACR2
+.*
+.* DCBMACF1 - FIRST BYTE OF DCBMACRF
+DCBMFECP EQUOVR ,,b,DCBMACF1
+DCBMFFE  EQUOVR ,,b,DCBMACF1
+DCBMFGET EQUOVR ,,b,DCBMACF1
+DCBMFPTQ EQUOVR ,,b,DCBMACF1
+DCBMFAPG EQUOVR ,,b,DCBMACF1
+DCBMFRD  EQUOVR ,,b,DCBMACF1
+DCBMFWRQ EQUOVR ,,b,DCBMACF1
+DCBMFCI  EQUOVR ,,b,DCBMACF1
+DCBMFMVG EQUOVR ,,b,DCBMACF1
+DCBMFRDK EQUOVR ,,b,DCBMACF1
+DCBMFLCG EQUOVR ,,b,DCBMACF1
+DCBMFRDI EQUOVR ,,b,DCBMACF1
+DCBMFABC EQUOVR ,,b,DCBMACF1
+DCBMFPT1 EQUOVR ,,b,DCBMACF1
+DCBMFSBG EQUOVR ,,b,DCBMACF1
+DCBMFDBF EQUOVR ,,b,DCBMACF1
+DCBMFFXA EQUOVR ,,b,DCBMACF1
+DCBMFCRL EQUOVR ,,b,DCBMACF1
+DCBMFCHK EQUOVR ,,b,DCBMACF1
+DCBMFRDX EQUOVR ,,b,DCBMACF1
+DCBMFDMG EQUOVR ,,b,DCBMACF1
+DCBMFCK  EQUOVR ,,b,DCBMACF1
+.*
+.* DCBMACF2 - SECOND BYTE OF DCBMACRF
+DCBMFSTL EQUOVR ,,b,DCBMACF2
+DCBMFPUT EQUOVR ,,b,DCBMACF2
+DCBMFGTQ EQUOVR ,,b,DCBMACF2
+DCBMFWRT EQUOVR ,,b,DCBMACF2
+DCBMFRDQ EQUOVR ,,b,DCBMACF2
+DCBMFMVP EQUOVR ,,b,DCBMACF2
+DCBMFWRK EQUOVR ,,b,DCBMACF2
+DCBMF5WD EQUOVR ,,b,DCBMACF2
+DCBMFLDM EQUOVR ,,b,DCBMACF2
+DCBMFLCP EQUOVR ,,b,DCBMACF2
+DCBMFIDW EQUOVR ,,b,DCBMACF2
+DCBMF4WD EQUOVR ,,b,DCBMACF2
+DCBMFPT2 EQUOVR ,,b,DCBMACF2
+DCBMFTMD EQUOVR ,,b,DCBMACF2
+DCBMFUIP EQUOVR ,,b,DCBMACF2
+DCBMF3WD EQUOVR ,,b,DCBMACF2
+DCBMFCTL EQUOVR ,,b,DCBMACF2
+DCBMFSTK EQUOVR ,,b,DCBMACF2
+DCBMFAWR EQUOVR ,,b,DCBMACF2
+DCBMF1WD EQUOVR ,,b,DCBMACF2
+DCBMFSWA EQUOVR ,,b,DCBMACF2
+DCBMFDMD EQUOVR ,,b,DCBMACF2
+DCBMFSTI EQUOVR ,,b,DCBMACF2
+.*
+.* Declare IOS flags
+DCBIFEC  EQUOVR ,,b,DCBIFLGS
+DCBIFPCT EQUOVR ,,b,DCBIFLGS
+DCBIFIOE EQUOVR ,,b,DCBIFLGS
+DCBIFLDT EQUOVR ,,b,DCBIFLGS
+.*
+.* Declare bits for communication interface type
+DCBINVB1 EQUOVR ,,b,DCBINVCI
+DCBINVB2 EQUOVR ,,b,DCBINVCI
+.*
+.* Declare bits for ISAM option codes
+DCBOPTUF EQUOVR ,,b,DCBOPTCD
+DCBOPTM  EQUOVR ,,b,DCBOPTCD
+DCBOPTI  EQUOVR ,,b,DCBOPTCD
+DCBOPTY  EQUOVR ,,b,DCBOPTCD
+DCBOPTL  EQUOVR ,,b,DCBOPTCD
+DCBOPTR  EQUOVR ,,b,DCBOPTCD
+.*
+.* Declare bits for ISAM additional macro reference
+DCBMACUR EQUOVR ,,b,DCBMAC
+DCBMACUW EQUOVR ,,b,DCBMAC
+DCBMACAW EQUOVR ,,b,DCBMAC
+DCBMACRE EQUOVR ,,b,DCBMAC
+.*
+.* Declare bits for exceptional condition codes
+DCBEXNKY EQUOVR ,,b,DCBEXCD1
+DCBEXIDA EQUOVR ,,b,DCBEXCD1
+DCBEXNSP EQUOVR ,,b,DCBEXCD1
+DCBEXINV EQUOVR ,,b,DCBEXCD1
+DCBEXIER EQUOVR ,,b,DCBEXCD1
+DCBEXOER EQUOVR ,,b,DCBEXCD1
+DCBEXBLI EQUOVR ,,b,DCBEXCD1
+DCBEXBLU EQUOVR ,,b,DCBEXCD1
+.*
+DCBEXSEQ EQUOVR ,,b,DCBEXCD2
+DCBEXDUP EQUOVR ,,b,DCBEXCD2
+DCBEXCLD EQUOVR ,,b,DCBEXCD2
+DCBEXOFL EQUOVR ,,b,DCBEXCD2
+DCBEXLTH EQUOVR ,,b,DCBEXCD2
+DCBEXRDE EQUOVR ,,b,DCBEXCD2
+.*
+.* Declare code-values for '2301 or not'
+DCBHMDRM EQUOVR ,,v,DCBHMASK
+DCBHMNDM EQUOVR ,,v,DCBHMASK
+.*
+.* Declare bits for ISAM status indicators
+DCBSTSSM EQUOVR ,,b,DCBST
+DCBSTKSQ EQUOVR ,,b,DCBST
+DCBSTLOD EQUOVR ,,b,DCBST
+DCBSTNCY EQUOVR ,,b,DCBST
+DCBSTNMC EQUOVR ,,b,DCBST
+DCBSTLBF EQUOVR ,,b,DCBST
+DCBSTLTF EQUOVR ,,b,DCBST
+.*
+.* Declare code-values for overflow device
+DCBDVI01 EQUOVR ,,v,DCBOVDEV
+DCBDVI03 EQUOVR ,,v,DCBOVDEV
+DCBDVI02 EQUOVR ,,v,DCBOVDEV
+DCBDVI05 EQUOVR ,,v,DCBOVDEV
+DCBDVI14 EQUOVR ,,v,DCBOVDEV
+DCBDVI30 EQUOVR ,,v,DCBOVDEV
+.*
+.* Declare bits for BDAM option codes
+DCBOPTTO EQUOVR ,,b,DCBOPTCD
+DCBOPTE  EQUOVR ,,b,DCBOPTCD
+DCBOPTF  EQUOVR ,,b,DCBOPTCD
+DCBOPTA  EQUOVR ,,b,DCBOPTCD
+DCBOPTDB EQUOVR ,,b,DCBOPTCD
+DCBOPTRE EQUOVR ,,b,DCBOPTCD
+DCBOPTRB EQUOVR ,,b,DCBOPTCD
+.*
+.* Declare bit-fields for QTAM adapter type
+DCBCPWTT EQUOVR ,,b,DCBPLBYT
+.*
+.* Declare bits for TCAM option codes
+DCBOPTWP EQUOVR ,,b,DCBOPTCD
+DCBOPTUM EQUOVR ,,b,DCBOPTCD
+DCBOPTCB EQUOVR ,,b,DCBOPTCD
+DCBOPTCP EQUOVR ,,b,DCBOPTCD
+DCBOPTIM EQUOVR ,,b,DCBOPTCD
+DCBOPTRM EQUOVR ,,b,DCBOPTCD
+.*
+.* Declare ready queue indicators
+DCBRDYPO EQUOVR ,,b,DCBRDYI
+DCBRDYIQ EQUOVR ,,b,DCBRDYI
+DCBRDYIZ EQUOVR ,,b,DCBRDYI
+.*
+.* Declare bits for BSC transmission mode
+DCBXMIBC EQUOVR ,,b,DCBXMODE
+DCBXMDA1 EQUOVR ,,b,DCBXMODE
+DCBXMDA2 EQUOVR ,,b,DCBXMODE
+.*
+.* Declare bits for BSC control flag
+DCBXCCSF EQUOVR ,,b,DCBXCODE
+DCBXCPTP EQUOVR ,,b,DCBXCODE
+DCBXCTR1 EQUOVR ,,b,DCBXCODE
+DCBXCAS1 EQUOVR ,,b,DCBXCODE
+DCBXCEBC EQUOVR ,,b,DCBXCODE
+DCBXCTR2 EQUOVR ,,b,DCBXCODE
+DCBXCAS2 EQUOVR ,,b,DCBXCODE
+.*
+.* Declare bits for SAM option codes
+DCBOPTW  EQUOVR ,,b,DCBOPTCD
+DCBOPTU  EQUOVR ,,b,DCBOPTCD
+DCBOPTC  EQUOVR ,,b,DCBOPTCD
+DCBOPTH  EQUOVR ,,b,DCBOPTCD
+DCBOPTO  EQUOVR ,,b,DCBOPTCD
+DCBBCKPT EQUOVR ,,b,DCBOPTCD
+DCBOPTQ  EQUOVR ,,b,DCBOPTCD
+DCBOPTZ  EQUOVR ,,b,DCBOPTCD
+DCBSRCHD EQUOVR ,,b,DCBOPTCD
+DCBOPTT  EQUOVR ,,b,DCBOPTCD
+DCBOPTJ  EQUOVR ,,b,DCBOPTCD
+.*
+.* Declare condition indicator bits
+DCBCNTOV EQUOVR ,,b,DCBCIND1
+DCBSTQCK EQUOVR ,,b,DCBCIND1
+DCBSTFLS EQUOVR ,,b,DCBCIND1
+DCBCNSRD EQUOVR ,,b,DCBCIND1
+DCBCNEVB EQUOVR ,,b,DCBCIND1
+DCBCNEVA EQUOVR ,,b,DCBCIND1
+DCBCNCI  EQUOVR ,,b,DCBCIND1
+DCBCNBRM EQUOVR ,,b,DCBCIND1
+DCBCBNDF EQUOVR ,,b,DCBCIND1
+DCBCNEXB EQUOVR ,,b,DCBCIND1
+.*
+DCBCNSTO EQUOVR ,,b,DCBCIND2
+DCBCNWR0 EQUOVR ,,b,DCBCIND2
+DCBCNCLO EQUOVR ,,b,DCBCIND2
+DCBCNIOE EQUOVR ,,b,DCBCIND2
+DCBCNBFP EQUOVR ,,b,DCBCIND2
+DCBCNCHS EQUOVR ,,b,DCBCIND2
+DCBCNFEO EQUOVR ,,b,DCBCIND2
+DCBCNQSM EQUOVR ,,b,DCBCIND2
+.*
+.* Declare bit-fields for flag byte
+DCBPOPEN EQUOVR ,,b,DCBQSWS
+.*
+.* Declare bit-fields for ascii tapes
+DCBBLBP  EQUOVR ,,b,DCBUSASI
+DCBQADFS EQUOVR ,,b,DCBUSASI
+DCBQADF1 EQUOVR ,,b,DCBUSASI
+DCBQADF2 EQUOVR ,,b,DCBUSASI
+DCBQADF3 EQUOVR ,,b,DCBUSASI
+DCB3525A EQUOVR ,,b,DCBUSASI
+DCBQSTRU EQUOVR ,,b,DCBUSASI
+.*
+.* Declare error option bits
+DCBERACC EQUOVR ,,b,DCBEROPT
+DCBERSKP EQUOVR ,,b,DCBEROPT
+DCBERABE EQUOVR ,,b,DCBEROPT
+DCBERBAM EQUOVR ,,b,DCBEROPT
+.*
+         MNOTE *,'Including DCBD mapping macro'
+.*
+.* DSORG=GS excluded because DCBD then expands incomplete
+         DCBD  DSORG=(BS,BX,CX,DA,IS,LR,PO,PS,QS,QX,TQ,TR,TX,XA,XE),   *
+               DEVD=(BS,DA,MR,OR,PC,PR,PT,RD,TA,WT)
+.*
+.* Additional equates for DCBMACF1 - FIRST BYTE OF DCBMACRF
+DCBMFECP EQU   DCBMRECP
+DCBMFFE  EQU   DCBMRFE
+DCBMFGET EQU   DCBMRGET
+DCBMFPTQ EQU   DCBMRPTQ
+DCBMFAPG EQU   DCBMRAPG
+DCBMFRD  EQU   DCBMRRD
+DCBMFWRQ EQU   DCBMRWRQ
+DCBMFCI  EQU   DCBMRCI
+DCBMFMVG EQU   DCBMRMVG
+DCBMFRDK EQU   DCBMRRDK
+DCBMFLCG EQU   DCBMRLCG
+DCBMFRDI EQU   DCBMRRDI
+DCBMFABC EQU   DCBMRABC
+DCBMFPT1 EQU   DCBMRPT1
+DCBMFSBG EQU   DCBMRSBG
+DCBMFDBF EQU   DCBMRDBF
+DCBMFFXA EQU   DCBPGFXA
+DCBMFCRL EQU   DCBMRCRL
+DCBMFCHK EQU   DCBMRCHK
+DCBMFRDX EQU   DCBMRRDX
+DCBMFDMG EQU   DCBMRDMG
+DCBMFCK  EQU   DCBMRCK
+.*
+.* Additional equates for DCBMACF2 - SECOND BYTE OF DCBMACRF
+DCBMFSTL EQU   DCBMRSTL
+DCBMFPUT EQU   DCBMRPUT
+DCBMFGTQ EQU   DCBMRGTQ
+DCBMFWRT EQU   DCBMRWRT
+DCBMFRDQ EQU   DCBMRRDQ
+DCBMFMVP EQU   DCBMRMVP
+DCBMFWRK EQU   DCBMRWRK
+DCBMF5WD EQU   DCBMR5WD
+DCBMFLDM EQU   DCBMRLDM
+DCBMFLCP EQU   DCBMRLCP
+DCBMFIDW EQU   DCBMRIDW
+DCBMF4WD EQU   DCBMR4WD
+DCBMFPT2 EQU   DCBMRPT2
+DCBMFTMD EQU   DCBMRTMD
+DCBMFUIP EQU   DCBMRUIP
+DCBMF3WD EQU   DCBMR3WD
+DCBMFCTL EQU   DCBMRCTL
+DCBMFSTK EQU   DCBMRSTK
+DCBMFAWR EQU   DCBMRAWR
+DCBMF1WD EQU   DCBMR1WD
+DCBMFSWA EQU   DCBMRSWA
+DCBMFDMD EQU   DCBMRDMD
+DCBMFSTI EQU   DCBMRSTI
+.*
+         DSOVR *END
+         EQUOVR *END
+.*
+.* For DSORG=GS, the definitions below were copied from DCBD
+         ORG   IHADCB
+***********************************************************************
+*                       GRAPHIC DEVICE INTERFACE
+***********************************************************************
+         DS    XL12           RESERVED
+DCBBRSA  DS    AL2            BUFFER RESTART ADDRESS.  BLANK BEFORE
+*                             EXECUTION OF SECOND I/O OPERATION
+DCBGTYPE DCL   *CODE,XL1,     TYPE OF BUFFER MANAGEMENT AND ATTENTION  *
+               DCBGTEXP,      EXPRESS                       HANDLING   *
+               DCBGTBAS,      BASIC                                    *
+               DCBGTNBM       DEFAULT - NO BUFFER MANAGEMENT       uL2A
+         DS    X              RESERVED
+DCBBFRST DS    AL2            BLANK BEFORE EXECUTION OF OPEN ROUTINE.
+*                             STARTING ADDRESS FOR BUFFER AFTER
+*                             EXECUTION OF OPEN ROUTINE
+DCBBFRSZ DS    H              BLANK BEFORE EXECUTION OF OPEN ROUTINE.
+*                             SIZE OF BUFFER AFTER EXECUTION OF OPEN
+*                             ROUTINE.
+***********************************************************************
+*                       FOUNDATION EXTENSION
+***********************************************************************
+         ORG   IHADCB+32      Set to start of foundation extension
+DCBPOLST DS    0A             ADDRESS OF AREA WHERE A DCB LIST IS TO BE
+*                             CONSTRUCTED FOR POLLING PURPOSES
+DCBGNCP  DS    FL1            NUMBER OF I/O INSTRUCTIONS TO BE ISSUED
+*                             BEFORE A WAIT MACRO INSTRUCTION
+DCBPOLSA DS    AL3            SAME AS DCBPOLST ABOVE
+***********************************************************************
+*                       FOUNDATION BEFORE OPEN
+***********************************************************************
+DCBOFGRW EQUOVR ,,b,DCBOFLG
+DCBOFGRW EQU   DCBBIT0        IF ZERO, LAST I/O OPERATION WAS GREAD.
+*                             IF ONE, LAST I/O OPERATION WAS GWRITE.
+***********************************************************************
+*                       FOUNDATION AFTER OPEN
+***********************************************************************
+         ORG   IHADCB+40
+         DS    XL8            Previously defined fields
+DCBGIOCR DS    0A             ADDRESS OF GRAPHICS I/O CONTROL ROUTINE
+         DS    BL1            DCBOFLGS: SAME AS DCBOFLG BEFORE OPEN
+DCBGIOCA DS    AL3            ADDRESS OF GRAPHICS I/O CONTROL ROUTINE
+DCBLNGGS EQU   *-IHADCB       LENGTH OF DCB FOR GRAPHIC DEVICE     uL1A&
+                              INTERFACE                            uL1A
+***********************************************************************
+*              END of GRAPHIC DEVICE INTERFACE
+***********************************************************************
+         EQUOVR *END
+*
+DCB      EQU   IHADCB                  * Name for USINGs
+         ORG
+DCB_LEN  EQU   *-DCB                   * Length of DCB
+*
+* Mapping for Block Descriptor Word
+BDW      DSECT
+BDWBLKLN DS    H                       * Length of block
+BDWT00   DS    H                       * Trailing zeros
+BDW_LEN  EQU   *-BDW                   * Length of BDW
+*
+* Mapping for Record Descriptor Word
+RDW      DSECT ,                       *
+RDWRECLN DS    H                       * Length of RDW + record
+RDWT00   DS    H                       * Trailing zeros
+*
+* RDW for XLRI has a different format
+         ORG   RDW                     *
+RDWL0    DS    X                       * Leading zeros
+RDWXLRLN DS    XL3                     * Length of logical record
+*
+         ORG   ,                       *
+RDW_LEN  EQU   *-RDW                   * Length of RDW
+*
+* Mapping for Segment Descriptor Word
+SDW      DSECT ,                       *
+SDWNULL  EQUOVR ,,b,SDWSEGLN           * SDWNULL is bit 0 of length
+SDWSEGLN DS    H                       * Length of segment
+SDWNULL  EQU   BIT0                    * Null segment indicator
+SDWSEGCC DCL   *CODE,B,                * Segment Control Code          *
+               SDWSCOMP,               * Complete record               *
+               SDWSFRST,               * First segment                 *
+               SDWSLAST,               * Last segment                  *
+               SDWSMIDL                * Middle segment
+         DS    X                       * Always zero
+SDW_LEN  EQU   *-SDW                   * Length of SDW
+         EQUOVR *END
+*
+* Mapping for Segment Control Word (ASCII)
+SCW      DSECT ,                       *
+SCWSPIND DCL   *CODE,C,                * Spanning indicator chararcter *
+               (SCWSCOMP,C'0'),        * Complete record               *
+               (SCWSFRST,C'1'),        * First segment                 *
+               (SCWSLAST,C'2'),        * Last segment                  *
+               (SCWSMIDL,C'3')         * Middle segment
+SCWSEGLN DS    CL4                     * Length of segment
+SCW_LEN  EQU   *-SCW                   * Length of SCW
+*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

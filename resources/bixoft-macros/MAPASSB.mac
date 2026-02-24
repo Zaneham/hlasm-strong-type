@@ -1,0 +1,147 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Address Space Secondary Block
+.*
+&LABEL   MAPASSB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPASSB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPASSB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ASSB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPASSB).MEND
+&BXA_MAC_MAPASSB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ASSB
+&BXA_CB_ASSB SETC 'ASSB'
+.*
+.* ASSBXMF1 - CROSS MEMORY FLAGS 1
+ASSBXEAX EQUOVR ,,b,ASSBXMF1
+.*
+.* ASSBSTW1 - FIRST WORD OF ASSBSTKN.
+ASSBSTYP EQUOVR ,,b,ASSBSTW1
+.*
+.* ASSBFLG0 - ASSB FLAG BYTE 0.
+ASSBBSDN EQUOVR ,,b,ASSBFLG0
+ASSBCDSI EQUOVR ,,b,ASSBFLG0
+ASSBPSCH EQUOVR ,,b,ASSBFLG0
+.*
+.* ASSBFLG1 - ASSB FLAG BYTE 1
+ASSBNTAR EQUOVR ,,b,ASSBFLG1
+ASSBNTTR EQUOVR ,,b,ASSBFLG1
+ASSBNTSL EQUOVR ,,b,ASSBFLG1
+.*
+.* ASSBFLG2 - ASSB FLAG BYTE 2.
+ASSBENFL EQUOVR ,,b,ASSBFLG2
+ASSBNSWF EQUOVR ,,b,ASSBFLG2
+ASSBPRAN EQUOVR ,,b,ASSBFLG2
+.*
+.* ASSBFLG3 - ASSB FLAG BYTE 3 - RESERVED.
+ASSBARM  EQUOVR ,,b,ASSBFLG3
+ASSBNRST EQUOVR ,,b,ASSBFLG3
+.*
+.* ASSBMT# - MEMTERM DISABLE COUNT.
+ASSBMTP  EQUOVR ,,b,ASSBMT#
+.*
+.* ASSBDFP - RESERVED FOR USE BY DFP.
+ASSBOAM  EQUOVR ,,b,ASSBDFP
+.*
+.* ASSBWMF1 - WLM flags
+ASSBWINI EQUOVR ,,b,ASSBWMF1
+ASSBFSAS EQUOVR ,,b,ASSBWMF1
+.*
+.* ASSBCTXF - Context Services flags
+ASSBNCL  EQUOVR ,,b,ASSBCTXF
+ASSBMSGI EQUOVR ,,b,ASSBCTXF
+ASSBURMX EQUOVR ,,b,ASSBCTXF
+ASSBURMM EQUOVR ,,b,ASSBCTXF
+.*
+         MNOTE *,'Including IHAASSB mapping macro'
+         IHAASSB LIST=YES,             * Keep unchanged PRINT option
+         EQUOVR *END
+*
+ASSB     DSECT ,                       * Reset to ASSB DSECT
+         ORG
+ASSB_LEN EQU   *-ASSB                  * Length of ASSB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,256 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's USING statement
+.*
+&LABEL   USING &DSECT,                 * Control block name            *
+               &BASE                   * Register (or field) for using
+.*
+.* &LABEL optional USING label
+.* &DSECT specifies the control block to be set addressable.
+.* &BASE  specifies either a register that points to &DSECT or a field
+.*        that contains a &DSECT as a label. If specified as a register
+.*        other registers may follow.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC USING                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLB  &SP_SHOWALL             * SHOWALL option
+         GBLC  &BXA_USELBL(50)         * Using labels ...
+         GBLA  &BXA_USEREG(50)         *   and their register indexes
+         GBLC  &BXA_USEFLD(50)         *   and associated base fields
+         GBLA  &BXA_USENDX0(5)         * Index into &BXA_USELBL/USEREG
+         GBLA  &BXA_USENDX1(5)         * Index into &BXA_USELBL/USEREG
+         GBLA  &BXA_USENDX             * Index into &BXA_USENDX1
+         LCLA  &N                      * Index for BXA_USE...
+         LCLA  &REG                    * Register number
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &ARGS                   * Arguments from SYSLIST
+         LCLA  &I                      * Index into &SYSLIST
+         LCLA  &O                      * Offset for 2nd 3d.. base regs
+         LCLA  &R                      * Index into &BXA_USED_REGS
+         LCLB  &BASREG                 * Basing on a register
+.*
+.* Check the LABEL parameter
+.* If an existing label is specified, that label must be dropped
+         AIF   (K'&LABEL EQ 0).NOERR0
+&N       SETA  &BXA_USENDX0(&BXA_USENDX)
+.LOOP0   ANOP
+&N       SETA  &N+1
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP0OK
+         AIF   ('&BXA_USELBL(&N)' NE '&LABEL').LOOP0
+.* Match found: issue message, unless within a macro
+         AIF   (&NESTLVL GT 1).NOERR0A
+.ERR0A   MNOTE 1,'Label &LABEL currently in use: issuing DROP for you'
+.NOERR0A ANOP
+         DROP  &LABEL
+.LOOP0OK ANOP
+.NOERR0  ANOP
+.*
+.* Check the DSECT parameter
+         AIF   (K'&DSECT EQ 0).ERR1A   * Must not be empty
+         CHKREG &DSECT                 * A register specified?
+         AIF   (&BXA_RC EQ 0).ERR1B    * Yes: issue error
+         AGO   .NOERR1                 * A register was specified!
+.ERR1A   MNOTE 8,'First operand missing (control block name)'
+         MEXIT
+.ERR1B   MNOTE 8,'You specified a register for a DSECT name'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check the BASE parameter
+         AIF   (K'&BASE EQ 0).ERR2A    * Must not be empty
+         CHKREG &BASE                  * A register was specified?
+         AIF   (&BXA_RC EQ 8).NOERR2   * Not a reg: dependent USING
+         AIF   (&BXA_RC EQ 0).EQUREG   * Ok: USE a defined reg
+.* NUMVAL = 4: a literal number 0-15 was specified
+&REG     SETA  &BASE                   * Extract register number
+         AGO   .USEREG
+.*
+.* &BASE is a known register: check its type
+.EQUREG  ANOP  ,                       * Check EQUated register
+         GBLC  &(BXA_REGT_&BASE)       * Declare type field for reg
+         GBLA  &(BXA_REGN_&BASE)       * Declare number field for reg
+&REG     SETA  &(BXA_REGN_&BASE)       * Extract register number
+         AIF   ('&(BXA_REGT_&BASE)' NE 'g').ERR2C * Invalid reg type
+.*
+.* Set specified register 'in use' and add label/reg to tables
+.USEREG  ANOP  ,                       * Second operand valid register
+&BASREG  SETB  1                       * Indicate basing on a reg
+&R       SETA  &REG+1                  * Increment reg to obtain index
+         AIF   (NOT &BXA_USED_REGS(&R)).NOERR2B
+.* If unlabeled USING overriding a prior unlabeled USING: drop prior
+         AIF   (K'&LABEL NE 0).ERR2B   * Not unlabeled
+         AIF   (K'&SYSLIST(3) NE 0).ERR2B * More than 1 register
+&N       SETA  &BXA_USENDX0(&BXA_USENDX)
+.LOOP4   ANOP
+&N       SETA  &N+1
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).ERR2B * Not found
+         AIF   ('&BXA_USELBL(&N)' NE '').LOOP4 * Skip mismatch
+         AIF   (&BXA_USEREG(&N) NE &R).LOOP4 * Skip mismatch
+.ERR2E   ANOP
+         AIF   (&SYSNEST GT 1).GENDROP
+&ARG     SETC  (DOUBLE '&BASE')
+         MNOTE 1,'Register &ARG currently in use: issuing DROP for you'
+.GENDROP ANOP
+         DROP  &BASE
+         AGO   .NOERR2B
+.ERR2B   ANOP
+&ARG     SETC  (DOUBLE '&BASE')
+         MNOTE 4,'Register &ARG currently not available for USING'
+.NOERR2B ANOP
+.*
+.* Set register in use excpt for USING PSA,R0
+         AIF   (&R EQ 1 AND '&DSECT' EQ 'PSA').NOSET
+&BXA_USED_REGS(&R) SETB 1              * Indicate register is in use
+.NOSET   ANOP  ,                       *
+&N       SETA  &BXA_USENDX1(&BXA_USENDX)+1 * Get pointer to free entry
+&BXA_USELBL(&N) SETC '&LABEL'          * Save label in table
+&BXA_USEREG(&N) SETA &R                * and register index value
+&BXA_USEFLD(&N) SETC '&DSECT'          * and base field name
+&BXA_USENDX1(&BXA_USENDX) SETA &N      * And update high valid ptr
+.*
+.CHKR0   ANOP  ,                       * R0 can be used for PSA only
+         AIF   (&REG NE 0).NOERR2      * Using Register 0?
+         AIF   ('&DSECT' EQ 'PSA').NOERR2 * Yes. For PSA?
+         AGO   .ERR2D                  * No: error
+.*
+.ERR2A   ANOP
+         AIF   (&DOTLOC GT 0).NOERR2
+         MNOTE 8,'Second operand missing (register or location)'
+         MEXIT
+.ERR2C   ANOP
+&ARG     SETC  (DOUBLE '&BASE')
+         MNOTE 8,'Register &ARG is not a general purpose register'
+         MEXIT
+.ERR2D   MNOTE 8,'With register 0 you cannot address &DSECT'
+.NOERR2  ANOP
+.*
+.* Check extra base registers (if any)
+         AIF   (NOT &BASREG).NOERR3    * Not basing on a register!
+&I       SETA  2                       * SYSLIST 1 & 2 checked ok
+.LOOP3   ANOP  ,                       * For all remaining arguments
+&I       SETA  &I+1                    * Point next argument
+         AIF   (&I GT N'&SYSLIST).LOOP3OK * At end: all args checked ok
+&ARG     SETC  '&SYSLIST(&I)'          * Extract argument from SYSLIST
+         AIF   (K'&ARG EQ 0).ERR3A     * Omitted register
+         CHKREG &ARG                   * A register was specified?
+         AIF   (&BXA_RC EQ 8).ERR3B    * Not a register
+         AIF   (&BXA_RC EQ 0).LOOP3RG  * Ok: defined register
+.* NUMVAL = 4: a literal number 0-15 was specified
+&REG     SETA  &ARG                    * Extract register number
+         AGO   .LOOP3AD                * and go add to tables
+.LOOP3RG ANOP  ,                       * Check EQUated register
+         GBLC  &(BXA_REGT_&ARG)        * Declare type field for reg
+         GBLA  &(BXA_REGN_&ARG)        * Declare number field for reg
+&REG     SETA  &(BXA_REGN_&ARG)        * Extract register number
+         AIF   ('&(BXA_REGT_&ARG)' NE 'g').ERR3B * Invalid reg type
+.*
+.LOOP3AD ANOP  ,                       * Valid reg. Add to tables
+&R       SETA  &REG+1                  * Increment reg, to obtain index
+         AIF   (NOT &BXA_USED_REGS(&R)).NOERR3D
+&ARG     SETC  (DOUBLE '&ARG')
+.ERR3D   MNOTE 4,'Register &ARG currently not available for USING'
+.NOERR3D ANOP
+&O       SETA  &I-2                    * Ordinal-1 of this base reg.
+&O       SETA  4096*&O                 * Determine offset from &DSECT
+&BXA_USED_REGS(&R) SETB 1              * Indicate register is in use
+&N       SETA  &BXA_USENDX1(&BXA_USENDX)+1 * Get pointer to free entry
+&BXA_USELBL(&N) SETC '&LABEL'          * Save label in table
+&BXA_USEREG(&N) SETA &R                * and register index value
+&BXA_USEFLD(&N) SETC '&DSECT+&O'       * and base location
+&BXA_USENDX1(&BXA_USENDX) SETA &N      * And update high valid ptr
+.*
+.LOOP3R0 ANOP  ,                       * Check for using R0
+         AIF   (&REG EQ 0).ERR3C       * Cannot use register 0
+         AGO   .LOOP3
+.*
+.ERR3A   MNOTE 8,'Missing argument in list of registers'
+         AGO   .LOOP3
+.ERR3B   ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Specified argument &ARG is not a general purpose regi*
+               ster'
+         AGO   .LOOP3
+.ERR3C   MNOTE 8,'You cannot use register 0 to address the specified ar*
+               ea of storage'
+         AGO   .LOOP3
+.LOOP3OK ANOP
+.NOERR3  ANOP
+.*
+.* Build &ARGS from &SYSLIST
+&I       SETA  0                       * I indexes &SYSLIST
+.LOOP1   ANOP  ,                       * For all entries in SYSLIST
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&ARGS    SETC  '&ARGS'.','.'&SYSLIST(&I)' * Add entry to ARGS
+         AGO   .LOOP1                  * And go process next entry
+.LOOP1OK ANOP
+&ARGS    SETC  '&ARGS'(2,*)            * Remove leading comma
+.*
+.* Generate _USING statement
+&LABEL   _USING &ARGS
+.*
+.* Report current USING status
+         AIF   (NOT &SP_SHOWALL).MEND * Only if SHOWALL requested
+         USEDREGS
+.*
+.MEND    MEND

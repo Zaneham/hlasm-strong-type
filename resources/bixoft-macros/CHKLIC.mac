@@ -1,0 +1,101 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999-2004
+.**********************************************************************
+         MACRO
+.*
+.* The assembler program accepts as a JCL-parameter a specification
+.* for the variable SYSPARM. The value entered in the JCL will be
+.* passed to a global set symbol named &SYSPARM. The value specified
+.* in the JCL is decomposed by the SYSPARM macro, which translates the
+.* specified values into settings for global SETx variables.
+.* This macro checks the validity and acceptance (by the user)
+.* of the license for the BXA macro library
+.*
+         CHKLIC &MACRO
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+.* Upon return:
+.* &BXA_RC     will contain 0 if a valid license was accepted
+.*                          4 if license (version) is not valid
+.*                          8 if license was not accepted
+.*                         12 for internal errors
+.*
+         GBLC  &SP_LICENSE             * License name / version
+         GBLC  &SP_LICSTAT             * License status
+         GBLA  &BXA_RC                 * Return code
+&BXA_RC  SETA  12                      * Assume internal error
+.*
+.* Check whether the license was accepted
+         AIF   ('&SP_LICSTAT' EQ 'IAGREE').AGREED
+&BXA_RC  SETA  8                       * Indicate not accepted
+         AGO   .LICERR
+.AGREED  ANOP  ,
+.*
+.* Check that a valid license id was entered
+         AIF   ('&SP_LICENSE' EQ 'GPL2.0').LICOK
+         AIF   ('&SP_LICENSE' EQ 'GPL3.0').LICOK
+&BXA_RC  SETA  4                       * Indicate invalid license
+         AGO   .LICERR
+.LICOK   ANOP  ,
+.*
+.* A valid license was specified and accepted
+&BXA_RC  SETA  0                       * Indicate license ok
+         AGO   .MEND
+.*
+.* Issue error message
+.LICERR  ANOP  ,
+         MNOTE &BXA_RC,'BXA macro &MACRO will not expand: no valid lice*
+               nce accepted'
+         AGO   .MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.MEND    MEND

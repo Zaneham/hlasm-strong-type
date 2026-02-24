@@ -1,0 +1,213 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the SMf Control tAble
+.*
+&LABEL   MAPSMCA &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSMCA                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSMCA        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SMCA').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSMCA).MEND
+&BXA_MAC_MAPSMCA SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SMCA
+&BXA_CB_SMCA SETC 'SMCA'
+.*
+.* SMCAOPT - SMFDEFLT OPTIONS
+SMCAOPT1 EQUOVR ,,b,SMCAOPT
+SMCAOPT2 EQUOVR ,,b,SMCAOPT
+SMCAEXT  EQUOVR ,,b,SMCAOPT
+SMCADSA  EQUOVR ,,b,SMCAOPT
+SMCAVOL  EQUOVR ,,b,SMCAOPT
+SMCAUDCS EQUOVR ,,b,SMCAOPT
+SMCARS01 EQUOVR ,,b,SMCAOPT
+SMCATDS  EQUOVR ,,b,SMCAOPT
+SMCAFGND EQUOVR ,,b,SMCAOPT
+.*
+.* SMCAMISC - MISCELLANEOUS INDICATORS
+SMCAUSER EQUOVR ,,b,SMCAMISC
+SMCAMAN  EQUOVR ,,b,SMCAMISC
+SMCADSIC EQUOVR ,,b,SMCAMISC
+SMCAFIRT EQUOVR ,,b,SMCAMISC
+SMCAPSDP EQUOVR ,,b,SMCAMISC
+SMCADBSY EQUOVR ,,b,SMCAMISC
+SMCABSW  EQUOVR ,,b,SMCAMISC
+SMCADUMP EQUOVR ,,b,SMCAMISC
+.*
+.* SMCAENDI - A COMMUNICATION FIELD
+SMCARS14 EQUOVR ,,b,SMCAENDI
+SMCARS15 EQUOVR ,,b,SMCAENDI
+SMCARS16 EQUOVR ,,b,SMCAENDI
+SMCARS17 EQUOVR ,,b,SMCAENDI
+SMCARS18 EQUOVR ,,b,SMCAENDI
+SMCARS19 EQUOVR ,,b,SMCAENDI
+SMCADSPO EQUOVR ,,b,SMCAENDI
+SMCADSNF EQUOVR ,,b,SMCAENDI
+.*
+.* SMCABITS - BIT INDICATORS
+SMCADAR  EQUOVR ,,b,SMCABITS
+SMCADSNM EQUOVR ,,b,SMCABITS
+.*
+.* SMCAPRMT - REPLACES OPI BIT
+SMCAIPLR EQUOVR ,,b,SMCAPRMT
+SMCALIST EQUOVR ,,b,SMCAPRMT
+SMCALDSN EQUOVR ,,b,SMCAPRMT
+SMCAMXDM EQUOVR ,,b,SMCAPRMT
+SMCASTUS EQUOVR ,,b,SMCAPRMT
+SMCARUN  EQUOVR ,,b,SMCAPRMT
+SMCASKD  EQUOVR ,,b,SMCAPRMT
+SMCACONS EQUOVR ,,b,SMCAPRMT
+.*
+.* SMCAFLGS - WRITER STATUS FLAGS
+SMCAINIT EQUOVR ,,b,SMCAFLGS
+SMCARSTR EQUOVR ,,b,SMCAFLGS
+SMCADTLS EQUOVR ,,b,SMCAFLGS
+SMCASETP EQUOVR ,,b,SMCAFLGS
+SMCADISP EQUOVR ,,b,SMCAFLGS
+SMCALL   EQUOVR ,,b,SMCAFLGS
+SMCALATE EQUOVR ,,b,SMCAFLGS
+SMCASETS EQUOVR ,,b,SMCAFLGS
+.*
+.* SMCAFLGR - RECOVERY FOOTPRINTS
+SMCATERM EQUOVR ,,b,SMCAFLGR
+SMCAPGFX EQUOVR ,,b,SMCAFLGR
+SMCASRBF EQUOVR ,,b,SMCAFLGR
+SMCAPSUS EQUOVR ,,b,SMCAFLGR
+SMCAPCDT EQUOVR ,,b,SMCAFLGR
+SMCAU29  EQUOVR ,,b,SMCAFLGR
+SMCANOST EQUOVR ,,b,SMCAFLGR
+SMCAPREV EQUOVR ,,b,SMCAFLGR
+SMCANMRE EQUOVR ,,b,SMCAFLGR
+.*
+.* SMCARCUR - RECOVERY RECURSION BITS
+SMCAMXDR EQUOVR ,,b,SMCARCUR
+SMCASTTR EQUOVR ,,b,SMCARCUR
+SMCASUSR EQUOVR ,,b,SMCARCUR
+SMCATIMR EQUOVR ,,b,SMCARCUR
+SMCASETR EQUOVR ,,b,SMCARCUR
+SMCASETC EQUOVR ,,b,SMCARCUR
+.*
+.* SMCAIOMC - NUMBER OF TIMES I/O MEASUREMENTS
+SMCAIOMS EQUOVR ,,b,SMCAIOMC
+.*
+.* SMCAEXFL - USER EXIT FLAGS
+SMCAEXR1 EQUOVR ,,b,SMCAEXFL
+SMCAEXR3 EQUOVR ,,b,SMCAEXFL
+SMCAEXR4 EQUOVR ,,b,SMCAEXFL
+SMCAEXR5 EQUOVR ,,b,SMCAEXFL
+.*
+.* SMCASIDB - SMF SID Syntax Used
+SMCASDFT EQUOVR ,,b,SMCASIDB
+SMCASONL EQUOVR ,,b,SMCASIDB
+SMCASSER EQUOVR ,,b,SMCASIDB
+SMCASSYS EQUOVR ,,b,SMCASIDB
+SMCASSYM EQUOVR ,,b,SMCASIDB
+SMCASCOM EQUOVR ,,b,SMCASIDB
+SMCASRSV EQUOVR ,,b,SMCASIDB
+.*
+.* SMCAUFLG - Usage Data Collection Services Flags
+SMCAUT89 EQUOVR ,,b,SMCAUFLG
+SMCAT892 EQUOVR ,,b,SMCAUFLG
+.*
+.* SMCADLFL - DATA LOST CONTROL FLAGS
+SMCADLWT EQUOVR ,,b,SMCADLFL
+SMCADLHL EQUOVR ,,b,SMCADLFL
+SMCADLLD EQUOVR ,,b,SMCADLFL
+SMCADLR1 EQUOVR ,,b,SMCADLFL
+SMCADLR2 EQUOVR ,,b,SMCADLFL
+SMCADLR3 EQUOVR ,,b,SMCADLFL
+SMCADLR4 EQUOVR ,,b,SMCADLFL
+SMCADLR5 EQUOVR ,,b,SMCADLFL
+.*
+         MNOTE *,'Including IEESMCA mapping macro'
+         IEESMCA ,
+         EQUOVR *END
+*
+SMCABASE DSECT ,                       * Resume SMCA DSECT
+SMCA     EQU   SMCABASE                * Label for USINGs
+         ORG
+SMCA_LEN EQU   *-SMCA                  * Length of SMCA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

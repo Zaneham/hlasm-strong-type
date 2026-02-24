@@ -1,0 +1,2832 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Copy a field - register or storage
+.*
+.* For oversized packed fields unpacking may be done by processing
+.*     left to right in clusters of several bytes at a time.
+.* For oversized zoned fields packing may be done by processing
+.*     right to left in a loop.
+.* For every EQUREG a check must be made whether the source and/or
+.*     destination registers are in USE. Change EQUREG with a
+.*     NO=(...) keyword.
+.*
+&LABEL   CPY   &TO,                    * Destination field             *
+               &FROM,                  * Source field                  *
+               &WARN                   * NOWARN or nothing
+.*
+.* &TO    specifies the field or register to be filled,
+.*     or (field,length)     to override the length of the field
+.*     or (reg,end_reg_name) to copy to a set of registers
+.*     or (reg,nr_of_regs)   to copy to a set of registers
+.*     or (gpr_name,ar_name) to copy to 1 or more GPR/AR pairs
+.*     or ((gpr),len)        to copy to a register-designated area
+.*     or ((gpr),(gpr))      to copy to a register-designated area
+.* &FROM  specifies the field or register to be copied,
+.*     or (field,length)     to override the length of the field
+.*     or (reg,nr_of_regs)   to copy from a set of registers
+.*     or (reg,end_reg_name) to copy from a set of registers
+.*     or (gpr_name,ar_name) to copy from 1 or more GPR/AR pairs
+.*     or ((gpr),len)        to copy from a register-designated area
+.*     or ((gpr),(gpr))      to copy from a register-designated area
+.*     or *STACK             to retrieve registers from the stack
+.* &WARN  specifies whether or not a warning is to be issued if
+.*        &TO and &FROM designate the same field/register
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CPY                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &SYSASCE                * Current ASC mode: P or AR
+         GBLA  &BXA_NUMVAL             * Register nr from CHKREG
+         LCLC  &_LABEL                 * LABEL parameter
+         LCLC  &_TO1                   * TO field designation
+         LCLC  &_TO2                   * TO length
+         LCLC  &TO_TP                  * Type of TO location
+         LCLA  &TO_LEN                 * Length of TO location
+         LCLA  &TO_REG                 * TO register number
+         LCLB  &TO_EREG                * TO end register specified?
+         LCLC  &_FROM1                 * FROM field designation
+         LCLC  &_FROM2                 * FROM length
+         LCLC  &FROM_TP                * Type of FROM location
+         LCLA  &FROM_LEN               * Length of FROM location
+         LCLA  &FROM_REG               * FROM register number
+         LCLB  &FROM_EREG              * FROM end register specified?
+         LCLA  &FROM_VAL               * Value of FROM literal
+         LCLC  &SIGN                   * Sign of FROM literal value
+         LCLB  &EQULIT                 * Source is an equated literal
+         LCLA  &I,&J                   *
+         LCLA  &LEN                    * Length value
+         LCLC  &LENC                   * Length value (character)
+         LCLA  &PAD_LEN                * Length of pad area
+         LCLC  &PAD_ADR                * Length of pad area
+         LCLB  &PAD0                   * On for pad with zeros         *
+                                       * Off for pad with blanks
+         LCLC  &MASK                   * Byte mask
+         LCLC  &REG                    * A register name
+         LCLC  &ODDREG                 * Associated odd reg name
+         LCLA  &REG_CT                 * Count of registers
+         LCLC  &REG_SRCP               * Source ptr reg for MVCL
+         LCLC  &REG_SRCL               * Source length reg for MVCL
+         LCLC  &REG_DSTP               * Destination ptr reg for MVCL
+         LCLC  &REG_DSTL               * Destination leng reg for MVCL
+.*
+.* Copy the LABEL parameter
+&_LABEL  SETC  '&LABEL'                *
+.*
+.* Check TO parameter
+         AIF   (K'&TO EQ 0).ERR1A      *
+&_TO1    SETC  '&TO'                   * Copy destination field
+         AIF   ('&TO'(1,1) NE '(').NOERR1 * No length specified
+         AIF   (N'&TO EQ 0).ERR1B      * Must have
+         AIF   (N'&TO EQ 1).ERR1C      *   exactly two
+         AIF   (N'&TO GT 2).ERR1D      *   sub-operands
+.NOERR1D ANOP  ,                       *
+&_TO1    SETC  '&TO(1)'                * Extract field designation
+&_TO2    SETC  '&TO(2)'                *     and field length
+         AIF   (K'&_TO1 EQ 0).ERR1B    *
+         AIF   (K'&_TO2 EQ 0).ERR1C    *
+         AGO   .NOERR1                 *
+.ERR1A   MNOTE 8,'Missing first operand - destination of copy'
+         MEXIT ,                       *
+.ERR1B   MNOTE 8,'Destination in parentheses: missing field name'
+         MEXIT ,                       *
+.ERR1C   MNOTE 8,'Destination in parentheses: missing length'
+         MEXIT ,                       *
+.ERR1D   MNOTE 4,'Destination in parentheses: too many subparameters'
+         AGO   .NOERR1D                *
+.NOERR1  ANOP  ,                       *
+.*
+.* Check FROM parameter
+         AIF   (K'&FROM EQ 0).ERR2A    *
+&_FROM1  SETC  '&FROM'                 * Copy source field
+         AIF   ('&FROM' EQ '*STACK').NOERR2
+         AIF   ('&FROM'(1,1) NE '(').NOERR2 * No length specified
+         AIF   (N'&FROM EQ 0).ERR2B    * Must have
+         AIF   (N'&FROM EQ 1).ERR2C    *   exactly two
+         AIF   (N'&FROM GT 2).ERR2D    *   sub-operands
+.NOERR2D ANOP  ,                       *
+&_FROM1  SETC  '&FROM(1)'              * Extract field designation
+&_FROM2  SETC  '&FROM(2)'              *     and field length
+         AIF   (K'&_FROM1 EQ 0).ERR2B  *
+         AIF   (K'&_FROM2 EQ 0).ERR2C  *
+         AGO   .NOERR2                 *
+.ERR2A   MNOTE 8,'Missing second operand - source of copy'
+         MEXIT ,                       *
+.ERR2B   MNOTE 8,'Source in parentheses: missing field name'
+         MEXIT ,                       *
+.ERR2C   MNOTE 8,'Source in parentheses: missing length'
+         MEXIT ,                       *
+.ERR2D   MNOTE 4,'Source in parentheses: too many subparameters'
+         AGO   .NOERR2D                *
+.NOERR2  ANOP  ,                       *
+.*
+.* Check the WARN parameter
+         AIF   (K'&WARN EQ 0).NOERR3   *
+         AIF   ('&WARN' EQ 'NOWARN').NOERR3
+.ERR3A   MNOTE 4,'If specified, third parameter must be ''NOWARN'''
+.NOERR3  ANOP  ,                       *
+.*
+.* Check nr of parameters
+         AIF   (N'&SYSLIST LE 3).NOERR4
+.ERR4A   MNOTE 4,'More than 3 parameters: remainder ignored'
+.NOERR4  ANOP  ,                       *
+.*
+.* Determine type of the TO field
+         AIF   ('&_TO1'(1,1) EQ '(').TO_PTR * Destination is pointered?
+         CHKLIT &_TO1,ALT=YES          * A literal nr was specified?
+         AIF   (&BXA_RC LT 8).ERR5A    * Valid literal: won't do!
+&I       SETA  ('&_TO1' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&I NE 0).ERR5B         * Invalid field name
+&TO_TP   SETC  T'&_TO1                 * Extract field type
+&I       SETA  ('&TO_TP' FIND 'ABCDEFGHKLPQRSVXYZ')
+         AIF   (&I EQ 1).NOERR5        * Valid field type
+         CHKREG &_TO1                  * Valid register type?
+         AIF   (&BXA_RC NE 0).ERR5C    * Invalid field type
+&TO_REG  SETA  &BXA_NUMVAL             * Save register number
+         AGO   .NOERR5                 *
+.TO_PTR  ANOP  ,                       *
+&TO_TP   SETC  'p'                     * Field type is pointer
+&_TO1    SETC  '&TO(1,1)'              * Extract register designation
+         CHKREG &_TO1,g                * Must be a gpr!
+         AIF   (&BXA_RC GT 4).ERR5D    * Not a valid pointer register
+         AGO   .NOERR5                 *
+.ERR5A   MNOTE 8,'Literal number cannot serve as destination'
+         MEXIT ,                       *
+.ERR5B   MNOTE 8,'Destination field not a valid field name'
+         MEXIT ,                       *
+.ERR5C   MNOTE 8,'&TO_TP is an invalid destination field type'
+         MEXIT ,                       *
+.ERR5D   MNOTE 8,'&_TO1 is an invalid destination pointer register'
+         MEXIT ,                       *
+.NOERR5  ANOP  ,                       *
+.*
+.* Determine type of the FROM field
+         AIF   ('&_FROM1'(1,1) EQ '(').FROM_PTR * Source is pointered?
+         AIF   ('&FROM' EQ '*STACK').NOERR6
+         CHKLIT &_FROM1,ALT=YES        * A literal nr was specified?
+         AIF   (&BXA_RC LT 8).ERR6A    * Valid literal nr: ok
+         AIF   ('&_FROM1'(1,1) EQ '=').FROMLIT * A literal was spec'd
+&I       SETA  ('&_FROM1' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&I EQ 0).FROMFLD       * Valid field name
+         AIF   (K'&_FROM1 LT 3).FROMTP0 * Cannot be a length reference
+         AIF   ('&_FROM1'(1,2) NE 'L''').FROMTP0 * Is not a length ref.
+&LENC    SETC  '&_FROM1'(3,*)          * Length of what?
+&BXA_NUMVAL SETA L'&LENC               * Retrieve length
+         AIF   (&BXA_NUMVAL NE 0).ERR6A * Ok: treat as literal number
+         AGO   .ERR6B                  * Cannot evaluate
+.FROMTP0 ANOP  ,                       * Source should evaluate to a nr
+&BXA_NUMVAL SETA &_FROM1               * A valid literal number?
+         AIF   (&I NE 0).ERR6A         * Ok: treat as a literal number
+         AGO   .ERR6B                  * Error: cannot evaluate
+.FROMFLD ANOP  ,                       * Source is a valid field name
+&FROM_TP SETC  T'&_FROM1               * Extract field type
+&I       SETA  ('&FROM_TP' FIND 'ABCDEFGHKLPQRSVXYZ')
+         AIF   (&I EQ 1).NOERR6        * Valid field type
+         AIF   ('&FROM_TP' NE '0').FROMREG * This an equated literal?
+&EQULIT  SETB  1                       * Yes: indicate equated literal
+&FROM_VAL SETA L'&_FROM1               * Determine value of literal
+         AGO   .NOERR6                 *
+.FROMREG ANOP  ,                       * Must be a valid register
+         CHKREG &_FROM1                * Valid register type?
+         AIF   (&BXA_RC NE 0).ERR6C    * Invalid field type
+&FROM_REG SETA &BXA_NUMVAL             * Save register number
+         AGO   .NOERR6                 *
+.FROMLIT ANOP  ,                       * A literal was specified as src
+         AIF   (K'&_FROM1 LT 5).ERR6D  * Not a decent literal
+&I       SETA  2                       * First position to check
+&J       SETA  ('(0123456789' FIND '&_FROM1'(&I,1)) * Check dup.factor
+         AIF   (&J EQ 0).FRLIT4        * No dup factor!
+         AIF   (&J EQ 1).FRLIT1        * Dup factor in parentheses!
+.FRLIT0  ANOP  ,                       * Loop to find end of dup.nr
+&I       SETA  &I+1                    * Point next char in &_FROM1
+         AIF   (&I GT K'&_FROM1).ERR6D * No type designation found
+&J       SETA  ('&_FROM1'(&I,1) FIND '0123456789')
+         AIF   (&J EQ 0).FRLIT4        * &I now points past dup.factor
+         AGO   .FRLIT0                 *
+.FRLIT1  ANOP  ,                       * &J contains nr of ( to match
+&I       SETA  &I+1                    * Point next char in &_FROM1
+         AIF   (&I GT K'&_FROM1).ERR6D * No type designation found
+         AIF   ('&_FROM1'(&I,1) EQ '(').FRLIT2
+         AIF   ('&_FROM1'(&I,1) EQ ')').FRLIT3
+         AGO   .FRLIT1                 *
+.FRLIT2  ANOP  ,                       * Another ( found
+&J       SETA  &J+1                    * Count unmatched parenthesis
+         AGO   .FRLIT1                 * and continue search for )
+.FRLIT3  ANOP  ,                       * An ending parenthesis found
+&J       SETA  &J-1                    * Reduce count of unmatched (
+         AIF   (&J GT 0).FRLIT1        * Search for more ) characters
+&I       SETA  &I+1                    * Point past dup-factor
+.FRLIT4  ANOP  ,                       * &I now points past dup.factor
+         AIF   (&I GT K'&_FROM1).ERR6D * No type designation found
+&FROM_TP SETC  '&_FROM1'(&I,1)         * Extract type of literal
+         AIF   (&I+3 GT K'&_FROM1).ERR6D * No valid value!
+&I       SETA  &I+1                    * Point next char
+         AIF   ('&_FROM1'(&I,1) NE 'L').FRLIT10 * No length modifier
+&LEN     SETA  &I+1                    * Point to start of length value
+         AIF   ('&_FROM1'(&I,1) EQ '''').FRLIT10 * No length modifier
+         AIF   ('&_FROM1'(&I,1) EQ '.').ERR6E * Length is in bits
+         AIF   ('&_FROM1'(&I,1) EQ '(').FRLIT6 * Length in ()
+.FRLIT5  ANOP  ,                       * Loop to find end of length
+&I       SETA  &I+1                    * Point next char in &_FROM1
+         AIF   (&I GT K'&_FROM1).ERR6D * No type designation found
+&J       SETA  ('&_FROM1'(&I,1) FIND '0123456789')
+         AIF   (&J EQ 0).FRLIT9        * &I now points past length
+         AGO   .FRLIT5                 *
+.FRLIT6  ANOP  ,                       * Lenth in parentheses
+&J       SETA  0                       * &J contains nr of ( to match
+&I       SETA  &I+1                    * Point next char in &_FROM1
+         AIF   (&I GT K'&_FROM1).ERR6D * No type designation found
+         AIF   ('&_FROM1'(&I,1) EQ '(').FRLIT7
+         AIF   ('&_FROM1'(&I,1) EQ ')').FRLIT8
+         AGO   .FRLIT6                 *
+.FRLIT7  ANOP  ,                       * Another ( found
+&J       SETA  &J+1                    * Count unmatched parenthesis
+         AGO   .FRLIT6                 * and continue search for )
+.FRLIT8  ANOP  ,                       * An ending parenthesis found
+&J       SETA  &J-1                    * Reduce count of unmatched (
+         AIF   (&J GT 0).FRLIT6        * Search for more ) characters
+&I       SETA  &I+1                    * Point past length value
+.FRLIT9  ANOP  ,                       * &I now points past length mod.
+&J       SETA  &I-&LEN                 * Nr of chars in length value
+&LENC    SETC  '&_FROM1'(&LEN,&J)      * Extract length value string
+&LEN     SETA  &LENC                   * Determine length value
+         AIF   (&LEN EQ 0).ERR6F       * Cannot evaluate length
+&FROM_LEN SETA &LEN                    *
+.FRLIT10 ANOP  ,                       *
+         AIF   ('&FROM_TP' EQ 'A').FRLITA
+         AIF   ('&FROM_TP' EQ 'B').NOERR6
+         AIF   ('&FROM_TP' EQ 'C').FRLITC
+         AIF   ('&FROM_TP' EQ 'D').FRLITD
+         AIF   ('&FROM_TP' EQ 'E').FRLITE
+         AIF   ('&FROM_TP' EQ 'F').FRLITF
+         AIF   ('&FROM_TP' EQ 'H').FRLITH
+         AIF   ('&FROM_TP' EQ 'L').FRLITL
+         AIF   ('&FROM_TP' EQ 'P').NOERR6
+         AIF   ('&FROM_TP' EQ 'Q').FRLITA
+         AIF   ('&FROM_TP' EQ 'S').FRLITY
+         AIF   ('&FROM_TP' EQ 'V').FRLITA
+         AIF   ('&FROM_TP' EQ 'X').NOERR6
+         AIF   ('&FROM_TP' EQ 'Y').FRLITY
+         AIF   ('&FROM_TP' EQ 'Z').NOERR6
+         AGO   .ERR6E                  * Unsupported type designation
+.FRLITA  ANOP  ,                       * A-type literal specified
+         AIF   (K'&LENC NE 0).FRLITA0  * Length was specified?
+&FROM_LEN SETA 4                       * No: use default
+.FRLITA0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/4             * Nr of whole words
+&I       SETA  &FROM_LEN-(&I*4)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'R'                     * Indicate unaligned address
+         AGO   .NOERR6                 *
+.FRLITC  ANOP  ,                       * C-type literal specified
+         AIF   (K'&LENC NE 0).NOERR6   * Length was specified!
+&LENC    SETC  '&_FROM1'(&I,*)         * I still points past length mod
+         AIF   (K'&LENC LT 3).ERR6D    * Not a valid text literal
+         AIF   ('&LENC'(1,1) NE '''').ERR6D * Must start with a quote..
+         AIF   ('&LENC'(K'&LENC,1) NE '''').ERR6D * And end with one!
+&LENC    SETC  '&LENC'(2,K'&LENC-2)    * Extract string value
+.FRLITC0 ANOP  ,                       * Loop to remove double quotes
+&I       SETA  ('&LENC' INDEX '''''')  * Search for double quote
+         AIF   (&I EQ 0).FRLITC3       * Not found: quit loop
+         AIF   (&I EQ 1).FRLITC1       * Remove leading quotes
+         AIF   (&I EQ K'&LENC-2).FRLITC2 * Remove trailing quotes
+&LENC    SETC  '&LENC'(1,&I-1).'"'.'&LENC'(&I+2,*)
+         AGO   .FRLITC0                * Check for more quotes
+.FRLITC1 ANOP  ,                       * Remove leading double quotes
+&LENC    SETC  '"'.'&LENC'(3,*)        *
+         AGO   .FRLITC0                * Check for more quotes
+.FRLITC2 ANOP  ,                       * Remove leading double quotes
+&LENC    SETC  '&LENC'(1,&I-1).'"'     *
+         AGO   .FRLITC0                * Check for more quotes
+.FRLITC3 ANOP  ,                       * All double quotes replaced
+&FROM_LEN SETA K'&LENC                 * Nr of characters in string
+         AGO   .NOERR6                 *
+.FRLITD  ANOP  ,                       * Floating point literal
+         AIF   (K'&LENC NE 0).FRLITD0  * Length was specified?
+&FROM_LEN SETA 8                       * No: use default
+.FRLITD0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/8             * Nr of double words
+&I       SETA  &FROM_LEN-(&I*8)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'K'                     * Indicate unaligned float
+         AGO   .NOERR6                 *
+.FRLITE  ANOP  ,                       * Floating point literal
+         AIF   (K'&LENC NE 0).FRLITE0  * Length was specified?
+&FROM_LEN SETA 4                       * No: use default
+.FRLITE0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/4             * Nr of whole words
+&I       SETA  &FROM_LEN-(&I*4)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'K'                     * Indicate unaligned float
+         AGO   .NOERR6                 *
+.FRLITF  ANOP  ,                       * Fixed point literal
+         AIF   (K'&LENC NE 0).FRLITF0  * Length was specified?
+&FROM_LEN SETA 4                       * No: use default
+.FRLITF0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/4             * Nr of whole words
+&I       SETA  &FROM_LEN-(&I*4)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'G'                     * Indicate unaligned fixed
+         AGO   .NOERR6                 *
+.FRLITH  ANOP  ,                       * Fixed point literal
+         AIF   (K'&LENC NE 0).FRLITH0  * Length was specified?
+&FROM_LEN SETA 2                       * No: use default
+.FRLITH0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/2             * Nr of half words
+&I       SETA  &FROM_LEN-(&I*2)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'G'                     * Indicate unaligned fixed
+         AGO   .NOERR6                 *
+.FRLITL  ANOP  ,                       * Floating point literal
+         AIF   (K'&LENC NE 0).FRLITL0  * Length was specified?
+&FROM_LEN SETA 8                       * No: use default
+.FRLITL0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/8             * Nr of double words
+&I       SETA  &FROM_LEN-(&I*8)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'K'                     * Indicate unaligned float
+         AGO   .NOERR6                 *
+.FRLITY  ANOP  ,                       * Address literal
+         AIF   (K'&LENC NE 0).FRLITY0  * Length was specified?
+&FROM_LEN SETA 2                       * No: use default
+.FRLITY0 ANOP  ,                       * Length of literal now known
+&I       SETA  &FROM_LEN/2             * Nr of half words
+&I       SETA  &FROM_LEN-(&I*2)        * Nr of additional bytes
+         AIF   (&I EQ 0).NOERR6        * Ok: aligned
+&FROM_TP SETC  'R'                     * Indicate unaligned address
+         AGO   .NOERR6                 *
+.FROM_PTR ANOP ,                       *
+&FROM_TP SETC  'p'                     * Field type is pointer
+&_FROM1  SETC  '&FROM(1,1)'            * Extract register designation
+         CHKREG &_FROM1,g              * Must be a gpr!
+         AIF   (&BXA_RC GT 4).ERR6G    * Not a valid pointer register
+         AGO   .NOERR6                 *
+.ERR6A   ANOP  ,                       * Source is a literal
+&FROM_TP SETC  '0'                     * Set source type
+&FROM_VAL SETA &BXA_NUMVAL             * Save value to be copied
+         AIF   (&FROM_VAL GE 0).ERR6A_ * Negative number?
+&SIGN    SETC  '-'                     * Indicate sign
+.ERR6A_  ANOP  ,                       *
+         AIF   (K'&_FROM2 EQ 0).NOERR6 * Explicit length specified?
+         MNOTE 4,'Explicit length not allowed for literal value: ignore*
+               d'                      *
+&_FROM2  SETC  ''                      * Wipe length indication
+         AGO   .NOERR6                 *
+.ERR6B   MNOTE 8,'Source field not a valid field name'
+         MEXIT ,                       *
+.ERR6C   ANOP  ,                       *
+         CHKLIT &_FROM1,ALT=YES,MSG=YES * Just to issue a message
+         MNOTE 8,'&FROM_TP is an invalid source field type'
+         MEXIT ,                       *
+.ERR6D   MNOTE 8,'Source field is not a valid literal'
+         MEXIT ,                       *
+.ERR6E   MNOTE 8,'Source field is an unsupported literal'
+         MEXIT ,                       *
+.ERR6F   ANOP  ,                       *
+&LENC    SETC  (DOUBLE '&LENC')        *
+         MNOTE 8,'Cannot evaluate length modifier: &LENC'
+         MEXIT ,                       *
+.ERR6G   MNOTE 8,'&_FROM1 is an invalid source pointer register'
+         MEXIT ,                       *
+.NOERR6  ANOP  ,                       *
+.*
+.* Determine length of TO field
+&I       SETA  ('acfg' FIND '&TO_TP')  * Register type?
+         AIF   (&I NE 0).TOLENR        * Yes: it is some register type
+         AIF   (K'&_TO2 NE 0).TOLENX   * Should be a valid expression
+&LEN     SETA  L'&_TO1                 * No reg & not spec'd: extract
+         AGO   .TOLENOK                * Length has now been set
+.TOLENR  ANOP  ,                       * Handle register types
+&LENC    SETC  '4484'(&I,1)            * Determine size of 1 register
+&LEN     SETA  &LENC                   *  and make it numeric
+&LENC    SETC  '16160416'(2*&I-1,2)    * Determine nr of registers
+&REG_CT  SETA  &LENC                   *  and make it numeric
+         AIF   (K'&_TO2 EQ 0).TOLENOK  * Reg & not spec'd: ok
+         CHKREG &_TO2                  * Check: register or number?
+         AIF   (&BXA_RC NE 0).TOLENRL  * Must be a literal number
+&TO_EREG SETB  1                       * Indicate end register spec'd
+         AIF   ('&TO_TP' NE T'&_TO2).TOLENR0
+         AIF   ('&TO_TP' EQ 'f').TOLENF * Go handle ending FP-register
+         AGO   .TOLENR1                * Go calculate total length
+.TOLENR0 ANOP  ,                       * Different register types
+         AIF   ('&TO_TP' NE 'g').ERR7A4 * Only allowed combination is
+         AIF   (T'&_TO2 NE 'a').ERR7A4 *   gpr with ar
+&TO_TP   SETC  'ga'                    * Indicate combined type
+.TOLENR1 ANOP  ,                       * End-register is valid
+&BXA_NUMVAL SETA 1+&BXA_NUMVAL-&TO_REG * Determine nr of registers
+         AIF   (&BXA_NUMVAL GT 0).TOLENR2 * Wrap around?
+&BXA_NUMVAL SETA &REG_CT+&BXA_NUMVAL   * Adjust for wrap
+.TOLENR2 ANOP  ,                       * BXA_NUMVAL now nr of registers
+&LEN     SETA  &LEN*&BXA_NUMVAL        * Length for all registers
+         AGO   .TOLENOK                *
+.TOLENF  ANOP  ,                       * Determine lenth from end-FPR
+&BXA_NUMVAL SETA 2+&BXA_NUMVAL-&TO_REG * Determine nr of HALF registers
+         AIF   (&BXA_NUMVAL GT 0).TOLENF1 * Wrap around?
+&BXA_NUMVAL SETA 2*&REG_CT+&BXA_NUMVAL * Adjust for wrap
+.TOLENF1 ANOP  ,                       *
+&LEN     SETA  &LEN*&BXA_NUMVAL/2      * Length for all registers
+         AGO   .TOLENOK                *
+.TOLENRL ANOP  ,                       * &_TO2 is the nr of regs
+&I       SETA  &_TO2                   * Make nr of regs numeric
+         AIF   (&I GT 16).ERR7A1       * Too many registers
+         AIF   ('&TO_TP' EQ 'f' AND &I GT 4).ERR7A1 * Too many regs
+&LEN     SETA  (&I*&LEN)               * Determine total length
+         AGO   .TOLENOK                * Length has now been set
+.TOLENX  ANOP  ,                       * Check length expression
+         AIF   ('&_TO2'(1,1) EQ '(').TOLENPT * To length is a (reg)?
+&LEN     SETA  &_TO2                   * Determine numeric value
+         AGO   .TOLENOK                * Length has now been set
+.TOLENPT ANOP  ,                       * Check length as a (ptr)
+         AIF   ('&TO_TP' NE 'p').ERR7A5 * TO1 must be a pointered field
+&_TO2    SETC  '&TO(2,1)'              * Extract register designation
+         CHKREG &_TO2,g                * Must be a valid gpr
+         AIF   (&BXA_RC GT 4).ERR7A6   * Error!
+&LEN     SETA  0                       * Indicate register used
+&TO_LEN  SETA  0                       * Indicate register used
+         AGO   .TOLENOQ                *
+.TOLENOK ANOP  ,                       *
+         AIF   (&LEN LE 0).ERR7A2      * Invalid length
+&TO_LEN  SETA  &LEN                    * Copy determined length
+.TOLENOQ ANOP  ,                       *
+.*
+.* Determine length of FROM field
+         AIF   (&FROM_LEN NE 0).GO     * Length of literal is known
+         AIF   ('&FROM' EQ '*STACK').GO * Length not relevant
+         AIF   ('&FROM_TP' EQ '0').FRLEN0 * Literal value?
+&I       SETA  ('acfg' FIND '&FROM_TP') * Register type?
+         AIF   (&I NE 0).FRLENR        * Yes: it is some register type
+         AIF   (K'&_FROM2 NE 0).FRLENX * Field & len spec'd: ok
+&LEN     SETA  L'&_FROM1               * Field & not spec'd: extract
+         AGO   .FRLENOK                * Length has now been set
+.FRLENR  ANOP  ,                       * Handle register types
+&LENC    SETC  '4484'(&I,1)            * Determine size of 1 register
+&LEN     SETA  &LENC                   *  and make it numeric
+&LENC    SETC  '16160416'(2*&I-1,2)    * Determine nr of registers
+&REG_CT  SETA  &LENC                   *  and make it numeric
+         AIF   (K'&_FROM2 EQ 0).FRLENOK * Reg & not spec'd: ok
+         CHKREG &_FROM2                * Check: register or number?
+         AIF   (&BXA_RC NE 0).FRLENRL  * Must be a literal number
+&FROM_EREG SETB 1                      * Indicate end reg specified
+         AIF   ('&FROM_TP' NE T'&_FROM2).FRLENR0
+         AIF   ('&FROM_TP' EQ 'f').FRLENF * Go handle end FP-register
+         AGO   .FRLENR1                * Go calculate total length
+.FRLENR0 ANOP  ,                       * Different register types
+         AIF   ('&FROM_TP' NE 'g').ERR7A4 * Only allowed combination is
+         AIF   (T'&_FROM2 NE 'a').ERR7A4 *   gpr with ar
+&FROM_TP SETC  'ga'                    * Indicate combined type
+.FRLENR1 ANOP  ,                       * End-register is valid
+&BXA_NUMVAL SETA 1+&BXA_NUMVAL-&FROM_REG * Determine nr of registers
+         AIF   (&BXA_NUMVAL GT 0).FRLENR2 * Wrap around?
+&BXA_NUMVAL SETA &REG_CT+&BXA_NUMVAL   * Adjust for wrap
+.FRLENR2 ANOP  ,                       * BXA_NUMVAL now nr of registers
+&LEN     SETA  &LEN*&BXA_NUMVAL        * Length for all registers
+         AGO   .FRLENOK                *
+.FRLENF  ANOP  ,                       * Determine lenth from end-FPR
+&BXA_NUMVAL SETA 2+&BXA_NUMVAL-&FROM_REG * Determine nr of HALF regs
+         AIF   (&BXA_NUMVAL GT 0).FRLENF1 * Wrap around?
+&BXA_NUMVAL SETA 2*&REG_CT+&BXA_NUMVAL * Adjust for wrap
+.FRLENF1 ANOP  ,                       * BXA_NUMVAL now nr of half regs
+&LEN     SETA  &LEN*&BXA_NUMVAL/2      * Length for all registers
+         AGO   .FRLENOK                *
+.FRLENRL ANOP  ,                       * &_FROM2 is the nr of regs
+&I       SETA  &_FROM2                 * Make nr of regs numeric
+         AIF   (&I GT 16).ERR7A1       * Too many registers
+         AIF   ('&FROM_TP' EQ 'f' AND &I GT 4).ERR7A1 * Too many regs
+&LEN     SETA  (&I*&LEN)               * Determine total length
+         AGO   .FRLENOK                * Length has now been set
+.FRLEN0  ANOP  ,                       * Determine literal length
+         AIF   ('&TO_TP' EQ 'B' OR '&TO_TP' EQ 'X').FRLEN0U * Unsigned?
+         AIF   (&FROM_VAL LT 0).FRLEN0N * Handle negative numbers
+&LEN     SETA  1                       * Assume 1 byte
+         AIF   (&FROM_VAL LT 128).FRLENOK * Will fit in 1 byte
+&LEN     SETA  2                       * Assume 2 bytes
+         AIF   (&FROM_VAL LT 32768).FRLENOK * Will fit in 2 bytes
+&LEN     SETA  3                       * Assume 3 bytes
+         AIF   (&FROM_VAL LT 8388608).FRLENOK * Will fit in 3 bytes
+&LEN     SETA  4                       * Must fit in 4 bytes
+         AGO   .FRLENOK                *
+.FRLEN0N ANOP  ,                       * Determine len of negative nr
+&LEN     SETA  1                       * Assume 1 byte
+         AIF   (&FROM_VAL GE -128).FRLENOK * Will fit in 1 byte
+&LEN     SETA  2                       * Assume 2 bytes
+         AIF   (&FROM_VAL GE -32768).FRLENOK * Will fit in 2 bytes
+&LEN     SETA  3                       * Assume 3 bytes
+         AIF   (&FROM_VAL GE -8388608).FRLENOK * Will fit in 3 bytes
+&LEN     SETA  4                       * Must fit in 4 bytes
+         AGO   .FRLENOK                *
+.FRLEN0U ANOP  ,                       * Determine len of unsigned nr
+&LEN     SETA  1                       * Assume 1 byte
+         AIF   (&FROM_VAL LT 256).FRLENOK * Will fit in 1 byte
+&LEN     SETA  2                       * Assume 2 bytes
+         AIF   (&FROM_VAL LT 65536).FRLENOK * Will fit in 2 bytes
+&LEN     SETA  3                       * Assume 3 bytes
+         AIF   (&FROM_VAL LT 16777216).FRLENOK * Will fit in 3 bytes
+&LEN     SETA  4                       * Must fit in 4 bytes
+         AGO   .FRLENOK                *
+.FRLENX  ANOP  ,                       * Evaluate length expression
+         AIF   ('&_FROM2'(1,1) EQ '(').FRLENPT * To length is a (reg)?
+&LEN     SETA  &_FROM2                 * Determine numeric value
+         AGO   .FRLENOK                *
+.FRLENPT ANOP  ,                       * Check length as a (ptr)
+         AIF   ('&FROM_TP' NE 'p').ERR7A7 * FROM1 must be pointered
+&_FROM2  SETC  '&FROM(2,1)'            * Extract register designation
+         CHKREG &_FROM2,g              * Must be a valid gpr
+         AIF   (&BXA_RC GT 4).ERR7A8   * Error!
+&LEN     SETA  0                       * Indicate register used
+&FROM_LEN SETA  0                      * Indicate register used
+         AGO   .FRLENOQ                *
+.FRLENOK ANOP  ,                       *
+         AIF   (&LEN LE 0).ERR7A3      * Invalid length
+&FROM_LEN SETA &LEN                    * Copy determined length
+.FRLENOQ ANOP  ,                       *
+.*
+.* Copy to self not useful
+         AIF   ('&_TO1' EQ '&_FROM1').ERR7 * Operands equal?
+&I       SETA  ('acfg' FIND '&TO_TP')  * Register type?
+         AIF   (&I EQ 0).GO            * Not a register: ok
+         AIF   ('&FROM_TP' NE '&TO_TP').GO * Different types: ok
+         AIF   (&FROM_REG NE &TO_REG).GO * Not same register nr: ok
+.ERR7    ANOP  ,                       * Copy to self detected
+         AIF   ('&WARN' EQ 'NOWARN').NOERR7 * Suppress message
+         MNOTE 4,'Copy to self not useful: ignored'
+.NOERR7  ANOP  ,                       *
+&_LABEL  LABEL ,                       *
+         MEXIT ,                       *
+.*
+.* Select code generation logic by from type field
+.GO      ANOP  ,
+         AIF   ('&FROM_TP' EQ 'A').GENA
+         AIF   ('&FROM_TP' EQ 'B').GENB
+         AIF   ('&FROM_TP' EQ 'C').GENC
+         AIF   ('&FROM_TP' EQ 'D').GEND
+         AIF   ('&FROM_TP' EQ 'E').GENE
+         AIF   ('&FROM_TP' EQ 'F').GENF
+         AIF   ('&FROM_TP' EQ 'G').GENG
+         AIF   ('&FROM_TP' EQ 'H').GENH
+         AIF   ('&FROM_TP' EQ 'K').GENK
+         AIF   ('&FROM_TP' EQ 'L').GENL
+         AIF   ('&FROM_TP' EQ 'P').GENP
+         AIF   ('&FROM_TP' EQ 'Q').GENQ
+         AIF   ('&FROM_TP' EQ 'R').GENR
+         AIF   ('&FROM_TP' EQ 'S').GENS
+         AIF   ('&FROM_TP' EQ 'V').GENV
+         AIF   ('&FROM_TP' EQ 'X').GENX
+         AIF   ('&FROM_TP' EQ 'Y').GENY
+         AIF   ('&FROM_TP' EQ 'Z').GENZ
+         AIF   ('&FROM_TP' EQ '0').GEN0
+         AIF   ('&FROM_TP' EQ 'a').GEN_A
+         AIF   ('&FROM_TP' EQ 'c').GEN_C
+         AIF   ('&FROM_TP' EQ 'f').GEN_F
+         AIF   ('&FROM_TP' EQ 'g').GEN_G
+         AIF   ('&FROM_TP' EQ 'ga').GEN_GA_
+         AIF   ('&FROM' EQ '*STACK').GENSTACK
+         AIF   ('&FROM_TP' EQ 'p').GEN_P
+         MNOTE 12,'Internal error: FROM type &FROM_TP not supported'
+         MEXIT ,                       *
+.*
+.* Error messages for generation sections below
+.ERR7A1  MNOTE 8,'Number of registers specified exceeds whole set'
+         MEXIT ,                       *
+.ERR7A2  MNOTE 8,'Invalid destination length specified: 0 or negative'
+         MEXIT ,                       *
+.ERR7A3  MNOTE 8,'Invalid source length specified: 0 or negative'
+         MEXIT ,                       *
+.ERR7A4  MNOTE 8,'Start and end registers have different types'
+         MEXIT ,                       *
+.ERR7A5  MNOTE 8,'Destination length in register valid only if destinat*
+               ion is in register too'
+         MEXIT ,                       *
+.ERR7A6  MNOTE 8,'&_TO2 is not a valid length register'
+         MEXIT ,                       *
+.ERR7A7  MNOTE 8,'Source length in register valid only if source is in *
+               register too'
+         MEXIT ,                       *
+.ERR7A8  MNOTE 8,'&_FROM2 is not a valid length register'
+         MEXIT ,                       *
+.ERR7B   MNOTE 8,'Cannot copy from ''&FROM_TP'' to ''&TO_TP'' type of f*
+               ields'                  *
+         MEXIT ,                       *
+.ERR7C   MNOTE 8,'Lengths - implied or specified - do not match'
+         MEXIT ,                       *
+.ERR7D   MNOTE 8,'Length of destination field exceeds 256'
+         MEXIT ,                       *
+.ERR7E   MNOTE 8,'Length of source field exceeds 256'
+         MEXIT ,                       *
+.ERR7F   MNOTE 8,'No register pair available for long move'
+         MEXIT ,                       *
+.ERR7G   MNOTE 8,'Field is too large to pack'
+         MEXIT ,                       *
+.ERR7H   MNOTE 8,'No register available to extend sign'
+         MEXIT ,                       *
+.ERR7I   MNOTE 8,'Destination field is too short'
+         MEXIT ,                       *
+.ERR7J   MNOTE 8,'Cannot load more than 1 FP register from unaligned fi*
+               eld'                    *
+         MEXIT ,                       *
+.ERR7K   MNOTE 8,'Cannot load an FP register from field with length &FR*
+               OM_LEN'                 *
+         MEXIT ,                       *
+.ERR7L   MNOTE 8,'Cannot copy extended floating point field of less tha*
+               n 6 bytes'              *
+         MEXIT ,                       *
+.ERR7M   MNOTE 8,'Register &_TO1 does not designate a pair of FP regist*
+               ers'                    *
+         MEXIT ,                       *
+.ERR7N   MNOTE 8,'Packed field is too large to unpack'
+         MEXIT ,                       *
+.ERR7O   MNOTE 8,'Too many digits in result: cannot unpack'
+         MEXIT ,                       *
+.ERR7P   MNOTE 8,'&_FROM1 must be 8 bytes long to copy to &_TO1'
+         MEXIT ,                       *
+.ERR7Q   MNOTE 8,'Cannot load more than 1 register at a time from an S-*
+               type constant'
+         MEXIT ,                       *
+.ERR7R   MNOTE 8,'S-type constant must be two bytes long to load a regi*
+               ster with it'           *
+         MEXIT ,                       *
+.ERR7S   MNOTE 8,'No work register available'
+         MEXIT ,                       *
+.ERR7T   MNOTE 8,'Cannot load an access register with a literal other t*
+               han 0, 1, or 2'         *
+         MEXIT ,                       *
+.ERR7U   MNOTE 8,'Cannot copy a negative value into an unsigned field'
+         MEXIT ,                       *
+.ERR7V   MNOTE 8,'Register &_FROM1 does not designate a pair of FP regi*
+               sters'                  *
+         MEXIT ,                       *
+.ERR7W   MNOTE 8,'Cannot copy more than 1 value to an explicit-length f*
+               loating point field'    *
+         MEXIT ,                       *
+.ERR7X   MNOTE 8,'Cannot extend negative literal to &TO_LEN bytes'
+         MEXIT ,                       *
+.*
+.* From type A: 4-byte address field
+.GENA    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'A').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'R').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'V').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'Y').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENA_G  * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy fullword address field to general purpose register(s)
+.GENA_G  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 4).GENA_G0  * 1 register to load
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_LM                  * Go generate multiple ICMs
+.GENA_G0 ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).DO_L   * Generate 1 L
+         AIF   (&FROM_LEN LT 4).GENA_G1 * Clear, then ICM
+&PAD_LEN SETA  &FROM_LEN-4             * Nr of excess bytes
+&_FROM1  SETC  '&_FROM1'.'+&PAD_LEN'   * Adjust source pointer
+&FROM_LEN SETA 4                       * Set usable source length
+&I       SETA  &PAD_LEN/4              * Nr of words padded
+&J       SETA  &PAD_LEN-(4*&I)         * Nr of additional bytes padded
+         AIF   (&J EQ 0).DO_L          * If none: still aligned
+&MASK    SETC  'YYYY'                  * Load 4 unaligned bytes
+         AGO   .DO_ICM                 * And go copy to register
+.GENA_G1 ANOP  ,                       * Load from short field
+&_LABEL  CLEAR &_TO1                   * Wipe register before use
+&_LABEL  SETC  ''                      * Wipe label after use
+&MASK    SETC  'NNNY'                  * Mask for 1-byte source field
+         AIF   (&FROM_LEN EQ 1).DO_ICM * Ok: go load register
+&MASK    SETC  'NNYY'                  * Mask for 2-byte source field
+         AIF   (&FROM_LEN EQ 2).DO_ICM * Ok: go load register
+&MASK    SETC  'NYYY'                  * Mask for 3-byte source field
+         AGO   .DO_ICM                 * Source must be 3 bytes long
+.*
+.* From type B: Binary data field (unsigned)
+.GENB    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'B').GENMVC0 * CPY unsigned to unsigned
+         AIF   ('&TO_TP' EQ 'X').GENMVC0 * CPY unsigned to unsigned
+         AIF   ('&TO_TP' EQ 'a').GENB_A  * CPY unsigned to ARnn
+         AIF   ('&TO_TP' EQ 'c').GENB_C  * CPY unsigned to CRnn
+         AIF   ('&TO_TP' EQ 'g').GENB_G  * CPY unsigned to Rnn
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy unsigned binary data to access register(s)
+.GENB_A  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_LAM                 * Go generate LAM instruction
+.*
+.* Copy unsigned binary data to control register(s)
+.GENB_C  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_LCTL                * Go generate LAM instruction
+.*
+.* Copy unsigned binary data to general purpose register(s)
+.GENB_G  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 4).GENB_G0  * 1 register to load
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENICMM                * Go generate multiple ICMs
+.GENB_G0 ANOP  ,                       *
+&MASK    SETC  'YYYY'                  *
+         AIF   (&FROM_LEN EQ 4).DO_ICM * Generate 1 ICM
+         AIF   (&FROM_LEN LT 4).GENB_G1 * Clear, then ICM
+&PAD_LEN SETA  &FROM_LEN-4             * Nr of excess bytes
+&_FROM1  SETC  '&_FROM1'.'+&PAD_LEN'   * Adjust source pointer
+&FROM_LEN SETA 4                       * Set usable source length
+         AGO   .DO_ICM                 * And go copy to register
+.GENB_G1 ANOP  ,                       * Load from short field
+&_LABEL  CLEAR &_TO1                   * Wipe register before use
+&_LABEL  SETC  ''                      * Wipe label after use
+&MASK    SETC  'NNNY'                  * Mask for 1-byte source field
+         AIF   (&FROM_LEN EQ 1).DO_ICM * Ok: go load register
+&MASK    SETC  'NNYY'                  * Mask for 2-byte source field
+         AIF   (&FROM_LEN EQ 2).DO_ICM * Ok: go load register
+&MASK    SETC  'NYYY'                  * Mask for 3-byte source field
+         AGO   .DO_ICM                 * Source must be 3 bytes long
+.*
+.* From type C: Character data field
+.GENC    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'C').GENMVCC * CPY char to char
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* From type D: Long floating point field
+.GEND    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'D').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'E').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'K').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'f').GEND_F * CPY float to FP register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a long floating point number to a register
+.GEND_F  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AIF   (&TO_LEN EQ 8).DO_LD    * Generate 1 LD
+         AGO   .GENLDM                 * Generate several LDs
+.*
+.* From type E: Short floating point field
+.GENE    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'D').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'E').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'K').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'f').GENE_F * CPY float to FP register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a short floating point number to a register
+.GENE_F  ANOP  ,                       *
+         AIF   (&TO_LEN NE 2*&FROM_LEN).ERR7C * Lengths equal?
+         AIF   (&TO_LEN EQ 8).DO_LE    * Generate 1 LE
+         AGO   .GENLEM                 * Generate several LEs
+.*
+.* From type F: Signed fullword
+.GENF    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'F').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'G').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'H').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'g').GENF_G * CPY signed to register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a signed fullword to a register
+.GENF_G  ANOP  ,                       *
+         AIF   (&TO_LEN LE 4).GENICM   * Generate 1 ICM/L/LH
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_LM                  * Generate 1 LM
+.*
+.* From type G: Unaligned signed
+.GENG    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'F').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'G').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'H').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'g').GENG_G * CPY signed to register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy an unaligned signed number
+.GENGG   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN LE &FROM_LEN).GENMVC0 * Copy or truncate
+         AIF   (&TO_LEN GT 8).GENGG20  * Cannot use registers to extend
+         AIF   (&TO_LEN GT 4).GENGG6   * Must use pair of regs
+.* Source and extended dest.value both fit in a single register
+         EQUREG R0=YES,TEMP=YES        * Assign a register
+         AIF   (&BXA_RC GT 0).ERR7H    * No reg available!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create register name
+&MASK    SETC  'YNNN'                  * Mask for 1-byte value
+&I       SETA  24                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 1).GENGG0 * Go load value
+&MASK    SETC  'YYNN'                  * Mask for 2-byte value
+&I       SETA  16                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 2 AND '&FROM_TP' NE 'G').GENGG1
+         AIF   (&FROM_LEN EQ 2).GENGG0 * Go load value
+&MASK    SETC  'YYYN'                  * Length MUST be 3 bytes!
+&I       SETA  8                       * Nr of bits to shift
+.GENGG0  ANOP  ,                       * Use ICM to load value
+&_LABEL  ICM   &REG,&MASK,&_FROM1      * Load source value
+&_LABEL  SETC  ''                      * Wipe used label
+         SRA   &REG,&I                 * Create fullword value
+         AGO   .GENGG2                 * Go save value in dest field
+.GENGG1  ANOP  ,                       * Happens to be aligned!
+&_LABEL  LH    &REG,&_FROM1            * Load source value
+&_LABEL  SETC  ''                      * Wipe used label
+.GENGG2  ANOP  ,                       * Value now in &REG
+&MASK    SETC  'NNYY'                  * Min.dest.size is 2 bytes!
+         AIF   (&TO_LEN EQ 2 AND '&TO_TP' NE 'G').GENGG4
+         AIF   (&TO_LEN EQ 2).GENGG3   * Go save value
+&MASK    SETC  'NYYY'                  * Mask for 3-byte value
+         AIF   (&TO_LEN EQ 3).GENGG3   * Go save value
+&MASK    SETC  'YYYY'                  * MUST be 4 bytes long!
+         AIF   ('&TO_TP' EQ 'F').GENGG5 * Go save value
+.GENGG3  ANOP  ,                       * Save value using STCM
+         STCM  &REG,&MASK,&_TO1        * Save extended value
+         MEXIT ,                       *
+.GENGG4  ANOP  ,                       * Go save value using STH
+         STH   &REG,&_TO1              * Save extended value
+         MEXIT ,                       *
+.GENGG5  ANOP  ,                       * Go save value using ST
+         ST    &REG,&_TO1              * Save extended value
+         MEXIT ,                       *
+.* Extend up to 8 bytes using a pair of registers
+.GENGG6  ANOP  ,                       *
+         EQUREG R0=YES,TEMP=YES,PAIR=YES,WARN=NO * Assign pair of regs
+         AIF   (&BXA_RC GT 0).GENGG20  * No pair available!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create register name
+&I       SETA  &BXA_NUMVAL+1           * Nr of odd register
+&ODDREG  SETC  'R'.'&I'                * Odd register name
+&MASK    SETC  'YNNN'                  * Mask for a 1-byte value
+&I       SETA  56                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 1).GENGG7 * Go load 1-byte value
+&MASK    SETC  'YYNN'                  * Mask for a 1-byte value
+&I       SETA  48                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 2 AND '&FROM_TP' NE 'G').GENGG8 *
+         AIF   (&FROM_LEN EQ 2).GENGG7 * Go load 2-byte value
+&MASK    SETC  'YYYN'                  * Mask for a 3-byte value
+&I       SETA  40                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 3).GENGG7 * Go load 3-byte value
+&MASK    SETC  'YYYY'                  * Mask for a 4-byte value
+&I       SETA  32                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 4 AND '&FROM_TP' EQ 'F').GENGG9 *
+         AIF   (&FROM_LEN EQ 4).GENGG7 * Go load 4-byte value
+         AGO   .GENGG10                * Go load larger values
+.GENGG7  ANOP  ,                       * ICM value up to 4 bytes with
+&_LABEL  ICM   &REG,&MASK,&_FROM1      * Load value
+&_LABEL  SETC  ''                      * Remove used label
+         SRDA  &REG,&I                 * Create 8-byte value
+         AGO   .GENGG14                * Go save created value
+.GENGG8  ANOP  ,                       * LH value of 2 bytes
+&_LABEL  LH    &REG,&_FROM1            * Load value
+&_LABEL  SETC  ''                      * Remove used label
+         SRDA  &REG,32                 * Create 8-byte value
+         AGO   .GENGG14                * Go save created value
+.GENGG9  ANOP  ,                       * Load 4-byte value
+&_LABEL  L     &REG,&_FROM1            * Load value
+&_LABEL  SETC  ''                      * Remove used label
+         SRDA  &REG,32                 * Create 8-byte value
+         AGO   .GENGG14                * Go save created value
+.* Source for move is 5 to 7 bytes long
+.GENGG10 ANOP  ,                       *
+&MASK    SETC  'YNNN'                  * Mask for a 5-byte value
+&I       SETA  24                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 5).GENGG11 * Go load 5-byte value
+&MASK    SETC  'YYNN'                  * Mask for a 6-byte value
+&I       SETA  16                      * Nr of bits to shift
+         AIF   (&FROM_LEN EQ 6 AND '&FROM_TP' NE 'G').GENGG12
+         AIF   (&FROM_LEN EQ 6).GENGG11 * Go load 6-byte value
+&MASK    SETC  'YYYN'                  * Mask for a 7-byte value
+&I       SETA  8                       * Nr of bits to shift
+.GENGG11 ANOP  ,                       *
+&_LABEL  ICM   &REG,&MASK,&_FROM1      * Load source data
+&_LABEL  SETC  ''                      * Remove used label
+         SRA   &REG,&I                 * Create first fullword of value
+         AGO   .GENGG13                * Go load second register
+.GENGG12 ANOP  ,                       * Source aligned: use LH
+&_LABEL  LH    &REG,&_FROM1            * Load source data
+&_LABEL  SETC  ''                      * Remove used label
+.GENGG13 ANOP  ,                       * First register now ok
+&I       SETA  &I/8                    * Set I to nr of bytes shifted
+&I       SETA  4-&I                    * Set I to nr of bytes loaded
+         ICM   &ODDREG,YYYY,&_FROM1+&I * Load second register
+.GENGG14 ANOP  ,                       * Value in reg.pair can be saved
+&MASK    SETC  'NNNY'                  * 5 bytes is shortest possible
+&I       SETA  1                       * Offset for 2nd register
+         AIF   (&TO_LEN EQ 5).GENGG15  * Save 5-byte value
+&MASK    SETC  'NNYY'                  * Mask for 6-byte value
+&I       SETA  2                       * Offset for 2nd register
+         AIF   (&TO_LEN EQ 6 AND '&TO_TP' NE 'G').GENGG16 *
+         AIF   (&TO_LEN EQ 6).GENGG15  * Save 6-byte value
+&MASK    SETC  'NYYY'                  * Mask for 7-byte value
+&I       SETA  3                       * Offset for 2nd register
+         AIF   (&TO_LEN EQ 7).GENGG15  * Save 7-byte value
+&MASK    SETC  'YYYY'                  * Mask for 8-byte value
+&I       SETA  4                       * Offset for 2nd register
+         AIF   ('&TO_TP' NE 'F').GENGG15 * Save 8-byte value
+         STM   &REG,&ODDREG,&_TO1      * Aligned! Use STM
+         MEXIT ,                       *
+.GENGG15 ANOP  ,                       * Save value with STCM
+         STCM  &REG,&MASK,&_TO1        * Save first part of result
+         STCM  &ODDREG,YYYY,&_TO1+&I   * Save second register
+         MEXIT ,                       *
+.GENGG16 ANOP  ,                       * Save value with STH/STCM
+         STH   &REG,&_TO1              * Save first part of result
+         STCM  &ODDREG,YYYY,&_TO1+&I   * Save second register
+         MEXIT ,                       *
+.* Logic for extending in storage
+.GENGG20 ANOP  ,                       * &TO_LEN greater than 4
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of sign bytes to add
+         EQUREG R0=YES,TEMP=YES        * Assign a register
+         AIF   (&BXA_RC NE 0).ERR7H    * Error
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create register name
+&_LABEL  ICM   &REG,YNNN,&_FROM1       * Load first byte of source
+&_LABEL  SETC  ''                      * Wipe used-up label
+         SRA   &REG,31                 * Create 4 sign bytes
+&MASK    SETC  'YNNN'                  * Mask for 1 sign byte
+         AIF   (&PAD_LEN EQ 1).GENGG21 * Go fill pad-area
+&MASK    SETC  'YYNN'                  * Mask for 2 sign bytes
+         AIF   (&PAD_LEN EQ 2 AND '&TO_TP' NE 'G').GENGG22 *
+         AIF   (&PAD_LEN EQ 2).GENGG21 * Go fill pad-area
+&MASK    SETC  'YYYN'                  * Mask for 3 sign bytes
+         AIF   (&PAD_LEN EQ 3).GENGG21 * Go fill pad-area
+&MASK    SETC  'YYYY'                  * Mask for 4 sign bytes
+         AIF   (&PAD_LEN EQ 4 AND '&TO_TP' EQ 'F').GENGG23 *
+         AIF   (&PAD_LEN EQ 4).GENGG21 * Go fill pad-area
+&MASK    SETC  'YNNN'                  * Mask for 1 sign byte
+.GENGG21 ANOP  ,                       * Set up sign with STCM
+         STCM  &REG,&MASK,&_TO1        * Save sign byte(s)
+         AIF   (&PAD_LEN LE 4).GENGG24 * Go copy value bytes
+         MVC   &_TO1+1(&PAD_LEN-1),&_TO1 * Propagate byte, extend sign
+         AGO   .GENGG24                * Go extend sign (if needed)
+.GENGG22 ANOP  ,                       * Set up sign with STH
+         STH   &REG,&_TO1              * Save sign bytes
+         AGO   .GENGG24                * Go copy value bytes
+.GENGG23 ANOP  ,                       * Set up sign with STH
+         ST    &REG,&_TO1              * Save sign bytes
+.GENGG24 ANOP  ,                       * Copy value bytes
+         MVC   &_TO1+&PAD_LEN.(&FROM_LEN),&_FROM1 * Copy value
+         MEXIT ,                       *
+.*
+.* Copy an unaligned signed number to a register
+.GENG_G  ANOP  ,                       *
+         AIF   (&TO_LEN LE 4).GENICM   * Generate 1 ICM/L/LH
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENICMM                * Generate several ICMs
+.*
+.* From type H: Signed halfword
+.GENH    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'F').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'G').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'H').GENGG  * CPY signed to signed
+         AIF   ('&TO_TP' EQ 'g').GENH_G * CPY signed to register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a signed halfword to a register
+.GENH_G  ANOP  ,                       *
+         AIF   (&TO_LEN LE 4).GENICM   * Generate 1 ICM/L/LH
+         AIF   (&TO_LEN NE 2*&FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENLHM                 * Generate several LHs
+.*
+.* From type K: Unaligned floating point field
+.GENK    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'D').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'E').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'K').GENKK  * CPY float to float
+         AIF   ('&TO_TP' EQ 'f').GENK_F * CPY float to FP register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a floating point number
+.GENKK   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN EQ &FROM_LEN).DO_MVC * Lengths equal?
+&PAD0    SETB  1                       * Use zeros for padding
+&PAD_LEN SETA  0                       * Nr of padding bytes needed
+&LEN     SETA  &TO_LEN                 * Determine length of move
+         AIF   (&TO_LEN LE &FROM_LEN).GENKK1
+&LEN     SETA  &FROM_LEN               * FROM-length is shorter
+&PAD_LEN SETA  &TO_LEN-&LEN            * Nr of padding bytes needed
+&TO_LEN  SETA  &LEN                    * Truncate destination field
+.GENKK1  ANOP  ,                       * &LEN now effective length
+         AIF   (&PAD_LEN LT 1).DO_MVC  * No padding required: use MVC
+&_LABEL  CLEAR (&_TO1+&LEN,&PAD_LEN),,XC * Wipe padding area
+&_LABEL  SETC  ''                      * Label no longer needed
+         AGO   .DO_MVC                 *
+.*
+.* Copy an unaligned floating point number to a register
+.GENK_F  ANOP  ,                       *
+         AIF   (&TO_LEN NE 8).ERR7J    * 1 register only?
+         AIF   (&FROM_LEN EQ 4).DO_LE  * Generate 1 LE
+         AIF   (&FROM_LEN EQ 8).DO_LD  * Generate 1 LD
+         AGO   .ERR7K                  * Error
+.*
+.* From type L: Extended floating point field
+.GENL    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'L').GENLL  * CPY float to float
+         AIF   ('&TO_TP' EQ 'f').GENL_F * CPY float to FP register pair
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy an extended floating point number
+.GENLL   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN EQ &FROM_LEN).DO_MVC * Lengths equal?
+         AIF   (&FROM_LEN LT 6).ERR7L  * Source too short
+         AIF   (&TO_LEN LT 6).ERR7L    * Destination too short
+         AGO   .GENKK                  * Otherwise: copy float field
+.*
+.* Copy an extended floating point number to a register
+.GENL_F  ANOP  ,                       *
+         AIF   (K'&_TO2 EQ 0).GENL_F1  * Just a register spec'd?
+         AIF   (NOT &TO_EREG).GENL_F2  * End register specified?
+.GENL_F1 ANOP  ,                       *
+&TO_LEN  SETA  &TO_LEN+8               * Yes: add length of odd reg
+.GENL_F2 ANOP  ,                       * &TO_LEN is now correct
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENLXM                 * Generate several LDs
+.*
+.* From type P: Packed decimal field
+.GENP    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'P').GENPP  * CPY packed to packed
+         AIF   ('&TO_TP' EQ 'Z').GENPZ  * CPY packed to zoned
+         AIF   ('&TO_TP' EQ 'g').GENP_G * CPY packed to register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a packed field
+.GENPP   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&FROM_LEN EQ &TO_LEN).DO_MVC
+         AIF   (&FROM_LEN LE 16 AND &TO_LEN LE 16).DO_ZAP
+         AIF   (&FROM_LEN GT &TO_LEN).GENPP0
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of prefix zeros to add
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),X'00'  * Wipe area
+&_LABEL  SETC  ''                      * Wipe used label
+         MVC   &_TO1+&PAD_LEN.(&FROM_LEN),&_FROM1 * Copy decimal data
+         MEXIT ,                       *
+.GENPP0  ANOP  ,                       * Source is larger
+&PAD_LEN SETA  &FROM_LEN-&TO_LEN       * Nr of excess source bytes
+&_FROM1  SETC  '&_FROM1'.'+&PAD_LEN'   * Skip excess bytes
+         AGO   .DO_MVC                 *
+.*
+.* Copy a packed field to a zoned field
+.GENPZ   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+&I       SETA  2*&FROM_LEN-1           * Nr of digits
+&PAD_LEN SETA  &TO_LEN-&I              * Nr of zeroes to append
+         AIF   (&PAD_LEN LT 1).GENPZ0  * No leading zeroes required
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),C'0'   * Initialize with leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Modify destination field
+&TO_LEN  SETA  &I                      *    and reduce its length
+.GENPZ0  ANOP  ,                       *
+         AIF   (&FROM_LEN GT 16).ERR7N * Source too large
+         AIF   (&TO_LEN GT 16).ERR7O   * Destination too large
+         AGO   .DO_UNPK                *
+.*
+.* Copy a packed number to a register
+.GENP_G  ANOP  ,                       *
+         AIF   (&TO_LEN NE 4).GENP_G0  * 1 register only?
+         AIF   (&FROM_LEN EQ 8).DO_CVB *
+         AIF   (&FROM_LEN LT 8).ERR7P  * Source too short
+&I       SETA  &FROM_LEN-8             * Excess digits
+&_FROM1  SETC  '&_FROM1'.'+&I'         * Skip excess digits
+&_FROM_LEN SETA 8                      * Adjust length
+         AGO   .DO_CVB                 * And go load register
+.GENP_G0 ANOP  ,                       *
+         AIF   (2*&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENCVBM                * Generate several CVBs
+.*
+.* From type Q: 4-byte offset address field
+.GENQ    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'Q').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'R').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENA_G  * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* From type R: unaligned address field
+.GENR    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'A').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'Q').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'R').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'S').GENRS   * CPY address to address
+         AIF   ('&TO_TP' EQ 'V').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'Y').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENA_G  * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy an unaligned address field to an S-type address field
+.GENRS   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_MVC                 *
+.*
+.* From type S: 2-byte address field - base-displacement
+.GENS    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'R').GENSS  * CPY address to address
+         AIF   ('&TO_TP' EQ 'S').GENSS  * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENS_G * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy an S-type address field to a field
+.GENSS   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_MVC                 *
+.*
+.* Copy an S-type address field to a register
+.GENS_G  ANOP  ,                       *
+         AIF   (&TO_LEN NE 4).ERR7Q    * Only 1 register!
+         AIF   (&FROM_LEN NE 2).ERR7R  * Must be two bytes long!
+         EQUREG TEMP=YES               * Assign work register
+         AIF   (&BXA_RC NE 0).ERR7S    *
+         AIF   (&BXA_NUMVAL NE &TO_REG).GENS_G0
+         USE   &_TO1                   * Set register in use
+         EQUREG TEMP=YES               * Assign work register
+&I       SETA  &BXA_RC                 * Save returncode
+&J       SETA  &BXA_NUMVAL             *    and return value
+         DROP  &_TO1                   * End of forced register use
+         AIF   (&BXA_RC NE 0).ERR7S    * No work register available
+.GENS_G0 ANOP  ,                       * Register allocated correctly
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create register name
+&_LABEL  LH    &REG,&_FROM1            * Load whole S-constant
+&_LABEL  SETC  ''                      * Wipe used label
+         SRL   &REG,12                 * Base register nr in low-order
+         LA    &_TO1,16*&_TO1          * Load register with its number
+         OR    &REG,&_TO1              * &REG now contains &to,&base
+         EX    &REG,_CPY&SYSNDX        * Copy base to destination reg
+         B     _CPY_&SYSNDX            * Skip executable instruction
+_CPY&SYSNDX LABEL ,                    *
+         DC    X'1800'                 * LR instruction
+_CPY_&SYSNDX LABEL ,                   *
+         LH    &REG,&_FROM1            * Reload S-constant
+         SLL   &REG,20                 * Remove register number
+         SRL   &REG,20                 * Keep offset in low-order bits
+         AR    &_TO1,&REG              * Create result value
+         MEXIT ,                       *
+.*
+.* From type V: 4-byte address field
+.GENV    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'A').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'R').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'V').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'Y').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENA_G  * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* From type X: Hexadecimal data field (unsigned)
+.GENX    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'B').GENMVC0 * CPY unsigned to unsigned
+         AIF   ('&TO_TP' EQ 'X').GENMVC0 * CPY unsigned to unsigned
+         AIF   ('&TO_TP' EQ 'a').GENB_A  * CPY unsigned to ARnn
+         AIF   ('&TO_TP' EQ 'c').GENB_C  * CPY unsigned to CRnn
+         AIF   ('&TO_TP' EQ 'g').GENB_G  * CPY unsigned to Rnn
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* From type Y: 2-byte address field
+.GENY    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'A').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'R').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'V').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'Y').GENMVC0 * CPY address to address
+         AIF   ('&TO_TP' EQ 'g').GENY_G  * CPY address to gpr
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy halfword address field to general purpose register(s)
+.GENY_G  ANOP  ,                       *
+         AIF   (&TO_LEN NE 2*&FROM_LEN).ERR7C * Lengths equal?
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENY_G0 ANOP  ,                       * Loop
+&_LABEL  LTHU  &_TO1,&_FROM1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&J       SETA  &J+2                    * Point next halfword
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENY_G1      * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENY_G1 ANOP  ,                       * I now next register nr
+&_TO1    SETC  'R'.'&I'                * Create next register name
+         AGO   .GENY_G0                *
+.*
+.* From type Z: Zoned decimal field
+.GENZ    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'P').GENZP  * CPY zoned to packed
+         AIF   ('&TO_TP' EQ 'Z').GENZZ  * CPY zoned to zoned
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a zoned field to a packed field
+.GENZP   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+&I       SETA  (&FROM_LEN/2)+1         * Nr of result bytes
+&PAD_LEN SETA  &TO_LEN-&I              * Nr of zeroes to append
+         AIF   (&PAD_LEN LT 1).GENZP0  * No leading zeroes required
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Initialize with leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Modify destination field
+&TO_LEN  SETA  &I                      *    and reduce its length
+.GENZP0  ANOP  ,                       *
+         AIF   (&FROM_LEN GT 16).ERR7G * Source too large
+         AGO   .DO_PACK                *
+.*
+.* Copy a zoned decimal field
+.GENZZ   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_LEN GT 256).ERR7E *
+         AIF   (&TO_LEN EQ &FROM_LEN).DO_MVC
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of leading zeros
+         AIF   (&PAD_LEN LT 1).GENZZ0  * No leading zeros required
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),C'0'   *
+&_LABEL  SETC  ''                      * Wipe used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination address
+&TO_LEN  SETA  &FROM_LEN               *
+         AGO   .DO_MVC                 * And go copy data portion
+.GENZZ0  ANOP  ,                       * Trucation required
+&PAD_LEN SETA  &FROM_LEN-&TO_LEN       * Nr of bytes to skip
+&_FROM1  SETC  '&_FROM1'.'+&PAD_LEN'   * Advannce source address
+&FROM_LEN SETA &TO_LEN                 *
+         AGO   .DO_MVC                 * And go copy data portion
+.*
+.* From type 0: Literal number
+.GEN0    ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'B').GEN0B  * CPY number to unsigned
+         AIF   ('&TO_TP' EQ 'D').GEN0K  * CPY number to long float
+         AIF   ('&TO_TP' EQ 'E').GEN0K  * CPY number to short float
+         AIF   ('&TO_TP' EQ 'F').GEN0G  * CPY number to fixed
+         AIF   ('&TO_TP' EQ 'G').GEN0G  * CPY number to fixed
+         AIF   ('&TO_TP' EQ 'H').GEN0G  * CPY number to fixed
+         AIF   ('&TO_TP' EQ 'K').GEN0K  * CPY number to float
+         AIF   ('&TO_TP' EQ 'L').GEN0L  * CPY number to extended float
+         AIF   ('&TO_TP' EQ 'P').GEN0P  * CPY number to packed
+         AIF   ('&TO_TP' EQ 'X').GEN0B  * CPY number to unsigned
+         AIF   ('&TO_TP' EQ 'Z').GEN0Z  * CPY number to zoned
+         AIF   ('&TO_TP' EQ 'a').GEN0_A * CPY number to access register
+         AIF   ('&TO_TP' EQ 'f').GEN0_F * CPY number to float register
+         AIF   ('&TO_TP' EQ 'g').GEN0_G * CPY number to register
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy a literal number to an unsigned field
+.GEN0B   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&TO_LEN LT &FROM_LEN).ERR7I * FROM_LEN <= 4 for literal
+         AIF   (&FROM_VAL LT 0).ERR7U  * FROM_LEN <= 4 for literal
+         AIF   (&TO_LEN LE 4).GEN0B0   * Just an MVC please
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of leading zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0B0  * No padding needed
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Wipe prefix area
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Adjust destination for move
+&TO_LEN  SETA  &FROM_LEN               *    and length too
+.GEN0B0  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+&_FROM1  SETC  '=AL&TO_LEN'.'(&_FROM1)' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to a signed field
+.GEN0G   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+         AIF   (&FROM_VAL EQ 0).GEN0G0 * Zero value requested?
+         AIF   (&TO_LEN LT &FROM_LEN).ERR7I * FROM_LEN <= 4 for literal
+         AIF   (&TO_LEN LE 4).GEN0G1   * Just an MVC please
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of leading zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0G1  * No padding needed
+         AIF   ('&SIGN' EQ '-').ERR7X  *
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Wipe prefix area
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Adjust destination for move
+&TO_LEN  SETA  &FROM_LEN               *    and length too
+         AGO   .GEN0G1                 *
+.GEN0G0  ANOP  ,                       *
+&_LABEL  CLEAR (&_TO1,&TO_LEN),,XC     * Insert zero value
+         MEXIT ,                       *
+.GEN0G1  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+         AIF   (&EQULIT).GEN0G2        *
+&_FROM1  SETC  '=FL&TO_LEN'.'''&_FROM1''' * Create literal
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.GEN0G2  ANOP  ,                       *
+&_FROM1  SETC  '=FL&TO_LEN'.'''&FROM_VAL''' * Create literal
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to a floating point field
+.GEN0K   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+&FROM_LEN SETA &FROM_LEN+1             * Add room for exponent byte
+         AIF   (&TO_LEN LT &FROM_LEN).ERR7I * FROM_LEN <= 5 for literal
+         AIF   (&FROM_LEN GE 5).GEN0K0 * May be useful to expand
+         AIF   (&FROM_LEN EQ &TO_LEN).GEN0K2 * literal length
+         AIF   (&TO_LEN GE 5).GEN0K0   * to accomodate value
+&FROM_LEN SETA &TO_LEN                 *
+         AGO   .GEN0K2                 * No padding required!
+.GEN0K0  ANOP  ,                       *
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of padding zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0K2  * No padding needed
+         AIF   ('&SIGN' EQ '-').ERR7X  *
+&_LABEL  CLEAR (&_TO1+&FROM_LEN,&PAD_LEN),,XC * Wipe prefix area
+&_LABEL  SETC  ''                      * Remove used label
+&TO_LEN  SETA  &FROM_LEN               * Adjust length of dest.field
+.GEN0K2  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+         AIF   (&EQULIT).GEN0K3        *
+&_FROM1  SETC  '=DL&TO_LEN'.'''&_FROM1''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.GEN0K3  ANOP  ,                       *
+&_FROM1  SETC  '=DL&TO_LEN'.'''&FROM_VAL''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to an extended floating point field
+.GEN0L   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+&FROM_LEN SETA &FROM_LEN+1             * Add room for exponent byte
+         AIF   (&FROM_LEN GE 6).GEN0L0 * Check minimum size for
+&FROM_LEN SETA 6                       *  L-type literal: 6 bytes min.
+.GEN0L0  ANOP  ,                       *
+         AIF   (&TO_LEN LT &FROM_LEN).ERR7I * FROM_LEN <= 5 for literal
+         AIF   (&FROM_LEN GE 8).GEN0L1 * May be useful to expand
+         AIF   (&FROM_LEN EQ &TO_LEN).GEN0L2 * literal length
+         AIF   (&TO_LEN GE 8).GEN0L1   * to accomodate value
+&FROM_LEN SETA &TO_LEN                 *
+         AGO   .GEN0L2                 * No padding required!
+.GEN0L1  ANOP  ,                       *
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of additional zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0L2  * No padding needed
+         AIF   ('&SIGN' EQ '-').ERR7X  *
+&_LABEL  CLEAR (&_TO1+&FROM_LEN,&PAD_LEN),,XC * Wipe extension area
+&_LABEL  SETC  ''                      * Remove used label
+&TO_LEN  SETA  &FROM_LEN               * And reduce destination length
+.GEN0L2  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+         AIF   (&EQULIT).GEN0L3        *
+&_FROM1  SETC  '=LL&TO_LEN'.'''&_FROM1''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.GEN0L3  ANOP  ,                       *
+&_FROM1  SETC  '=LL&TO_LEN'.'''&FROM_VAL''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to a packed decimal field
+.GEN0P   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+&LEN     SETA  K'&FROM_VAL             * Nr of digits in literal
+&LEN     SETA  (&LEN/2)+1              * Nr of positions required
+         AIF   (&TO_LEN LT &LEN).ERR7I * Won't fit!
+&PAD_LEN SETA  &TO_LEN-&LEN            * Nr of leading zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0P0  * No padding needed
+         AIF   ('&SIGN' EQ '-').ERR7X  *
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Wipe prefix area
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Adjust destination for move
+&TO_LEN  SETA  &LEN                    *    and length too
+.GEN0P0  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+         AIF   (&EQULIT).GEN0P1        *
+&_FROM1  SETC  '=PL&TO_LEN'.'''&_FROM1''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.GEN0P1  ANOP  ,                       *
+&_FROM1  SETC  '=PL&TO_LEN'.'''&FROM_VAL''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to a zoned decimal field
+.GEN0Z   ANOP  ,                       *
+         AIF   (&TO_LEN GT 256).ERR7D  *
+&LEN     SETA  K'&FROM_VAL             * Nr of digits in literal
+         AIF   (&TO_LEN LT &LEN).ERR7I * Won't fit!
+&PAD_LEN SETA  &TO_LEN-&LEN            * Nr of leading zeros needed
+         AIF   (&PAD_LEN LT 1).GEN0Z0  * No padding needed
+         AIF   ('&SIGN' EQ '-').ERR7X  *
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),C'0'   * Wipe prefix area
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Adjust destination for move
+&TO_LEN  SETA  &LEN                    *    and length too
+.GEN0Z0  ANOP  ,                       *
+         AIF   (&TO_LEN EQ 1).GEN0_MVI * Use MVI for 1-byte fields
+         AIF   (&EQULIT).GEN0Z1        *
+&_FROM1  SETC  '=ZL&TO_LEN'.'''&_FROM1''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.GEN0Z1  ANOP  ,                       *
+&_FROM1  SETC  '=ZL&TO_LEN'.'''&FROM_VAL''' * Create literal to copy
+         AGO   .GEN0_MVC               * Go generate MVC to copy
+.*
+.* Copy a literal number to an access register
+.GEN0_A  ANOP  ,                       *
+         AIF   (&FROM_VAL EQ 0).GEN0_A0 * Only literal values 0,
+         AIF   (&FROM_VAL EQ 1).GEN0_A1 *  1, and 2 are allowed for
+         AIF   (&FROM_VAL EQ 2).GEN0_A1 *  use with access registers
+         AGO   .ERR7T                  * Illegal literal for AR
+.GEN0_A0 ANOP  ,                       * Load with value of 0
+&_LABEL  CLEAR &_TO1                   * Wipe register to create 0
+&_LABEL  SETC  ''                      * Wipe used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+         AGO   .GEN0_A2                *
+.GEN0_A1 ANOP  ,                       * Load with value of 1 or 2
+         EQUREG TEMP=YES,R0=YES        * Find a free register
+         AIF   (&BXA_RC NE 0).ERR7S    * None available!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create name of register
+&_LABEL  LA    &REG,&_FROM1            * Load ALET value
+&_LABEL  SETC  ''                      * Wipe used label
+         SAR   &_TO1,&REG              * Copy ALET to access register
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+.GEN0_A2 ANOP  ,                       * Copy ALET to other ARs
+&I       SETA  &TO_REG                 * Save first register number
+.GEN0_A3 ANOP  ,                       * Loop to fill ARs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GEN0_A4      * Valid register nr
+&I       SETA  0                       * Wrap-around to AR0
+.GEN0_A4 ANOP  ,                       * I now next register nr
+&REG     SETC  'AR'.'&I'               * Create next register name
+         CPYA  &REG,&_TO1              * Copy ALET
+         AGO   .GEN0_A3                *
+.*
+.* Copy a literal number to a floating point register
+.* For a value of zero an SDR might be used, but this might generate
+.*     a significance interruption.
+.GEN0_F  ANOP  ,                       *
+&_FROM1  SETC  '=D'.'''&_FROM1'''      * Create literal to copy
+         AIF   (NOT &EQULIT).GEN0_F1   *
+&_FROM1  SETC  '=D'.'''&FROM_VAL'''    * Create literal to copy
+.GEN0_F1 ANOP  ,                       *
+&_LABEL  LD    &_TO1,&_FROM1           * Load value to register
+&_LABEL  SETC  ''                      * Wipe used label
+         AIF   (&TO_LEN EQ 8).MEND     * 1 register: done
+&I       SETA  &TO_REG                 * Save first register number
+.GEN0_F3 ANOP  ,                       * Loop to fill FPRs
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No registers left to fill
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GEN0_F4       * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GEN0_F4 ANOP  ,                       * I now next register nr
+&REG     SETC  'FPR'.'&I'              * Create next register name
+         LDR   &REG,&_TO1              * Copy value
+         AGO   .GEN0_F3                *
+.*
+.* Copy a literal number to a general purpose register
+.GEN0_G  ANOP  ,                       *
+         AIF   (&FROM_VAL EQ 0).GEN0_G0 * 0? use Clear
+         AIF   (&FROM_VAL LT 4096).GEN0_G1 *  Use LA if possible
+         AIF   (&FROM_VAL GT 32767).GEN0_G2 *  Too large for LH
+         AIF   (&FROM_VAL LT -32768).GEN0_G2 *  Too large for LH
+&_FROM1  SETC  '=H'.'''&_FROM1'''      * Create literal to copy
+         AIF   (NOT &EQULIT).GEN0_GA   *
+&_FROM1  SETC  '=H'.'''&FROM_VAL'''    * Create literal to copy
+.GEN0_GA ANOP  ,                       *
+&_LABEL  LH    &_TO1,&_FROM1           * Load value to register
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+         AGO   .GEN0_G3                *
+.GEN0_G0 ANOP  ,                       * Load with value of 0
+&_LABEL  CLEAR &_TO1                   * Wipe register to create 0
+&_LABEL  SETC  ''                      * Wipe used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+         AGO   .GEN0_G3                *
+.GEN0_G1 ANOP  ,                       * Load with value up to 4095
+&_LABEL  LA    &_TO1,&_FROM1           * Load value
+&_LABEL  SETC  ''                      * Wipe used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+         AGO   .GEN0_G3                *
+.GEN0_G2 ANOP  ,                       *
+&_FROM1  SETC  '=F'.'''&_FROM1'''      * Create literal to copy
+         AIF   (NOT &EQULIT).GEN0_GB   *
+&_FROM1  SETC  '=F'.'''&FROM_VAL'''    * Create literal to copy
+.GEN0_GB ANOP  ,                       *
+&_LABEL  L     &_TO1,&_FROM1           * Load value to register
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register: done
+         AGO   .GEN0_G3                *
+.GEN0_G3 ANOP  ,                       * Copy value to other regs
+&I       SETA  &TO_REG                 * Save first register number
+.GEN0_G4 ANOP  ,                       * Loop to fill regs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GEN0_G5      * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GEN0_G5 ANOP  ,                       * I now next register nr
+&REG     SETC  'R'.'&I'                * Create next register name
+         LR    &REG,&_TO1              * Copy value
+         AGO   .GEN0_G4                *
+.*
+.* Logic to generate a move of a literal after truncation or expansion
+.*   has been dealt with.
+.GEN0_MVC ANOP ,                       * All GEN0-routines enter here
+         AIF   (K'&_TO2 NE 0).GEN0_MVC1 * Use explicit length
+         AIF   (&TO_LEN NE L'&_TO1).GEN0_MVC1 * Use explicit length
+&_LABEL  MVC   &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.GEN0_MVC1 ANOP ,                      * MVC with explicit length
+&_LABEL  MVC   &_TO1.(&TO_LEN),&_FROM1 *
+         MEXIT ,                       *
+.*
+.* Logic to generate a move of a literal to a 1-byte field
+.GEN0_MVI ANOP ,                       * All GEN0-routines enter here
+         AIF   ('&_FROM1'(1,1) NE '=').GEN0_MVI0
+&_FROM1  SETC  '&_FROM1'(2,*)          * Remove leading = sign
+.GEN0_MVI0 ANOP ,                      *
+&_LABEL  MVI   &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* From type a: Access Register
+.GEN_A   ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'B').GEN_AB  * CPY AR to binary
+         AIF   ('&TO_TP' EQ 'X').GEN_AB  * CPY AR to binary
+         AIF   ('&TO_TP' EQ 'a').GEN_A_A * CPY AR to AR
+         AIF   ('&TO_TP' EQ 'g').GEN_A_G * CPY AR to GPR
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy access register(s) to an unsigned binary field
+.GEN_AB  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_STAM                * Go generate STAM instruction
+.*
+.* Copy access register(s) to access register(s)
+.GEN_A_A ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+&_LABEL  CPYA  &_TO1,&_FROM1           * Copy ALET
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+.GEN_A_A0 ANOP ,                       * Loop to copy ARs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+1               * Next dest reg nr
+         AIF   (&TO_REG LT 16).GEN_A_A1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to AR0
+.GEN_A_A1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+1             * Next src reg nr
+         AIF   (&FROM_REG LT 16).GEN_A_A2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to AR0
+.GEN_A_A2 ANOP ,                       * FROM_REG now next register nr
+&REG     SETC  'AR'.'&TO_REG'          * Create next dest.reg name
+&ODDREG  SETC  'AR'.'&FROM_REG'        * Create next src.reg name
+         CPYA  &REG,&ODDREG            * Copy ALET
+         AGO   .GEN_A_A0               *
+.*
+.* Copy access register(s) to GP register(s)
+.GEN_A_G ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+&_LABEL  EAR   &_TO1,&_FROM1           * Copy ALET
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+.GEN_A_G0 ANOP ,                       * Loop to copy ARs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+1               * Next dest reg nr
+         AIF   (&TO_REG LT 16).GEN_A_G1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to R0
+.GEN_A_G1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+1             * Next src reg nr
+         AIF   (&FROM_REG LT 16).GEN_A_G2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to AR0
+.GEN_A_G2 ANOP ,                       * FROM_REG now next register nr
+&REG     SETC  'R'.'&TO_REG'           * Create next dest.reg name
+&ODDREG  SETC  'AR'.'&FROM_REG'        * Create next src.reg name
+         EAR   &REG,&ODDREG            * Copy ALET
+         AGO   .GEN_A_G0               *
+.*
+.* From type c: Control Register
+.GEN_C   ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'B').GEN_CB * CPY CR to binary
+         AIF   ('&TO_TP' EQ 'X').GEN_CB * CPY CR to binary
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy control register(s) to an unsigned binary field
+.GEN_CB  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_STCTL               * Go generate STCTL instruction
+.*
+.* From type f: Floating Point Register
+.GEN_F   ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'D').GEN_FD  * CPY FPR to long
+         AIF   ('&TO_TP' EQ 'E').GEN_FE  * CPY FPR to short
+         AIF   ('&TO_TP' EQ 'K').GEN_FK  * CPY FRP to float field
+         AIF   ('&TO_TP' EQ 'L').GEN_FL  * CPY FPR to extended
+         AIF   ('&TO_TP' EQ 'f').GEN_F_F * CPY FPR to FPR
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy floating point register(s) to long field(s)
+.GEN_FD  ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AIF   (&TO_LEN EQ 8).DO_STD   * Generate 1 STD
+         AGO   .GENSTDM                * Generate several STDs
+.*
+.* Copy floating point register(s) to short field(s)
+.GEN_FE  ANOP  ,                       *
+         AIF   (2*&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AIF   (&TO_LEN EQ 4).DO_STE   * Generate 1 STE
+         AGO   .GENSTEM                * Generate several STEs
+.*
+.* Copy floating point register to floating field (any length)
+.GEN_FK  ANOP  ,                       *
+         AIF   (&FROM_LEN GT 16).ERR7W * Cannot save more than 2 regs
+         AIF   (&FROM_LEN EQ 16).GEN_FK1 * Store extended operand!
+.* Handle 1 register
+         AIF   (&TO_LEN LT 4).ERR7I    * Dest.field too short
+         AIF   (&TO_LEN GE 8).GEN_FK0  * Go save long operand
+.* Handle short operand
+&PAD_LEN SETA  &TO_LEN-4               * Nr of trailing zeroes required
+         AIF   (&PAD_LEN EQ 0).GEN_FE  * No padding: store short
+&_LABEL  CLEAR (&_TO1+4,&PAD_LEN),,XC  * Wipe trailer area
+&_LABEL  SETC  ''                      * Remove generated label
+&TO_LEN  SETA  4                       * Length of area to fill
+         AGO   .GEN_FE                 * Go store 1 short operand
+.GEN_FK0 ANOP  ,                       * Must store a long operand
+&PAD_LEN SETA  &TO_LEN-8               * Nr of trailing zeroes required
+         AIF   (&PAD_LEN EQ 0).GEN_FD  * No padding: store long
+&_LABEL  CLEAR (&_TO1+8,&PAD_LEN),,XC  * Wipe trailer area
+&_LABEL  SETC  ''                      * Remove generated label
+&TO_LEN  SETA  8                       * Length of area to fill
+         AGO   .GEN_FD                 * Go store 1 long operand
+.GEN_FK1 ANOP  ,                       * Must store an extended operand
+         AIF   (&TO_LEN LT 16).ERR7I   * Dest.field too short
+&PAD_LEN SETA  &TO_LEN-16              * Nr of trailing zeroes required
+         AIF   (&PAD_LEN EQ 0).GEN_FK2 *=GEN_FL2
+&_LABEL  CLEAR (&_TO1+16,&PAD_LEN),,XC * Wipe trailer area
+&_LABEL  SETC  ''                      * Remove generated label
+&TO_LEN  SETA  16                      * Length of area to fill
+         AGO   .GEN_FK2                *=GEN_FL2
+.*
+.* Copy floating point register(s) to extended field(s)
+.GEN_FL  ANOP  ,                       *
+         AIF   (K'&_FROM2 EQ 0).GEN_FL1 * Just a register spec'd?
+         AIF   (NOT &FROM_EREG).GEN_FL2 * End register specified?
+.GEN_FL1 ANOP  ,                       *
+&FROM_LEN SETA &FROM_LEN+8             * Yes: add length of odd reg
+.GEN_FK2 ANOP  ,                       * Must store an extended operand
+.GEN_FL2 ANOP  ,                       * &FROM_LEN is now correct
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTXM                * Generate several STDs
+.*
+.* Copy floating point register(s) to FP register(s)
+.GEN_F_F ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+&_LABEL  LDR   &_TO1,&_FROM1           * Copy
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 8).MEND     * 1 register only to copy?
+.GEN_F_F0 ANOP ,                       * Loop to copy FPRs
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+2               * Next dest reg nr
+         AIF   (&TO_REG LT 8).GEN_F_F1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to FPR0
+.GEN_F_F1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+2             * Next src reg nr
+         AIF   (&FROM_REG LT 8).GEN_F_F2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to FPR0
+.GEN_F_F2 ANOP ,                       * FROM_REG now next register nr
+&REG     SETC  'FPR'.'&TO_REG'         * Create next dest.reg name
+&ODDREG  SETC  'FPR'.'&FROM_REG'       * Create next src.reg name
+         LDR   &REG,&ODDREG            * Copy
+         AGO   .GEN_F_F0               *
+.*
+.* From type g: General Purpose Register
+.GEN_G   ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'A').GEN_GA  * CPY reg to address
+         AIF   ('&TO_TP' EQ 'B').GEN_GB  * CPY reg to unsigned
+         AIF   ('&TO_TP' EQ 'F').GEN_GF  * CPY reg to signed
+         AIF   ('&TO_TP' EQ 'G').GEN_GG  * CPY reg to signed
+         AIF   ('&TO_TP' EQ 'H').GEN_GH  * CPY reg to signed
+         AIF   ('&TO_TP' EQ 'P').GEN_GP  * CPY reg to packed decimal
+         AIF   ('&TO_TP' EQ 'Q').GEN_GA  * CPY reg to address
+         AIF   ('&TO_TP' EQ 'R').GEN_GR  * CPY reg to address
+         AIF   ('&TO_TP' EQ 'V').GEN_GA  * CPY reg to address
+         AIF   ('&TO_TP' EQ 'X').GEN_GB  * CPY reg to unsigned
+         AIF   ('&TO_TP' EQ 'Y').GEN_GY  * CPY reg to address
+         AIF   ('&TO_TP' EQ 'a').GEN_G_A * CPY reg to access register
+         AIF   ('&TO_TP' EQ 'g').GEN_G_G * CPY reg to reg
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy from register(s) to address field(s)
+.GEN_GA  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GA1 * Just 1 register?
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_STM                 * Generate 1 STM
+.GEN_GA1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN EQ 4).DO_ST    * Generate 1 ST
+         AIF   (&TO_LEN LT 4).GEN_GA2  * Use STCM to save
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Insert leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination field
+&TO_LEN  SETA  4                       * 4 bytes remain unfilled
+&I       SETA  &PAD_LEN/4              * Nr of words padded
+&J       SETA  &PAD_LEN-(4*&I)         * Nr of extra bytes padded
+         AIF   (&J EQ 0).DO_ST         * Go generate a ST
+.GEN_GA2 ANOP  ,                       * STCM required
+.GEN_GR2 ANOP  ,                       * Entry from reg-to-unaligned
+.GEN_GY2 ANOP  ,                       * Entry from reg-to-halfword
+&MASK    SETC  'NNNY'                  * Mask for a 1-byte field
+         AIF   (&TO_LEN EQ 1).DO_STCM  * Go save byte
+&MASK    SETC  'NNYY'                  * Mask for a 2-byte field
+         AIF   (&TO_LEN EQ 2).DO_STCM  * Go save bytes
+&MASK    SETC  'NYYY'                  * Mask for a 3-byte field
+         AIF   (&TO_LEN EQ 3).DO_STCM  * Go save bytes
+&MASK    SETC  'YYYY'                  * Mask for a 4-byte field
+         AGO   .DO_STCM                * Go save bytes
+.*
+.* Copy from register(s) to unsigned binary field(s)
+.GEN_GB  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GB1 * Just 1 register?
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTCMM               * Generate multiple STCMs
+.GEN_GB1 ANOP  ,                       * Only 1 register to save
+&MASK    SETC  'YYYY'                  *
+         AIF   (&TO_LEN EQ 4).DO_STCM  * Generate 1 ST
+         AIF   (&TO_LEN LT 4).GEN_GB2  * Use STCM to save
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Insert leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination field
+         AGO   .DO_STCM                * Go generate a STCM
+.GEN_GB2 ANOP  ,                       * STCM required
+.GEN_GF2 ANOP  ,                       * Entry from reg-to-fullword
+.GEN_GG2 ANOP  ,                       * Entry from reg-to-signed
+.GEN_GH2 ANOP  ,                       * Entry from reg-to-halfword
+&MASK    SETC  'NNNY'                  * Mask for a 1-byte field
+         AIF   (&TO_LEN EQ 1).DO_STCM  * Go save byte
+&MASK    SETC  'NNYY'                  * Mask for a 2-byte field
+         AIF   (&TO_LEN EQ 2).DO_STCM  * Go save bytes
+&MASK    SETC  'NYYY'                  * Mask for a 3-byte field
+         AIF   (&TO_LEN EQ 3).DO_STCM  * Go save bytes
+&MASK    SETC  'YYYY'                  * Mask for a 4-byte field
+         AGO   .DO_STCM                * Go save bytes
+.*
+.* Copy from register(s) to signed binary fullword(s)
+.GEN_GF  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GF1 * Just 1 register?
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .DO_STM                 * Generate 1 STM
+.GEN_GF1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN EQ 4).DO_ST    * Generate 1 ST
+         AIF   (&TO_LEN EQ 2).DO_STH   * Generate 1 STH
+         AIF   (&TO_LEN LE 4).GEN_GF2  *=GEN_GB2
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+         EQUREG TEMP=YES,R0=YES        * Find available register
+         AIF   (&BXA_RC NE 0).ERR7H    * None found!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create workreg name
+&_LABEL  LR    &REG,&_FROM1            * Copy value to save
+&_LABEL  SETC  ''                      * Remove used label
+&MASK    SETC  'YYYY'                  * Mask to save register
+&PAD_ADR SETC  '&_TO1'                 * Save destination
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Create destination for data
+         SRA   &REG,31                 * Create all sign bits
+         AIF   (&PAD_LEN GT 8).GEN_GF6 *
+         AIF   (&PAD_LEN EQ 1).GEN_GF3 *
+         AIF   (&PAD_LEN EQ 2).GEN_GF4 *
+         AIF   (&PAD_LEN EQ 3).GEN_GF5 *
+         ST    &REG,&PAD_ADR           * First set of lead sign bytes
+&PAD_ADR SETC  '&PAD_ADR'.'+4'         * Adjust pad-area pointer
+         AIF   (&PAD_LEN EQ 4).DO_ST   * Ok: save register
+         AIF   (&PAD_LEN EQ 5).GEN_GF3 *
+         AIF   (&PAD_LEN EQ 6).GEN_GF4 *
+         AIF   (&PAD_LEN EQ 7).GEN_GF5 *
+         ST    &REG,&PAD_ADR           * Fill up to 8 lead sign bytes
+         AGO   .DO_ST                  * Go save register
+.GEN_GF3 ANOP  ,                       * 1 leading sign byte
+         STC   &REG,&PAD_ADR           *
+         AGO   .DO_STCM                * Go save register
+.GEN_GF4 ANOP  ,                       * 2 leading sign bytes
+         STH   &REG,&PAD_ADR           *
+         AGO   .DO_STCM                * Go save register
+.GEN_GF5 ANOP  ,                       * 3 leading sign bytes
+         STCM  &REG,YYYN,&PAD_ADR      *
+         AGO   .DO_STCM                * Go save register
+.GEN_GF6 ANOP ,                        * More than 8 leading sign bytes
+         ST    &REG,&PAD_ADR           * Insert leading sign bytes
+         MVC   &PAD_ADR+4(&PAD_LEN-4),&PAD_ADR * Propagate sign
+&I       SETA  &PAD_LEN/4              * Nr of words padded
+&I       SETA  &PAD_LEN-(4*&I)         * Nr of extra bytes padded
+         AIF   (&I EQ 0).DO_ST         * Still aligned: use ST
+         AGO   .DO_STCM                * Go save register
+.*
+.* Copy from register(s) to signed binary field(s)
+.GEN_GG  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GG1 * Just 1 register?
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTCMM               * Generate multiple STCMs
+.GEN_GG1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN LE 4).GEN_GG2  *=GEN_GB2
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+         EQUREG TEMP=YES,R0=YES        * Find available register
+         AIF   (&BXA_RC NE 0).ERR7H    * None found!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create workreg name
+&_LABEL  LR    &REG,&_FROM1            * Copy value to save
+&_LABEL  SETC  ''                      * Remove used label
+&MASK    SETC  'YYYY'                  * Mask to save register
+&PAD_ADR SETC  '&_TO1'                 * Save destination
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Create destination for data
+         SRA   &REG,31                 * Create all sign bits
+         AIF   (&PAD_LEN GT 8).GEN_GG6 *
+         AIF   (&PAD_LEN EQ 1).GEN_GG3 *
+         AIF   (&PAD_LEN EQ 2).GEN_GG4 *
+         AIF   (&PAD_LEN EQ 3).GEN_GG5 *
+         STCM  &REG,YYYY,&PAD_ADR      * First set of lead sign bytes
+&PAD_ADR SETC  '&PAD_ADR'.'+4'         * Adjust pad-area pointer
+         AIF   (&PAD_LEN EQ 4).DO_STCM * Ok: save register
+         AIF   (&PAD_LEN EQ 5).GEN_GG3 *
+         AIF   (&PAD_LEN EQ 6).GEN_GG4 *
+         AIF   (&PAD_LEN EQ 7).GEN_GG5 *
+         STCM  &REG,YYYY,&PAD_ADR      * Fill up to 8 lead sign bytes
+         AGO   .DO_STCM                * Go save register
+.GEN_GG3 ANOP  ,                       * 1 leading sign byte
+         STC   &REG,&PAD_ADR           *
+         AGO   .DO_STCM                * Go save register
+.GEN_GG4 ANOP  ,                       * 2 leading sign bytes
+         STCM  &REG,YYNN,&PAD_ADR      *
+         AGO   .DO_STCM                * Go save register
+.GEN_GG5 ANOP  ,                       * 3 leading sign bytes
+         STCM  &REG,YYYN,&PAD_ADR      *
+         AGO   .DO_STCM                * Go save register
+.GEN_GG6 ANOP ,                        * More than 8 leading sign bytes
+         STCM  &REG,YYYY,&PAD_ADR      *
+         MVC   &PAD_ADR+4(&PAD_LEN-4),&PAD_ADR * Propagate sign
+         AGO   .DO_STCM                * Go save register
+.*
+.* Copy from register(s) to signed binary halfword(s)
+.GEN_GH  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GH1 * Just 1 register?
+         AIF   (2*&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTHM                * Generate multiple STHs
+.GEN_GH1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN EQ 2).DO_STH   * Generate 1 STH
+         AIF   (&TO_LEN LE 4).GEN_GH2  *=GEN_GB2
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+         EQUREG TEMP=YES,R0=YES        * Find available register
+         AIF   (&BXA_RC NE 0).ERR7H    * None found!
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create workreg name
+&_LABEL  LR    &REG,&_FROM1            * Copy value to save
+&_LABEL  SETC  ''                      * Remove used label
+&MASK    SETC  'YYYY'                  * Mask to save register
+&PAD_ADR SETC  '&_TO1'                 * Save destination
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Create destination for data
+         SRA   &REG,31                 * Create all sign bits
+         AIF   (&PAD_LEN GT 8).GEN_GH6 *
+         AIF   (&PAD_LEN EQ 1).GEN_GH3 *
+         AIF   (&PAD_LEN EQ 2).GEN_GH4 *
+         AIF   (&PAD_LEN EQ 3).GEN_GH5 *
+         STCM  &REG,YYYY,&PAD_ADR      * First set of lead sign bytes
+&PAD_ADR SETC  '&PAD_ADR'.'+4'         * Adjust pad-area pointer
+         AIF   (&PAD_LEN EQ 4).DO_STCM * Ok: save register
+         AIF   (&PAD_LEN EQ 5).GEN_GH3 *
+         AIF   (&PAD_LEN EQ 6).GEN_GH4 *
+         AIF   (&PAD_LEN EQ 7).GEN_GH5 *
+         STCM  &REG,YYYY,&PAD_ADR      * Fill up to 8 lead sign bytes
+         AGO   .DO_STCM                * Go save register
+.GEN_GH3 ANOP  ,                       * 1 leading sign byte
+         STC   &REG,&PAD_ADR           *
+         AGO   .DO_STCM                * Go save register
+.GEN_GH4 ANOP  ,                       * 2 leading sign bytes
+         STH   &REG,&PAD_ADR           *
+         AGO   .DO_STCM                * Go save register
+.GEN_GH5 ANOP  ,                       * 3 leading sign bytes
+         STCM  &REG,YYYN,&PAD_ADR      *
+         AGO   .DO_STCM                * Go save register
+.GEN_GH6 ANOP ,                        * More than 8 leading sign bytes
+         STH   &REG,&PAD_ADR           * Insert leading sign bytes
+         MVC   &PAD_ADR+2(&PAD_LEN-2),&PAD_ADR * Propagate sign
+         AGO   .DO_STCM                * Go save register
+.*
+.* Copy from register(s) to packed decimal number(s)
+.GEN_GP  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GP1 * Just 1 register?
+         AIF   (&TO_LEN NE 2*&FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENCVDM                * Generate multiple CVDs
+.GEN_GP1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN LT 8).ERR7I    *
+&PAD_LEN SETA  &TO_LEN-8               * Nr of leading zeros needed
+         AIF   (&PAD_LEN LT 1).GEN_GP2 * None needed
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Create leading zeros
+&_LABEL  SETC  ''                      * Remove used-up label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination pointer
+.GEN_GP2 ANOP  ,                       *
+&_LABEL  CVD   &_FROM1,&_TO1           *
+         MEXIT ,                       *
+.*
+.* Copy from register(s) to unaligned address field(s)
+.GEN_GR  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GR1 * Just 1 register?
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTCMM               * Generate multiple STCMs
+.GEN_GR1 ANOP  ,                       * Only 1 register to save
+&MASK    SETC  'YYYY'                  * Set default mask for STCM
+         AIF   (&TO_LEN EQ 4).DO_STCM  * Generate 1 ST
+         AIF   (&TO_LEN LT 4).GEN_GR2  *=GEN_GA2
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Insert leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination field
+         AGO   .DO_STCM                * Go generate a STCM
+.*
+.* Copy from register(s) to halfword address field(s)
+.GEN_GY  ANOP  ,                       *
+         AIF   (&FROM_LEN EQ 4).GEN_GY1 * Just 1 register?
+         AIF   (2*&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENSTHM                * Generate multiple STHs
+.GEN_GY1 ANOP  ,                       * Only 1 register to save
+         AIF   (&TO_LEN EQ 2).DO_STH   * Generate 1 STH
+         AIF   (&TO_LEN LT 4).GEN_GY2  *=.GEN_GA2
+&PAD_LEN SETA  &TO_LEN-4               * Nr of leading zeros needed
+&MASK    SETC  'YYYY'                  * Default mask for STCM
+         AIF   (&PAD_LEN LT 1).DO_STCM *
+&_LABEL  CLEAR (&_TO1,&PAD_LEN),,XC    * Insert leading zeros
+&_LABEL  SETC  ''                      * Remove used label
+&_TO1    SETC  '&_TO1'.'+&PAD_LEN'     * Advance destination field
+&TO_LEN  SETA  4                       * 4 bytes remain unfilled
+         AGO   .GEN_GY2                *=.GEN_GA2
+.*
+.* Copy register(s) to access register(s)
+.GEN_G_A ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+&_LABEL  SAR   &_TO1,&_FROM1           * Copy ALET
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+.GEN_G_A0 ANOP ,                       * Loop to copy ARs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+1               * Next dest reg nr
+         AIF   (&TO_REG LT 16).GEN_G_A1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to R0
+.GEN_G_A1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+1             * Next src reg nr
+         AIF   (&FROM_REG LT 16).GEN_G_A2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to AR0
+.GEN_G_A2 ANOP ,                       * FROM_REG now next register nr
+&REG     SETC  'R'.'&FROM_REG'         * Create next src.reg name
+&ODDREG  SETC  'AR'.'&TO_REG'          * Create next dest.reg name
+         SAR   &ODDREG,&REG            * Copy ALET
+         AGO   .GEN_G_A0               *
+.*
+.* Copy register(s) to register(s)
+.GEN_G_G ANOP  ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+&_LABEL  LR    &_TO1,&_FROM1           * Copy register
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+.GEN_G_G0 ANOP ,                       * Loop to copy regs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+1               * Next dest reg nr
+         AIF   (&TO_REG LT 16).GEN_G_G1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to R0
+.GEN_G_G1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+1             * Next src reg nr
+         AIF   (&FROM_REG LT 16).GEN_G_G2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to AR0
+.GEN_G_G2 ANOP ,                       * FROM_REG now next register nr
+&REG     SETC  'R'.'&FROM_REG'         * Create next src.reg name
+&ODDREG  SETC  'R'.'&TO_REG'           * Create next dest.reg name
+         LR    &ODDREG,&REG            * Copy register
+         AGO   .GEN_G_G0               *
+.*
+.* From type ga: Combined general purpose and access registers
+.GEN_GA_ ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'ga').GEN_GA_GA * CPY regs to regs
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Copy combined GPR-AR pairs
+.GEN_GA_GA ANOP ,                      *
+         AIF   (&TO_LEN NE &FROM_LEN).ERR7C * Lengths equal?
+         AGO   .GENLAEM                *
+.*
+.* From type p: pointered data field
+.GEN_P   ANOP  ,                       *
+         AIF   ('&TO_TP' EQ 'p').DO_MVCL * CPY pointered to pointered
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* From type *STACK: Stacked registers
+.GENSTACK ANOP ,                       *
+&FROM_TP SETC  '*STACK'                *
+         AIF   ('&TO_TP' EQ 'ga').DO_EREG * CPY stack to registers
+         AGO   .ERR7B                  * Unsupported combination
+.*
+.* Load several registers with packed data
+.GENCVBM ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENCVBM0 ANOP ,                       * Loop
+&_LABEL  CVB   &_TO1,&_FROM1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&J       SETA  &J+8                    * Point next short field
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENCVBM1     * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENCVBM1 ANOP ,                       * I now next register nr
+&_TO1    SETC  'R'.'&I'                * Create next register name
+         AGO   .GENCVBM0               *
+.*
+.* Store several registers as packed data
+.GENCVDM ANOP  ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENCVDM0 ANOP ,                       * Loop
+&_LABEL  CVD   &_FROM1,&_TO1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No storage left to fill
+&J       SETA  &J+8                    * Point next short field
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENCVDM1     * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENCVDM1 ANOP ,                       * I now next register nr
+&_FROM1  SETC  'R'.'&I'                * Create next register name
+         AGO   .GENCVDM0               *
+.*
+.* Load a register with an unaligned signed integer
+.GENICM  ANOP  ,                       *
+&MASK    SETC  'YNNN'                  * Mask for a 1-byte value
+&I       SETA  24                      * Nr of bytes to shift
+         AIF   (&FROM_LEN EQ 1).GENICM0 * Go load value
+&MASK    SETC  'YYNN'                  * Mask for a 2-byte value
+&I       SETA  16                      * Nr of bytes to shift
+         AIF   (&FROM_LEN EQ 2 AND '&FROM_TP' NE 'G').GENICM1
+         AIF   (&FROM_LEN EQ 2).GENICM0 * Go load value
+&MASK    SETC  'YYYN'                  * Mask for a 3-byte value
+&I       SETA  8                       * Nr of bytes to shift
+         AIF   (&FROM_LEN EQ 3).GENICM0 * Go load value
+&MASK    SETC  'YYYY'                  * MUST be a four-byte value
+         AIF   (&FROM_LEN EQ 4 AND '&FROM_TP' NE 'F').GENICM0
+         AIF   (&FROM_LEN EQ 4).GENICM2 * Load aligned fullword
+         AIF   ('&FROM_TP' EQ 'F').GENICM3 * Oversized, aligned
+         AGO   .GENICM4                * Oversized, unaligned
+.GENICM0 ANOP  ,                       * Use ICM to load value
+&_LABEL  ICM   &_TO1,&MASK,&_FROM1     * Copy value to register
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   ('&MASK' EQ 'YYYY').MEND
+         SRA   &_TO1,&I                * Shift value in register
+         MEXIT ,                       *
+.GENICM1 ANOP  ,                       * Load aligned halfword
+&_LABEL  LH    &_TO1,&_FROM1           * Copy value to register
+         MEXIT ,                       *
+.GENICM2 ANOP  ,                       * Load aligned fullword
+&_LABEL  L     &_TO1,&_FROM1           * Copy value to register
+         MEXIT ,                       *
+.GENICM3 ANOP  ,                       * Load/truncate from Fullword
+&I       SETA  &FROM_LEN-4             * Offset in source field
+&J       SETA  &I/4                    * Nr of words in offset
+&J       SETA  &I-(4*&J)               * Nr of excess bytes
+         AIF   (&J NE 0).GENICM4       * Go load unaligned 'word'
+&_LABEL  L     &_TO1,&_FROM1+&I        * Copy value to register
+         MEXIT ,                       *
+.GENICM4 ANOP  ,                       * Load/truncate unaligned
+&I       SETA  &FROM_LEN-4             * Offset in source field
+&_LABEL  ICM   &_TO1,YYYY,&_FROM1+&I   * Copy value to register
+         MEXIT ,                       *
+.*
+.* Load several registers with unaligned data
+.GENICMM ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENICMM0 ANOP ,                       * Loop
+&_LABEL  ICM   &_TO1,YYYY,&_FROM1+&J   *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&J       SETA  &J+4                    * Point next long field
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENICMM1     * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENICMM1 ANOP ,                       * I now next register nr
+&_TO1    SETC  'R'.'&I'                * Create next register name
+         AGO   .GENICMM0               *
+.*
+.* Copy alet-qualified addresses register to register
+.GENLAEM ANOP  ,                       *
+         AIF   ('&SYSASCE' EQ 'P').GENLAEMP * Primary mode!
+&_LABEL  LAE   &_TO1,0(0,&_FROM1)      * Copy ALET and address
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+         AGO   .GENLAEM0               *
+.GENLAEMP ANOP ,                       *
+&_LABEL  LR    &_TO1,&_FROM1           * Copy address
+         CPYA  &_TO2,&_FROM2           *   and ALET
+&_LABEL  SETC  ''                      * Remove used label
+         AIF   (&TO_LEN EQ 4).MEND     * 1 register only to copy?
+.GENLAEM0 ANOP ,                       * Loop to copy register pairs
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to copy
+&TO_REG  SETA  &TO_REG+1               * Next dest reg nr
+         AIF   (&TO_REG LT 16).GENLAEM1 * Valid register nr
+&TO_REG  SETA  0                       * Wrap-around to R0
+.GENLAEM1 ANOP ,                       * TO_REG now next register nr
+&FROM_REG SETA &FROM_REG+1             * Next src reg nr
+         AIF   (&FROM_REG LT 16).GENLAEM2 * Valid register nr
+&FROM_REG SETA 0                       * Wrap-around to R0
+.GENLAEM2 ANOP ,                       * FROM_REG now next register nr
+&_TO1    SETC  'R'.'&TO_REG'           * Create next dest.reg name
+&_FROM1  SETC  'R'.'&FROM_REG'         * Create next src.reg name
+         AIF   ('&SYSASCE' EQ 'P').GENLAEM3 * Primary mode!
+         LAE   &_TO1,0(0,&_FROM1)      * Copy ALET and address
+         AGO   .GENLAEM0               *
+.GENLAEM3 ANOP ,                       * Copy addr+ALET in primary mode
+&_TO2    SETC  'AR'.'&TO_REG'          * Create next dest.reg name
+&_FROM2  SETC  'AR'.'&FROM_REG'        * Create next src.reg name
+         LR    &_TO1,&_FROM1           * Copy address
+         CPYA  &_TO2,&_FROM2           *   and ALET
+         AGO   .GENLAEM0               *
+.*
+.* Load several floating point registers with long operands
+.GENLDM  ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENLDM0 ANOP  ,                       * Loop
+&_LABEL  LD    &_TO1,&_FROM1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No registers left to fill
+&J       SETA  &J+8                    * Point next long field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENLDM1       * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENLDM1 ANOP  ,                       * I now next register nr
+&_TO1    SETC  'FPR'.'&I'              * Create next register name
+         AGO   .GENLDM0                *
+.*
+.* Load several floating point registers with short operands
+.GENLEM  ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENLEM0 ANOP  ,                       * Loop
+&_LABEL  LE    &_TO1,&_FROM1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No registers left to fill
+&J       SETA  &J+4                    * Point next short field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENLEM1       * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENLEM1 ANOP  ,                       * I now next register nr
+&_TO1    SETC  'FPR'.'&I'              * Create next register name
+         AGO   .GENLEM0                *
+.*
+.* Load several halfwords into registers
+.GENLHM  ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENLHM0 ANOP  ,                       * Loop
+&_LABEL  LH    &_TO1,&_FROM1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&J       SETA  &J+2                    * Point next short field
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENLHM1      * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENLHM1 ANOP  ,                       * I now next register nr
+&_TO1    SETC  'R'.'&I'                * Create next register name
+         AGO   .GENLHM0                *
+.*
+.* Load several floating point registers with extended operands
+.GENLXM  ANOP  ,                       *
+&I       SETA  &TO_REG                 * Save first register number
+         AIF   (&I NE 0 AND &I NE 4).ERR7M * Not a valid pair!
+&I       SETA  &I+2                    * Nr of next register
+&ODDREG  SETC  'FPR'.'&I'              * Name of second register
+&J       SETA  0                       * Offset in source field
+.GENLXM0 ANOP  ,                       * Loop
+&_LABEL  LD    &_TO1,&_FROM1+&J        * Load low-order register
+&_LABEL  SETC  ''                      * Remove label after use
+&J       SETA  &J+8                    * Point next long field
+         LD    &ODDREG,&_FROM1+&J      * Load high-order register
+&TO_LEN  SETA  &TO_LEN-16              * Reduce length
+         AIF   (&TO_LEN LT 16).MEND    * No registers left to fill
+&J       SETA  &J+8                    * Point next long field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENLXM1       * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENLXM1 ANOP  ,                       * I now next register nr
+&_TO1    SETC  'FPR'.'&I'              * Create next register name
+&I       SETA  &I+2                    * Nr of next register
+&ODDREG  SETC  'FPR'.'&I'              * Name of second register
+         AGO   .GENLXM0                *
+.*
+.* Copy two character fields
+.GENMVCC ANOP  ,                       *
+&PAD0    SETB  0                       * Use spaces for padding
+&PAD_LEN SETA  0                       * Nr of padding bytes needed
+&LEN     SETA  &TO_LEN                 * Determine length of move
+         AIF   (&TO_LEN LE &FROM_LEN).GENMVCC1
+&LEN     SETA  &FROM_LEN               * FROM-length is shorter
+&PAD_LEN SETA  &TO_LEN-&FROM_LEN       * Nr of padding bytes needed
+.GENMVCC1 ANOP ,                       * &LEN now effective length
+         AIF   (&LEN GT 256).GENMVCL   *
+         AIF   (&PAD_LEN GT 256).GENMVCL *
+&TO_LEN  SETA  &LEN                    * Truncate destination field
+         AIF   (&PAD_LEN LT 1).DO_MVC  * No padding required: use MVC
+&_LABEL  CLEAR (&_TO1+&LEN,&PAD_LEN),C' ' * Wipe padding area
+&_LABEL  SETC  ''                      * Label no longer needed
+&TO_LEN  SETA  &LEN                    * Set source and destination
+&FROM_LEN SETA &LEN                    *   lengths for data move
+         AGO   .DO_MVC                 *
+.*
+.* Set up for a long move
+.GENMVCL ANOP  ,                       *
+&LEN     SETA  &FROM_LEN               * Determine effective length
+         AIF   (&TO_LEN GT &FROM_LEN).GENMVCL0 * Which is shorter
+&LEN     SETA  &TO_LEN                 * TO_LEN is shorter
+&FROM_LEN SETA &LEN                    * Make source length shorter
+.GENMVCL0 ANOP ,                       * Len now contains effective len
+&PAD_LEN SETA  &TO_LEN-&LEN            * Size of pad-area
+.* If possible: generate MVCL instruction
+         AIF   (&LEN LT 1024 AND &PAD_LEN LT 1).GENMVCL6 * Multiple MVC
+         EQUREG PAIR=YES,TEMP=YES,R0=YES,WARN=NO * Alloc src reg pair
+         AIF   (&BXA_RC NE 0).GENMVCL2 * Allocation failed
+&REG_SRCP SETC 'R'.'&BXA_NUMVAL'       * Create source ptr reg name
+&BXA_NUMVAL SETA &BXA_NUMVAL+1         * Nr of odd reg in pair
+&REG_SRCL SETC 'R'.'&BXA_NUMVAL'       * Create source len reg name
+         USE   &REG_SRCP               * Set registers in use to
+         USE   &REG_SRCL               *  prevent re-allocation
+         EQUREG PAIR=YES,TEMP=YES,R0=YES,WARN=NO * Alloc dest reg pair
+         AIF   (&BXA_RC NE 0).GENMVCL1 * Allocation failed
+         DROP  &REG_SRCL               * Source register pair
+         DROP  &REG_SRCP               *    no longer needed
+         AGO   .DO_MVCL                * Two pairs of regs available!
+.GENMVCL1 ANOP ,                       * Second pair not available
+         DROP  &REG_SRCL               * Source register pair
+         DROP  &REG_SRCP               *    no longer needed
+.GENMVCL2 ANOP ,                       *
+.* Cannot use MVCL: try to generate a loop
+&PAD_LEN SETA  &TO_LEN-&LEN            * Determine pad length
+&I       SETA  &LEN/256                * Nr of loops to perform
+         AIF   (&I LE 4).GENMVCL6      * Repeat is shorter than loop?
+         EQUREG TEMP=YES,WARN=NO       * Allocate src pointer
+         AIF   (&BXA_RC NE 0).GENMVCL6 * Not enough regs
+&REG_SRCP SETC 'R'.'&BXA_NUMVAL'       * Create source ptr reg name
+         USE   &REG_SRCP               * Set reg in use
+         EQUREG TEMP=YES,WARN=NO       * Allocate dest pointer
+         AIF   (&BXA_RC NE 0).GENMVCL5 * Not enough regs
+&REG_DSTP SETC 'R'.'&BXA_NUMVAL'       * Create dest ptr reg name
+         USE   &REG_DSTP               * Set reg in use
+         EQUREG TEMP=YES,WARN=NO       * A DO loop register available?
+         AIF   (&BXA_RC NE 0).GENMVCL4 * No reg available for loop
+         MNOTE 0,'No two register pairs available: generating a loop'
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create loop register name
+         USE   &REG                    * Set loop counter in use
+&_LABEL  LA    &REG_SRCP,&_FROM1       * Init source ptr
+&_LABEL  SETC  ''                      * Label no longer needed
+         LA    &REG_DSTP,&_TO1         * Init dest ptr
+         CPY   &REG,&I                 * Init loop counter
+_CPY&SYSNDX LABEL ,                    * Loop point
+         MVC   0(256,&REG_DSTP),0(&REG_SRCP) * Move 1 section of data
+         INC   &REG_SRCP,256           * Advance src and dest ptrs
+         INC   &REG_DSTP,256           *    to next section of data
+         BCT   &REG,_CPY&SYSNDX        * Loop to repeat n times
+         DROP  &REG                    * Loop counter no longer needed
+&J       SETA  &LEN-(256*&I)           * Calculate remaining length
+         AIF   (&J LT 1).GENMVCL3      * Any data remains?
+         MVC   0(&J,&REG_DSTP),0(&REG_SRCP) * Move remaining data
+.GENMVCL3 ANOP ,                       * Data portion has been moved
+         DROP  &REG_DSTP               * Free dest ptr
+         DROP  &REG_SRCP               * Free src ptr
+.* Now we must set up another loop to pad
+         AIF   (&PAD_LEN LT 1).MEND    * No padding: we're done
+&I       SETA  (&PAD_LEN-1)/256        * Nr of 256-byte sections
+         AIF   (&I LE 3).GENMVCL9      * List of MVCs shorter than loop
+         MVI   0(&REG_DSTP),C' '       * Insert first pad byte
+         LA    &REG,&I                 * Nr of sections
+_CPY_&SYSNDX LABEL ,                   * Loop point
+         MVC   1(256,&REG_DSTP),0(&REG_DSTP) * Pad 1 section
+         INC   &REG_DSTP,256           * Point to next section
+         BCT   &REG,_CPY_&SYSNDX       * Loop to repeat n times
+&J       SETA  (&PAD_LEN-1)-(256*&I)   * Remaining pad length
+         AIF   (&J LT 1).MEND          * All padding completed?
+         MVC   1(&J,&REG_DSTP),0(&REG_DSTP) * Wipe remainder
+         MEXIT ,                       *
+.GENMVCL4 ANOP ,                       * No loop register available
+         DROP  &REG_DSTP               * Free up allocated register
+.GENMVCL5 ANOP ,                       * No loop register available
+         DROP  &REG_SRCP               * Free up allocated register
+.GENMVCL6 ANOP ,
+.* Last option: generate a lot of MVCs
+         MNOTE 0,'Insufficient registers available: generating MVCs'
+&I       SETA  &LEN/256                * Nr of MVCs to generate
+&J       SETA  0                       * Loop counter
+.GENMVCL7 ANOP ,                       * Loop to gen MVCs
+         AIF   (&J GE &I).GENMVCL8     * End of loop
+&_LABEL  MVC   &_TO1+256*&J.(256),&_FROM1+256*&J
+&_LABEL  SETC  ''                      * Wipe used label
+&J       SETA  &J+1                    *
+         AGO   .GENMVCL7               *
+.GENMVCL8 ANOP ,                       * Gen remaining MVC
+&J       SETA  &LEN-(256*&I)           * Remaining data
+         AIF   (&J LT 1).GENMVCL9      * No data remains
+&_LABEL  MVC   &_TO1+256*&I.(&J),&_FROM1+256*&I
+&_LABEL  SETC  ''                      * Wipe used label
+.GENMVCL9 ANOP ,                       * All data has been moved
+         AIF   (&PAD_LEN LT 1).MEND    * No padding: we're done
+&_TO1    SETC  '&_TO1'.'+'.'&LEN'      * Set destination area to pad
+&TO_LEN  SETA  &TO_LEN-&LEN            * Set length of padding area
+.* If possible: generate MVCL instruction to fill pad-area
+         AIF   (&PAD_LEN LE 769).GENMVCL13 * Use set of MVCs: shorter
+         EQUREG PAIR=YES,TEMP=YES,R0=YES,WARN=NO * Alloc src reg pair
+         AIF   (&BXA_RC NE 0).GENMVCL12 * Allocation failed
+&REG_SRCP SETC 'R'.'&BXA_NUMVAL'       * Create source ptr reg name
+&BXA_NUMVAL SETA &BXA_NUMVAL+1         * Nr of odd reg in pair
+&REG_SRCL SETC 'R'.'&BXA_NUMVAL'       * Create source len reg name
+         USE   &REG_SRCP               * Set registers in use to
+         USE   &REG_SRCL               *  prevent re-allocation
+         EQUREG PAIR=YES,TEMP=YES,R0=YES,WARN=NO * Alloc dest reg pair
+         AIF   (&BXA_RC NE 0).GENMVCL10 * Allocation failed
+         DROP  &REG_SRCL               * Source register pair
+         DROP  &REG_SRCP               *    no longer needed
+&FROM_LEN SETA 0                       * Set source length to 0
+&_FROM1  SETC  '0'                     * Set source ptr to null
+         AGO   .DO_MVCL                * Two pairs of regs available!
+.GENMVCL10 ANOP ,                      * Second pair not available
+         DROP  &REG_SRCL               * Source register pair
+         DROP  &REG_SRCP               *    no longer needed
+.* Cannot use MVCL: try to generate a loop
+&I       SETA  (&PAD_LEN-1)/256        * Nr of 256-byte sections
+         AIF   (&I LE 3).GENMVCL13     * Repeat is shorter than loop?
+         EQUREG TEMP=YES,WARN=NO       * Allocate dest pointer
+         AIF   (&BXA_RC NE 0).GENMVCL13 * Not enough regs
+&REG_DSTP SETC 'R'.'&BXA_NUMVAL'       * Create dest ptr reg name
+         USE   &REG_DSTP               * Set reg in use
+         EQUREG TEMP=YES,WARN=NO       * A DO loop register available?
+         AIF   (&BXA_RC NE 0).GENMVCL12 * No reg available for loop
+&REG     SETC  'R'.'&BXA_NUMVAL'       * Create loop register name
+         USE   &REG                    * Set loop counter in use
+         LA    &REG_DSTP,&_TO1         * Point to pad-area
+         MVI   0(&REG_DSTP),C' '       * Insert first pad byte
+         LA    &REG,&I                 * Nr of sections
+_CPY_&SYSNDX LABEL ,                   * Loop point
+         MVC   1(256,&REG_DSTP),0(&REG_DSTP) * Pad 1 section
+         INC   &REG_DSTP,256           * Point to next section
+         BCT   &REG,_CPY_&SYSNDX       * Loop to repeat n times
+         DROP  &REG                    * Loop counter no longer needed
+         DROP  &REG_DSTP               *
+&J       SETA  (&PAD_LEN-1)-(256*&I)   * Remaining pad length
+         AIF   (&J LT 1).MEND          * All padding completed?
+         MVC   1(&J,&REG_DSTP),0(&REG_DSTP) * Wipe remainder
+         MEXIT ,                       *
+.GENMVCL12 ANOP ,                      *
+         DROP  &REG_DSTP               *
+.GENMVCL13 ANOP ,                      *
+&I       SETA  (&PAD_LEN-1)/256        * Nr of 256-byte sections
+         MVI   &_TO1,C' '              * Insert first pad byte
+&J       SETA  0                       * Loop counter
+.GENMVCL15 ANOP ,                      *
+         AIF   (&J GE &I).GENMVCL16    * End of loop
+         MVC   &_TO1+1+256*&J.(256),&_TO1+256*&J
+&J       SETA  &J+1                    *
+         AGO   .GENMVCL15              *
+.GENMVCL16 ANOP ,                      *
+&J       SETA  (&PAD_LEN-1)-(256*&I)   * Remaining pad-length
+         AIF   (&J LT 1).MEND          * No more padding: we're done
+         MVC   &_TO1+1+256*&I.(&J),&_TO1+256*&I
+         MEXIT ,                       *
+.*
+.* Copy two unsigned fields of unequal length, under 256
+.GENMVC0 ANOP  ,                       *
+         AIF   (&TO_LEN GT 255).ERR7D  * Length within limit?
+         AIF   (&FROM_LEN GT 255).ERR7E * Length within limit?
+         AIF   (&TO_LEN EQ &FROM_LEN).DO_MVC * Lengths equal?
+         AIF   (&TO_LEN LT &FROM_LEN).GENMVC0A * Adjust source
+.* Destination field is larger
+&I       SETA  &TO_LEN-&FROM_LEN       * Data offset in TO-field
+         AIF   (&I GT 1).GENMVC0XC     * Length to clear > 1: use XC
+&_LABEL  MVI   &_TO1.,X'00'            * Wipe destination area
+         AGO   .GENMVC0B               *
+.GENMVC0XC ANOP ,                      *
+&_LABEL  XC    &_TO1.(&I),&_TO1        * Wipe destination area
+.GENMVC0B ANOP ,                       * Destination field now cleared
+&_LABEL  SETC  ''                      * Remove label
+&_TO1    SETC  '&_TO1'.'+&I'           * Add offset to TO field
+&TO_LEN  SETA  &FROM_LEN               * Reduce length of TO field
+         AGO   .DO_MVC                 * Go generate MVC instruction
+.* Source field is larger
+.GENMVC0A ANOP ,                       *
+&I       SETA  &FROM_LEN-&TO_LEN       * Data offset in FROM-field
+&_FROM1  SETC  '&_FROM1'.'+&I'         * Add offset to FROM field
+&FROM_LEN SETA &TO_LEN                 * Reduce length of FROM field
+         AGO   .DO_MVC                 * Go generate MVC instruction
+.*
+.* Store several registers into unaligned field
+.GENSTCMM ANOP ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+&J       SETA  0                       * Offset in source field
+.GENSTCMM0 ANOP ,                      * Loop
+&_LABEL  STCM  &_FROM1,YYYY,&_TO1+&J   *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to fill
+&J       SETA  &J+4                    * Point next dest field
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENSTCMM1    * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENSTCMM1 ANOP ,                      * I now next register nr
+&_FROM1  SETC  'R'.'&I'                * Create next register name
+         AGO   .GENSTCMM0              *
+.*
+.* Store several floating point registers into long operands
+.GENSTDM ANOP  ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+&J       SETA  0                       * Offset in dest. field
+.GENSTDM0 ANOP ,                       * Loop
+&_LABEL  STD   &_FROM1,&_TO1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-8               * Reduce length
+         AIF   (&TO_LEN LT 8).MEND     * No registers left to save
+&J       SETA  &J+8                    * Point next long field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENSTDM1      * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENSTDM1 ANOP ,                       * I now next register nr
+&_FROM1  SETC  'FPR'.'&I'              * Create next register name
+         AGO   .GENSTDM0               *
+.*
+.* Store several floating point registers into short operands
+.GENSTEM ANOP  ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+&J       SETA  0                       * Offset in dest. field
+.GENSTEM0 ANOP ,                       * Loop
+&_LABEL  STE   &_FROM1,&_TO1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-4               * Reduce length
+         AIF   (&TO_LEN LT 4).MEND     * No registers left to save
+&J       SETA  &J+4                    * Point next long field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENSTEM1      * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENSTEM1 ANOP ,                       * I now next register nr
+&_FROM1  SETC  'FPR'.'&I'              * Create next register name
+         AGO   .GENSTEM0               *
+.*
+.* Store several registers into halfwords
+.GENSTHM ANOP  ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+&J       SETA  0                       * Offset in dest. field
+.GENSTHM0 ANOP ,                       * Loop
+&_LABEL  STH   &_FROM1,&_TO1+&J        *
+&_LABEL  SETC  ''                      * Remove label after use
+&TO_LEN  SETA  &TO_LEN-2               * Reduce length
+         AIF   (&TO_LEN LT 2).MEND     * No registers left to save
+&J       SETA  &J+2                    * Point next halfword
+&I       SETA  &I+1                    * Next register number
+         AIF   (&I LT 16).GENSTHM1     * Valid register nr
+&I       SETA  0                       * Wrap-around to R0
+.GENSTHM1 ANOP ,                       * I now next register nr
+&_FROM1  SETC  'R'.'&I'                * Create next register name
+         AGO   .GENSTHM0               *
+.*
+.* Save several floating point registers into extended operands
+.GENSTXM ANOP  ,                       *
+&I       SETA  &FROM_REG               * Save first register number
+         AIF   (&I NE 0 AND &I NE 4).ERR7V * Not a valid pair!
+&I       SETA  &I+2                    * Nr of next register
+&ODDREG  SETC  'FPR'.'&I'              * Name of second register
+&J       SETA  0                       * Offset in source field
+.GENSTXM0 ANOP ,                       * Loop
+&_LABEL  STD   &_FROM1,&_TO1+&J        * Save low-order register
+&_LABEL  SETC  ''                      * Remove label after use
+&J       SETA  &J+8                    * Point next long field
+         STD   &ODDREG,&_TO1+&J        * Save high-order register
+&TO_LEN  SETA  &TO_LEN-16              * Reduce length
+         AIF   (&TO_LEN LT 16).MEND    * No registers left to fill
+&J       SETA  &J+8                    * Point next long field
+&I       SETA  &I+2                    * Next register number
+         AIF   (&I LT 8).GENSTXM1      * Valid register nr
+&I       SETA  0                       * Wrap-around to FPR0
+.GENSTXM1 ANOP ,                       * I now next register nr
+&_FROM1  SETC  'FPR'.'&I'              * Create next register name
+&I       SETA  &I+2                    * Nr of next register
+&ODDREG  SETC  'FPR'.'&I'              * Name of second register
+         AGO   .GENSTXM0               *
+.*
+.* Generate an Extract stacked REGisters
+.DO_EREG ANOP  ,                       *
+&I       SETA  &TO_LEN/4               * Get number of registers
+&I       SETA  &TO_REG+&I-1            * Get ending register number
+         AIF   (&I LE 15).DO_EREG1     * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+.DO_EREG1 ANOP ,                       * End-register determined
+&REG     SETC  'R'.'&I'                * Create register name
+&_LABEL  EREG  &_TO1,&REG              *
+         MEXIT ,                       *
+.*
+.* Generate an Insert Characters under Mask
+.DO_ICM  ANOP  ,                       *
+&_LABEL  ICM   &_TO1,&MASK,&_FROM1     *
+         MEXIT ,                       *
+.*
+.* Generate a Load instruction to fill a register
+.DO_L    ANOP  ,                       *
+&_LABEL  L     &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a CVB instruction to fill a register
+.DO_CVB  ANOP  ,                       *
+&_LABEL  CVB   &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a Load Access Multiple instruction to fill some ARs
+.DO_LAM  ANOP  ,                       *
+&REG     SETC  '&_TO1'                 * Default end register name
+         AIF   (&TO_LEN EQ 4).DO_LAM1  * Ok: load 1 access register
+&I       SETA  &TO_LEN/4               * Get number of registers
+&I       SETA  &TO_REG+&I-1            * Get ending register number
+&REG     SETC  'AR'.'&I'               * Create register name
+         AIF   (&I LE 15).DO_LAM1      * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+&REG     SETC  'AR'.'&I'               * Create register name
+.DO_LAM1 ANOP  ,                       * End-register determined
+&_LABEL  LAM   &_TO1,&REG,&_FROM1      *
+         MEXIT ,                       *
+.*
+.* Generate a Load Control instruction to fill some control registers
+.DO_LCTL ANOP  ,                       *
+&REG     SETC  '&_TO1'                 * Default end register name
+         AIF   (&TO_LEN EQ 4).DO_LCTL1 * Ok: load 1 control register
+&I       SETA  &TO_LEN/4               * Get number of registers
+&I       SETA  &TO_REG+&I-1            * Get ending register number
+&REG     SETC  'CR'.'&I'               * Create register name
+         AIF   (&I LE 15).DO_LCTL1     * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+&REG     SETC  'CR'.'&I'               * Create register name
+.DO_LCTL1 ANOP ,                       * End-register determined
+&_LABEL  LCTL  &_TO1,&REG,&_FROM1      *
+         MEXIT ,                       *
+.*
+.* Generate a Load floating point (long)
+.DO_LD   ANOP  ,                       *
+&_LABEL  LD    &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a Load floating point (short)
+.DO_LE   ANOP  ,                       *
+&_LABEL  LE    &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a Load Multiple instruction to fill some registers
+.DO_LM   ANOP  ,                       *
+         AIF   (&TO_LEN EQ 4).DO_L     * Load only 1 register
+&I       SETA  &TO_LEN/4               * Get number of registers
+&I       SETA  &TO_REG+&I-1            * Get ending register number
+         AIF   (&I LE 15).DO_LM1       * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+.DO_LM1  ANOP  ,                       * End-register determined
+&REG     SETC  'R'.'&I'                * Create register name
+&_LABEL  LM    &_TO1,&REG,&_FROM1      *
+         MEXIT ,                       *
+.*
+.* Copy two fields of equal length, under 256
+.* Generate explict length when specified or needed
+.DO_MVC  ANOP  ,                       *
+         AIF   (K'&_TO2 NE 0).DO_MVC1  * Use explicit length specified
+         AIF   (&TO_LEN NE L'&_TO1).DO_MVC1 * Use deviating length
+&_LABEL  MVC   &_TO1,&_FROM1           * Use implicit length
+         MEXIT ,                       *
+.DO_MVC1 ANOP  ,                       *
+&_LABEL  MVC   &_TO1.(&TO_LEN),&_FROM1 *
+         MEXIT ,                       *
+.*
+.* Copy data, using MVCL
+.DO_MVCL ANOP  ,                       *
+         EQUREG PAIR=YES,TEMP=YES,R0=YES * Allocate src reg pair
+         AIF   (&BXA_RC NE 0).ERR7F    * Allocation failed
+&REG_SRCP SETC 'R'.'&BXA_NUMVAL'       * Create source ptr reg name
+&BXA_NUMVAL SETA &BXA_NUMVAL+1         * Nr of odd reg in pair
+&REG_SRCL SETC 'R'.'&BXA_NUMVAL'       * Create source len reg name
+         USE   &REG_SRCP               * Set registers
+         USE   &REG_SRCL               *     in use
+         EQUREG PAIR=YES,TEMP=YES,R0=YES * Allocate dest reg pair
+         AIF   (&BXA_RC NE 0).ERR7F    * Allocation failed
+&REG_DSTP SETC 'R'.'&BXA_NUMVAL'       * Create dest ptr reg name
+&BXA_NUMVAL SETA &BXA_NUMVAL+1         * Nr of odd reg in pair
+&REG_DSTL SETC 'R'.'&BXA_NUMVAL'       * Create dest len reg name
+         USE   &REG_DSTP               * Set registers
+         USE   &REG_DSTL               *     in use
+.* Set source length
+         AIF   (&FROM_LEN EQ 0).DO_MVCLA * Length is in a register?
+&_LABEL  CPY   &REG_SRCL,&FROM_LEN     * Set length of source data
+         AGO   .DO_MVCLB               *
+.DO_MVCLA ANOP ,                       *
+&_LABEL  LR    &REG_SRCL,&_FROM2       * Set length of source data
+.DO_MVCLB ANOP ,                       *
+&_LABEL  SETC  ''                      * Label no longer needed
+.* Set source address
+         AIF   ('&_FROM1' EQ '0').DO_MVCL0
+         AIF   ('&FROM_TP' EQ 'p').DO_MVCLC * Pointered source field?
+         AGO   .DO_MVCLE               * No: normal field
+.DO_MVCLC ANOP ,                       *
+         AIF   ('&SYSASCE' EQ 'P').DO_MVCLD * Primary mode?
+         LAE   &REG_SRCP,0(,&_FROM1)   * Point to source data
+         AGO   .DO_MVCL1               *
+.DO_MVCLD ANOP ,                       *
+         LR    &REG_SRCP,&_FROM1       * Point to source data
+         AGO   .DO_MVCL1               *
+.DO_MVCLE ANOP ,                       *
+         AIF   ('&SYSASCE' EQ 'P').DO_MVCLF * Primary mode?
+         LAE   &REG_SRCP,&_FROM1       * Point to source data
+         AGO   .DO_MVCL1               *
+.DO_MVCLF ANOP ,                       *
+         LA    &REG_SRCP,&_FROM1       * Point to source data
+         AGO   .DO_MVCL1               *
+.DO_MVCL0 ANOP ,                       *
+         CLEAR &REG_SRCP               * Clear source data pointer
+.DO_MVCL1 ANOP ,                       *
+.* Set destination length
+         AIF   (&TO_LEN NE 0).DO_MVCLG
+         LR    &REG_DSTL,&_TO2         * Set length of dest field
+         AGO   .DO_MVCL3               *
+.DO_MVCLG ANOP ,                       *
+         AIF   (&TO_LEN NE &FROM_LEN).DO_MVCL2
+         LR    &REG_DSTL,&REG_SRCL     * Copy data length
+         AGO   .DO_MVCL3               *
+.DO_MVCL2 ANOP ,                       *
+         CPY   &REG_DSTL,&TO_LEN       * Set length of dest field
+.DO_MVCL3 ANOP ,                       *
+.* Set destination address
+         AIF   ('&TO_TP' EQ 'p').DO_MVCLH * Pointered dest field?
+         AGO   .DO_MVCLJ               * No: normal field
+.DO_MVCLH ANOP ,                       *
+         AIF   ('&SYSASCE' EQ 'P').DO_MVCLI * Primary mode?
+         LAE   &REG_DSTP,0(,&_TO1)     * Point to destination field
+         AGO   .DO_MVCL4               *
+.DO_MVCLI ANOP ,                       *
+         LR    &REG_DSTP,&_TO1         * Point to destination field
+         AGO   .DO_MVCL4               *
+.DO_MVCLJ ANOP ,                       *
+         AIF   ('&SYSASCE' EQ 'P').DO_MVCLK * Primary mode?
+         LAE   &REG_DSTP,&_TO1         * Point to destination field
+         AGO   .DO_MVCL4               *
+.DO_MVCLK ANOP ,                       *
+         LA    &REG_DSTP,&_TO1         * Point to destination field
+.DO_MVCL4 ANOP ,                       *
+.* Insert padding into source length register
+         AIF   (&FROM_LEN EQ 0).DO_MVCL5 * Pad with zeros if needed
+         AIF   (&TO_LEN EQ 0).DO_MVCL5 * Pad with zeros if needed
+         AIF   (&FROM_LEN GE &TO_LEN).DO_MVCL5 * No padding needed
+         AIF   (&PAD0).DO_MVCL5        * Pad=X'00' --> No pad needed
+         ICM   &REG_SRCL,YNNN,=C' '    * Set padding to spaces
+.DO_MVCL5 ANOP ,                       *
+.*
+         MVCL  &REG_DSTP,&REG_SRCP     *
+         DROP  &REG_DSTL               * Destination register pair
+         DROP  &REG_DSTP               *    no longer needed
+         DROP  &REG_SRCL               * Source register pair
+         DROP  &REG_SRCP               *    no longer available
+         MEXIT ,                       *
+.*
+.* Generate a PACK to copy zoned decimal data to a packed field
+.DO_PACK ANOP  ,                       *
+         AIF   (K'&_TO2 NE 0).DO_PACK0 *
+         AIF   (&TO_LEN NE L'&_TO1).DO_PACK0 *
+         AGO   .DO_PACK1               *
+.DO_PACK0 ANOP ,                       * Add explicit dest.length
+&_TO1    SETC  '&_TO1'.'(&TO_LEN)'     * Add length to destination
+.DO_PACK1 ANOP ,                       * Length now in destination fld
+         AIF   (K'&_FROM2 NE 0).DO_PACK2 *
+         AIF   (&FROM_LEN NE L'&_FROM1).DO_PACK2 *
+         AGO   .DO_PACK3               *
+.DO_PACK2 ANOP ,                       * Add explicit src.length
+&_FROM1  SETC  '&_FROM1'.'(&FROM_LEN)' * Add length to source
+.DO_PACK3 ANOP ,                       * Length now in source fld
+&_LABEL  PACK  &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a Store register
+.DO_ST   ANOP  ,                       *
+&_LABEL  ST    &_FROM1,&_TO1           *
+         MEXIT ,                       *
+.*
+.* Generate a Store Access Multiple instruction to save some ARs
+.DO_STAM ANOP  ,                       *
+&I       SETA  &FROM_LEN/4             * Get number of registers
+&I       SETA  &FROM_REG+&I-1          * Get ending register number
+&REG     SETC  'AR'.'&I'               * Create register name
+         AIF   (&I LE 15).DO_STAM1     * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+&REG     SETC  'AR'.'&I'               * Create register name
+.DO_STAM1 ANOP ,                       * End-register determined
+&_LABEL  STAM  &_FROM1,&REG,&_TO1      *
+         MEXIT ,                       *
+.*
+.* Generate a Store characters under mask
+.DO_STCM ANOP  ,                       *
+&_LABEL  STCM  &_FROM1,&MASK,&_TO1     *
+         MEXIT ,                       *
+.*
+.* Generate a Store Control instruction to fill some control registers
+.DO_STCTL ANOP ,                       *
+&I       SETA  &FROM_LEN/4             * Get number of registers
+&I       SETA  &FROM_REG+&I-1          * Get ending register number
+&REG     SETC  'CR'.'&I'               * Create register name
+         AIF   (&I LE 15).DO_STCTL1    * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+&REG     SETC  'CR'.'&I'               * Create register name
+.DO_STCTL1 ANOP ,                      * End-register determined
+&_LABEL  STCTL &_FROM1,&REG,&_TO1      *
+         MEXIT ,                       *
+.*
+.* Generate a Store floating point (long)
+.DO_STD  ANOP  ,                       *
+&_LABEL  STD   &_FROM1,&_TO1           *
+         MEXIT ,                       *
+.*
+.* Generate a Store floating point (short)
+.DO_STE  ANOP  ,                       *
+&_LABEL  STE   &_FROM1,&_TO1           *
+         MEXIT ,                       *
+.*
+.* Generate a Store Halfword
+.DO_STH  ANOP  ,                       *
+&_LABEL  STH   &_FROM1,&_TO1           *
+         MEXIT ,                       *
+.*
+.* Generate a Store Multiple instruction to save some registers
+.DO_STM  ANOP  ,                       *
+&I       SETA  &FROM_LEN/4             * Get number of registers
+&I       SETA  &FROM_REG+&I-1          * Get ending register number
+         AIF   (&I LE 15).DO_STM1      * End-reg is ok
+&I       SETA  &I-16                   * Perform wrap-around
+.DO_STM1 ANOP  ,                       * End-register determined
+&REG     SETC  'R'.'&I'                * Create register name
+&_LABEL  STM   &_FROM1,&REG,&_TO1      *
+         MEXIT ,                       *
+.*
+.* Generate an UNPK to copy packed decimal data to a zoned field
+.DO_UNPK ANOP  ,                       *
+         AIF   (K'&_TO2 NE 0).DO_UNPK0 *
+         AIF   (&TO_LEN NE L'&_TO1).DO_UNPK0 *
+         AGO   .DO_UNPK1               *
+.DO_UNPK0 ANOP ,                       * Add explicit dest.length
+&_TO1    SETC  '&_TO1'.'(&TO_LEN)'     * Add length to destination
+.DO_UNPK1 ANOP ,                       * Length now in destination fld
+         AIF   (K'&_FROM2 NE 0).DO_UNPK2 *
+         AIF   (&FROM_LEN NE L'&_FROM1).DO_UNPK2 *
+         AGO   .DO_UNPK3               *
+.DO_UNPK2 ANOP ,                       * Add explicit src.length
+&_FROM1  SETC  '&_FROM1'.'(&FROM_LEN)' * Add length to source
+.DO_UNPK3 ANOP ,                       * Length now in source fld
+&_LABEL  UNPK  &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.* Generate a ZAP to copy packed decimal data
+.DO_ZAP  ANOP  ,                       *
+         AIF   (K'&_TO2 NE 0).DO_ZAP0  *
+         AIF   (&TO_LEN NE L'&_TO1).DO_ZAP0 *
+         AGO   .DO_ZAP1                *
+.DO_ZAP0 ANOP  ,                       * Add explicit dest.length
+&_TO1    SETC  '&_TO1'.'(&TO_LEN)'     * Add length to destination
+.DO_ZAP1 ANOP  ,                       * Length now in destination fld
+         AIF   (K'&_FROM2 NE 0).DO_ZAP2 *
+         AIF   (&FROM_LEN NE L'&_FROM1).DO_ZAP2 *
+         AGO   .DO_ZAP3                *
+.DO_ZAP2 ANOP  ,                       * Add explicit src.length
+&_FROM1  SETC  '&_FROM1'.'(&FROM_LEN)' * Add length to source
+.DO_ZAP3 ANOP  ,                       * Length now in source fld
+&_LABEL  ZAP   &_TO1,&_FROM1           *
+         MEXIT ,                       *
+.*
+.MEND    MEND

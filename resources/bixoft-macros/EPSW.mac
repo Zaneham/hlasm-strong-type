@@ -1,0 +1,118 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Extract current PSW
+.*
+&LABEL   EPSW  &REG                    * Register set to be used
+.*
+.* &REG  specifies an even register. The PSW will be placed in register
+.*       &REG and &REG+1.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EPSW                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_REG
+         LCLC  &_REG1,&_REG2
+         LCLA  &REGN
+.*
+.* Check the REG parameter
+         AIF   (K'&REG EQ 0).ERR1A
+&_REG    SETC  '&REG'
+         AIF   ('&_REG'(1,1) NE '(').LAB1A * If enclosed in parentheses
+&_REG    SETC  '&REG(1)'               * Remove parentheses
+.LAB1A   ANOP
+         AIF   ('&_REG'(1,1) NE 'R').LAB1B * If R...
+&_REG    SETC  '&_REG'(2,*)            * Remove leading R
+&_REG1   SETC  'R'
+&_REG2   SETC  'R'
+.LAB1B   ANOP
+         AIF   ('&_REG' EQ '0').LAB1C
+         AIF   ('&_REG' EQ '00').LAB1C
+         AIF   ('&_REG' EQ '14').LAB1C
+         AGO   .ERR1B
+.LAB1C   ANOP
+&_REG1   SETC  '&_REG1'.'&_REG'
+&REGN    SETA  &_REG
+&REGN    SETA  &REGN+1
+&_REG2   SETC  '&_REG2'.'&REGN'
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'You should specify an even general purpose register'
+         MEXIT
+.ERR1B   MNOTE 8,'You can use only R0/R1 or R14/R15'
+.NOERR1  ANOP
+.*
+.* Check the number of parameters
+         AIF   (N'&SYSLIST GT 1).ERR2
+         AGO   .NOERR2
+.ERR2    MNOTE 4,'Too many parameters specified: ignored'
+.NOERR2  ANOP
+.*
+.* Generate code
+&LABEL   LA    &_REG2,_EPSW&SYSNDX     * Load internal return address
+         LA    &_REG1,1                * Amode bit
+         SLL   &_REG1,31               *   into bit 0
+         OR    &_REG2,&_REG1           *   of the return address
+         BAKR  &_REG2,R0               * Create stack entry (nobranch)
+         LA    &_REG2,1                * Specifies PSW for ESTA
+         ESTA  &_REG1,&_REG2           * Put PSW into registers
+         PR    ,                       * Remove stack entry
+_EPSW&SYSNDX LABEL ,                   *
+.*
+.MEND    MEND

@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: win32-x64
+            binary_src: _build/default/bin/main.exe
+            binary_dst: hlasm-lsp.exe
+          - os: ubuntu-latest
+            target: linux-x64
+            binary_src: _build/default/bin/main
+            binary_dst: hlasm-lsp
+          - os: macos-13
+            target: darwin-x64
+            binary_src: _build/default/bin/main
+            binary_dst: hlasm-lsp
+          - os: macos-latest
+            target: darwin-arm64
+            binary_src: _build/default/bin/main
+            binary_dst: hlasm-lsp
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: '5.1'
+
+      - name: Install OCaml dependencies
+        run: opam install . --deps-only --yes
+
+      - name: Build language server
+        run: opam exec -- dune build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Prepare extension
+        shell: bash
+        run: |
+          mkdir -p vscode/server vscode/data
+          cp "${{ matrix.binary_src }}" "vscode/server/${{ matrix.binary_dst }}"
+          cp data/macros.json vscode/data/macros.json
+          cp README.md vscode/README.md
+          cp LICENSE vscode/LICENSE
+
+      - name: Build extension
+        working-directory: vscode
+        run: |
+          npm ci
+          npm run compile
+
+      - name: Package VSIX
+        working-directory: vscode
+        run: npx @vscode/vsce package --target ${{ matrix.target }}
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.target }}
+          path: vscode/*.vsix
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all VSIX artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: vsix
+          pattern: vsix-*
+          merge-multiple: true
+
+      - name: Publish to VS Code Marketplace
+        run: npx @vscode/vsce publish --packagePath vsix/*.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vsix/*.vsix
+          generate_release_notes: true

@@ -1,0 +1,156 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Job Step Control Block
+.*
+&LABEL   MAPJSCB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPJSCB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPJSCB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'JSCB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPJSCB).MEND
+&BXA_MAC_MAPJSCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_JSCB
+&BXA_CB_JSCB SETC 'JSCB'
+.*
+.* JSCBOPTS - OPTION SWITCHES
+JSCRSV04 EQUOVR ,,b,JSCBOPTS
+JSCRSV05 EQUOVR ,,b,JSCBOPTS
+JSCBLONG EQUOVR ,,b,JSCBOPTS
+JSCRSV06 EQUOVR ,,b,JSCBOPTS
+JSCRSV07 EQUOVR ,,b,JSCBOPTS
+JSCRSV08 EQUOVR ,,b,JSCBOPTS
+JSCSIOTS EQUOVR ,,b,JSCBOPTS
+JSCBAUTH EQUOVR ,,b,JSCBOPTS
+.*
+.* JSCBSWT1 - STATUS SWITCHES  (OS/VS2)
+JSCBPASS EQUOVR ,,b,JSCBSWT1
+JSCRSV11 EQUOVR ,,b,JSCBSWT1
+JSCRSV12 EQUOVR ,,b,JSCBSWT1
+JSCRSV13 EQUOVR ,,b,JSCBSWT1
+JSCRSV14 EQUOVR ,,b,JSCBSWT1
+JSCRSV15 EQUOVR ,,b,JSCBSWT1
+JSCRSV16 EQUOVR ,,b,JSCBSWT1
+JSCBPMSG EQUOVR ,,b,JSCBSWT1
+.*
+.* JSCBWTFG - FLAGS USED BY WTP SUPPORT
+JSCBIOFG EQUOVR ,,b,JSCBWTFG
+JSCBRET  EQUOVR ,,b,JSCBWTFG
+.* JSCRSV18 EQUOVR ,,b,JSCBWTFG        * Last seen in OS/390 V2R6
+JSCBBMO  EQUOVR ,,b,JSCBWTFG           * First seen in z/OS V1R4
+JSCRSV19 EQUOVR ,,b,JSCBWTFG
+JSCRSV20 EQUOVR ,,b,JSCBWTFG
+JSCRSV21 EQUOVR ,,b,JSCBWTFG
+JSCRSV22 EQUOVR ,,b,JSCBWTFG
+JSCRSV23 EQUOVR ,,b,JSCBWTFG
+.*
+.* JSCBFBYT - FLAG BYTE  (MDC300)
+JSCBRV01 EQUOVR ,,b,JSCBFBYT
+JSCBADSP EQUOVR ,,b,JSCBFBYT
+JSCBRV02 EQUOVR ,,b,JSCBFBYT
+JSCBRV03 EQUOVR ,,b,JSCBFBYT
+JSCBSJFY EQUOVR ,,b,JSCBFBYT
+JSCBSJFN EQUOVR ,,b,JSCBFBYT
+JSCBRV06 EQUOVR ,,b,JSCBFBYT
+JSCBRV07 EQUOVR ,,b,JSCBFBYT
+.*
+.* JSCBJJSB - JOB JOURNAL STATUS INDICATORS
+JSCBJNLN EQUOVR ,,b,JSCBJJSB
+JSCBJNLF EQUOVR ,,b,JSCBJJSB
+JSCBJNLE EQUOVR ,,b,JSCBJJSB
+JSCBJSBI EQUOVR ,,b,JSCBJJSB
+JSCBJSBA EQUOVR ,,b,JSCBJJSB
+JSCBJSBX EQUOVR ,,b,JSCBJJSB
+JSCBJSBT EQUOVR ,,b,JSCBJJSB
+.*
+         MNOTE *,'Including IEZJSCB mapping macro'
+         IEZJSCB ,                     *
+         EQUOVR *END
+*
+         ORG   ,                       *
+JSCB     EQU   IEZJSCB                 * Start of JSCB
+JSCB_LEN EQU   *-JSCB                  * Length of JSCB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

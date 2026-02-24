@@ -1,0 +1,293 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Communications Vector Table
+.*
+&LABEL   MAPCVT &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPCVT                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPCVT         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'CVT').EMBED
+         AIF   ('&CB' EQ 'CVTVSTGX').EMBED
+         AIF   ('&CB' EQ 'CVTXTNT1').EMBED
+         AIF   ('&CB' EQ 'CVTXTNT2').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPCVT).MEND
+&BXA_MAC_MAPCVT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_CVT
+         GBLC  &BXA_CB_CVTVSTGX
+         GBLC  &BXA_CB_CVTXTNT1
+         GBLC  &BXA_CB_CVTXTNT2
+&BXA_CB_CVT SETC 'CVT'
+&BXA_CB_CVTVSTGX SETC 'CVT'
+&BXA_CB_CVTXTNT1 SETC 'CVT'
+&BXA_CB_CVTXTNT2 SETC 'CVT'
+.*
+.* CVTDCB - OPERATING SYSTEM characteristics
+CVTMVSE  EQUOVR ,,b,CVTDCB
+CVT1SSS  EQUOVR ,,b,CVTDCB
+CVT2SPS  EQUOVR ,,b,CVTDCB
+CVT4MS1  EQUOVR ,,b,CVTDCB
+CVTOSEXT EQUOVR ,,b,CVTDCB
+CVT4MPS  EQUOVR ,,b,CVTDCB
+CVT6DAT  EQUOVR ,,b,CVTDCB
+CVTMVS2  EQUOVR ,,b,CVTDCB
+CVT8AOS2 EQUOVR ,,b,CVTDCB
+.*
+.* CVTOPTA - OPTION INDICATORS
+CVTCCH   EQUOVR ,,b,CVTOPTA
+CVTAPR   EQUOVR ,,b,CVTOPTA
+CVTDDR   EQUOVR ,,b,CVTOPTA
+CVTNIP   EQUOVR ,,b,CVTOPTA
+CVT121TR EQUOVR ,,b,CVTOPTA
+CVTASCII EQUOVR ,,b,CVTOPTA
+CVTXPFP  EQUOVR ,,b,CVTOPTA
+.*
+.* CVTOPTB - MISCELLANEOUS FLAGS
+CVTPROT  EQUOVR ,,b,CVTOPTB
+CVTCTIMS EQUOVR ,,b,CVTOPTB
+CVTTOD   EQUOVR ,,b,CVTOPTB
+CVTNLOG  EQUOVR ,,b,CVTOPTB
+CVTAPTHR EQUOVR ,,b,CVTOPTB
+CVTFP    EQUOVR ,,b,CVTOPTB
+CVTVS1A  EQUOVR ,,b,CVTOPTB
+CVTVS1B  EQUOVR ,,b,CVTOPTB
+.*
+.* CVTGTFST - GTF FLAG BYTES
+CVTGTFAV EQUOVR ,,b,CVTGTFST
+CVTSPD   EQUOVR ,,b,CVTGTFST
+CVTWSPR  EQUOVR ,,b,CVTGTFST
+CVTUSR   EQUOVR ,,b,CVTGTFST
+CVTRNIO  EQUOVR ,,b,CVTGTFST
+.*
+.* CVTTCMFG - TCAM FLAGS
+CVTTCRDY EQUOVR ,,b,CVTTCMFG
+CVTLDEV  EQUOVR ,,b,CVTTCMFG
+CVTNWTCM EQUOVR ,,b,CVTTCMFG
+.*
+.* CVTDMSRF - OPEN/CLOSE/EOV FLAG BYTE.
+CVTSDUMP EQUOVR ,,b,CVTDMSRF
+CVTUDUMP EQUOVR ,,b,CVTDMSRF
+.*
+.* CVTDIRST - FLAG BYTE
+CVTDICOM EQUOVR ,,b,CVTDIRST
+.*
+.* CVTSYLK - SUPERVISOR LOCK.
+CVTSYLKS EQUOVR ,,v,CVTSYLK
+CVTSYLKR EQUOVR ,,v,CVTSYLK
+.*
+.* CVTFLAG1 - FLAG BYTE
+CVTRSMWD EQUOVR ,,b,CVTFLAG1
+CVTSVPRC EQUOVR ,,b,CVTFLAG1
+CVTCUSE  EQUOVR ,,b,CVTFLAG1
+CVTMVPG  EQUOVR ,,b,CVTFLAG1
+CVTOVER  EQUOVR ,,b,CVTFLAG1
+CVTCSTR  EQUOVR ,,b,CVTFLAG1
+CVTSUBSP EQUOVR ,,b,CVTFLAG1
+CVTKPAR  EQUOVR ,,b,CVTFLAG1
+.*
+.* CVTFLAG2 - FLAG BYTE
+CVTCMPSC EQUOVR ,,b,CVTFLAG2
+CVTCMPSH EQUOVR ,,b,CVTFLAG2
+CVTSOPF  EQUOVR ,,b,CVTFLAG2
+CVTBFPH  EQUOVR ,,b,CVTFLAG2
+CVTPER2  EQUOVR ,,b,CVTFLAG2
+.*
+.* CVTCTLFG - SYSTEM CONTROL FLAGS
+CVTDSTAT EQUOVR ,,b,CVTCTLFG
+CVTNOMP  EQUOVR ,,b,CVTCTLFG
+CVTGTRCE EQUOVR ,,b,CVTCTLFG
+CVTSDTRC EQUOVR ,,b,CVTCTLFG
+.*
+.* CVTGRSST - GRS status.
+CVTE51GN EQUOVR ,,b,CVTGRSST
+CVTE51LN EQUOVR ,,b,CVTGRSST
+.*
+.* CVTMFRTR - ADDRESS OF MEASUREMENT FACILITY ROUTINE
+CVTMFACT EQUOVR ,,b,CVTMFRTR
+.*
+.* CVTGSDA - ADDRESS OF GLOBAL SYSTEM DUPLEX AREA
+CVTGSDAB EQUOVR ,,b,CVTGSDA
+.*
+.* CVTFUNC - Reserved for solution/offering use.
+CVTSOLN  EQUOVR ,,b,CVTFUNC
+.*
+.* CVTXAFL - FLAG BYTE FOR MVS/XA PROCESSING.
+CVTCSRIM EQUOVR ,,b,CVTXAFL
+.*
+.* CVTOSLV0 - BYTE 0 OF CVTOSLVL
+CVTH3310 EQUOVR ,,b,CVTOSLV0
+CVTESA   EQUOVR ,,b,CVTOSLV0
+CVTXAX   EQUOVR ,,b,CVTOSLV0
+CVTH4420 EQUOVR ,,b,CVTOSLV0
+CVTJ3313 EQUOVR ,,b,CVTOSLV0
+CVTJ3311 EQUOVR ,,b,CVTOSLV0
+CVTHIPER EQUOVR ,,b,CVTOSLV0
+CVTH4410 EQUOVR ,,b,CVTOSLV0
+CVTLKR   EQUOVR ,,b,CVTOSLV0
+CVTUCBSV EQUOVR ,,b,CVTOSLV0
+CVTCADS  EQUOVR ,,b,CVTOSLV0
+CVTCRPTL EQUOVR ,,b,CVTOSLV0
+CVTJ4422 EQUOVR ,,b,CVTOSLV0
+.*
+.* CVTOSLV1 - BYTE 1 OF CVTOSLVL
+CVTH4430 EQUOVR ,,b,CVTOSLV1
+CVTDYAPF EQUOVR ,,b,CVTOSLV1
+CVTWLM   EQUOVR ,,b,CVTOSLV1
+CVTH5510 EQUOVR ,,b,CVTOSLV1
+CVTDYNEX EQUOVR ,,b,CVTOSLV1
+CVTH5520 EQUOVR ,,b,CVTOSLV1
+CVTENCLV EQUOVR ,,b,CVTOSLV1
+CVTJ5522 EQUOVR ,,b,CVTOSLV1
+CVTH5530 EQUOVR ,,b,CVTOSLV1
+CVTH6603 EQUOVR ,,b,CVTOSLV1
+CVTOS390_010300 EQUOVR ,,b,CVTOSLV1
+CVTOS390_R3     EQUOVR ,,b,CVTOSLV1
+CVTDYNL  EQUOVR ,,b,CVTOSLV1
+CVTH6601 EQUOVR ,,b,CVTOSLV1
+CVTOS390 EQUOVR ,,b,CVTOSLV1
+CVTOS390_010100 EQUOVR ,,b,CVTOSLV1
+CVTOS390_R1     EQUOVR ,,b,CVTOSLV1
+CVTPRDED EQUOVR ,,b,CVTOSLV1
+CVTJ6602 EQUOVR ,,b,CVTOSLV1
+CVTOS390_010200 EQUOVR ,,b,CVTOSLV1
+CVTOS390_R2     EQUOVR ,,b,CVTOSLV1
+CVTPARMC EQUOVR ,,b,CVTOSLV1
+.*
+.* CVTOSLV2 - BYTE 2 OF CVTOSLVL
+CVTOS390_010400 EQUOVR ,,b,CVTOSLV2
+CVTOS390_020400 EQUOVR ,,b,CVTOSLV2
+CVTOS390_R4     EQUOVR ,,b,CVTOSLV2
+CVTJ6604 EQUOVR ,,b,CVTOSLV2
+CVTDYLPA EQUOVR ,,b,CVTOSLV2
+CVTRTLS  EQUOVR ,,b,CVTOSLV2
+CVTOS390_020500 EQUOVR ,,b,CVTOSLV2
+CVTOS390_R5     EQUOVR ,,b,CVTOSLV2
+CVTH6605 EQUOVR ,,b,CVTOSLV2
+CVTOS390_020600 EQUOVR ,,b,CVTOSLV2
+CVTOS390_R6     EQUOVR ,,b,CVTOSLV2
+CVTH6606 EQUOVR ,,b,CVTOSLV2
+CVTBFP   EQUOVR ,,b,CVTOSLV2
+.*
+.* CVTFLGBT - FLAG BYTE (OS/VS1)
+CVTNPE   EQUOVR ,,b,CVTFLGBT
+CVTVME   EQUOVR ,,b,CVTFLGBT
+CVTBAH   EQUOVR ,,b,CVTFLGBT
+.*
+.* CVTAVVT - ADDRESS OF AVM CONTROL BLOCK
+CVTAVIN  EQUOVR ,,b,CVTAVVT
+.*
+.* CVTFBYT1 - FLAG BYTE
+CVTRDE   EQUOVR ,,b,CVTFBYT1
+.*
+.* CVTATCVT - POINTER TO VTAM'S CVT
+CVTATACT EQUOVR ,,b,CVTATCVT
+.*
+.* CVT-macro contains a constant, which is defined outside its DSECT
+CVTFIX   DSECT ,                       * Reset to CVT DSECT
+         MNOTE *,'Including CVT mapping macro'
+         CVT   DSECT=YES,              * Generate CVT                  *
+               PREFIX=YES,             * with prefix area              *
+               LIST=YES                * and unchanged PRINT option
+         EQUOVR *END
+*
+CVTFIX   DSECT ,                       * Reset to CVT prefix
+CVT      EQU   CVTMAP                  * For USINGs
+         ORG
+CVTFIX_LEN EQU CVT-CVTFIX              * Length of CVT prefix
+CVT_LEN  EQU   *-CVT                   * Length of CVT proper
+*
+CVTVSTGX DSECT ,                       * Reset to CVTVSTGX DSECT
+         ORG
+CVTVSTGX_LEN EQU *-CVTVSTGX            * Length of CVTVSTGX
+*
+CVTXTNT1 DSECT ,                       * Reset to OS/VS extension
+         ORG
+CVTXTNT1_LEN EQU *-CVTXTNT1            * Length of CVTXTNT1
+*
+CVTXTNT2 DSECT ,                       * Reset to OS/VS2 extension
+         ORG
+CVTXTNT2_LEN EQU *-CVTXTNT2            * Length of CVTXTNT2
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

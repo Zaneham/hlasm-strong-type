@@ -1,0 +1,139 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: LEAVE
+.* Combines with DO (WHILE/UNTIL) to abort an executing loop
+.*
+.* Syntax:
+.* 0) LEAVE
+.* 1) LEAVE cond
+.* 2) LEAVE UNLESS,cond
+.* where cond is a condition, as described in the IF macro
+.*
+&LABEL   LEAVE &DOLAB=                 * Label of associated DO
+.*                                     * Condition in &SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC LEAVE                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_DO(5)          * DO-labels
+         GBLC  &BXA_STK_LBL(5)         * Labels
+         LCLC  &OP                     * Last DO opcode on stack
+         LCLC  &DO                     * Label of last DO on stack
+         LCLC  &LBL                    * Endlabel of last DO on stack
+         LCLA  &I                      * Stack pointer
+         LCLC  &ARGS                   * SYSLIST as a string
+.*
+.* Search down the stack to find the last active DO statement
+&I       SETA  &BXA_STK+1              * Copy stack pointer
+.LOOP1   ANOP  ,                       * Search struct.program. stack
+&I       SETA  &I-1                    * Point preceding entry
+         AIF   (&I LT 1).ERR1A         * Not found: error!
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract opcode from stack
+         AIF   ('&OP' EQ 'DO').LOOP1F  * Found
+         AIF   ('&OP' EQ 'DOWHILE').LOOP1F
+         AIF   ('&OP' EQ 'DOUNTIL').LOOP1F
+         AIF   ('&OP' EQ 'DOCOUNT').LOOP1F
+         AGO   .LOOP1                  * Mismatch: keep searching
+.LOOP1F  ANOP  ,                       * Found LEAVE-able entry
+&LBL     SETC  '&BXA_STK_LBL(&I)'      * Extract end-of-loop label
+&DO      SETC  '&BXA_STK_DO(&I)'       *  and start-of-loop label
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'No preceding DO statement: ignored'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* If DO-label specified: must match label of DO statement
+         AIF   (K'&DOLAB EQ 0).NOERR2
+         AIF   ('&DOLAB' EQ '&DO').NOERR2
+.ERR2A   MNOTE 8,'Specified label does not match current active DO'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* If end-of-loop label not in table: generate one
+.* &I still points to current stack entry
+         AIF   (K'&LBL GT 0).DOOK
+&LBL     SETC  '_EDO_&SYSNDX'          * Create end-of-loop label
+&BXA_STK_LBL(&I) SETC '&LBL'           * And add to table
+.DOOK    ANOP  ,
+.*
+.* Build ARGS from &SYSLIST.
+&I       SETA  0                       * I indexes SYSLIST
+.LOOP2   ANOP  ,                       * For all entries in SYSLIST
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP2OK * At end: quit loop
+&ARGS    SETC  '&ARGS'.','.'&SYSLIST(&I)' * Add entry to ARGS
+         AGO   .LOOP2                  * And go process next entry
+.LOOP2OK ANOP
+         AIF   (K'&ARGS EQ 0).NOARGS
+&ARGS    SETC  '('.'&ARGS'(2,*).')'    * Parenthesize and remove lead ,
+.NOARGS  ANOP
+.*
+.* Generate the code for leaving this loop
+         AIF   (K'&ARGS EQ 0).NOCOND
+         AIF   ('&ARGS' EQ '(,)').NOCOND
+         GOTO  &LBL,&ARGS              * Conditional exit-from-loop
+         MEXIT
+.*
+.NOCOND  ANOP
+         GOTO  &LBL                    * Exit from loop
+.*
+.MEND    MEND

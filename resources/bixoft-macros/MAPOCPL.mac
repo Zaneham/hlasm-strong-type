@@ -1,0 +1,151 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for parameter list entries used by OPEN/CLOSE SVC's
+.* This parameter list is used by:
+.*   SVC 19 = OPEN
+.*   SVC 20 = CLOSE
+.*   SVC 22 = OPEN,TYPE=J
+.*   SVC 23 = CLOSE,TYPE=T
+.*
+&LABEL   MAPOCPL &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPOCPL                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPOCPL        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'OC24').EMBED
+         AIF   ('&CB' EQ 'OC31').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPOCPL).MEND
+&BXA_MAC_MAPOCPL SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_OC24
+         GBLC  &BXA_CB_OC31
+&BXA_CB_OC24 SETC 'OCPL'
+&BXA_CB_OC31 SETC 'OCPL'
+.*
+         MNOTE *,'Generating DSECT for Open/Close parameter list entry'
+*
+* DSECT for OPEN/CLOSE parameter list entries
+* If R1 contains an address it points to a MODE=24 parmlist
+* If R1 contains 0, R0 points to a MODE=31 parmlist
+*
+* The option byte is divided into three parts:
+* - Bit 0  : Contains the end-of-list indicator
+* - Bit 1-3: Contain the second option. These three bits must be
+*            tested together
+* - Bit 4-7: Contain the first option. These four bits must be
+*            tested together
+*
+OCPL     DSECT ,                       * MODE=24 version
+OC24     DS    0F                      * Each entry is an aligned word
+OC24OPT  DS    XL1                     * Option byte: see below
+OC24DCB  DS    AL3                     * Pointer to DCB
+OC24_LEN EQU   *-OC24
+*
+         ORG   OC24                    * MODE=31 version
+OC31     DS    0FL8                    * Two words on word boundary
+OC31OPT  DS    XL1                     * Option byte
+OC31NULL DS    AL3                     * Contains zeroes
+OC31DCB  DS    AL4                     * Pointer to DCB
+OC31_LEN EQU   *-OC31
+*
+* Following is a list of bit-definitions for the OPT byte:
+* See SYS1.MODGEN(IECEQU) for the official definitions
+*   End-of-list-indicator  BIT0
+*   2nd option=DISP        NOBITS (bits 1-3 off)
+*   2nd option=REWIND      BIT1
+*   2nd option=FREE/IDLE   BIT2
+*   2nd option=REREAD      BIT3
+*   2nd option=LEAVE       BIT2+BIT3
+*   1st option=INPUT       NOBITS (bits 4-7 off)
+*   1st option=RDBACK      BIT7
+*   1st option=UPDAT       BIT5
+*   1st option=INOUT       BIT6+BIT7
+*   1st option=OUTIN       BIT5+BIT6+BIT7
+*   1st option=OUTINX      BIT5+BIT6
+*   1st option=EXTEND      BIT4+BIT5+BIT6
+*   1st option=OUTPUT      BIT4+BIT5+BIT6+BIT7
+.*
+.* Return to our original CSECT name and include IECEQU
+&SYSECT  &SYSSTYP
+.*
+         GENMAPS IECEQ                 * Include Open/Close/EOV equates
+.*
+.MEND    MEND

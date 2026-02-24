@@ -1,0 +1,214 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Partitioned DataSet directory entry
+.*
+&LABEL   MAPPDS &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPPDS                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPPDS         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'PDS').EMBED
+         AIF   ('&CB' EQ 'TTRN').EMBED
+         AIF   ('&CB' EQ 'TTRX').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPPDS).MEND
+&BXA_MAC_MAPPDS SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_PDS
+         GBLC  &BXA_CB_TTRN
+         GBLC  &BXA_CB_TTRX
+&BXA_CB_PDS SETC 'PDS'
+&BXA_CB_TTRN SETC 'PDS'
+&BXA_CB_TTRX SETC 'PDS'
+.*
+.* PDS2LIBF - LIBRARY FLAG FIELD
+PDS2LNRM EQUOVR ,,v,PDS2LIBF
+PDS2LLNK EQUOVR ,,v,PDS2LIBF
+PDS2LJOB EQUOVR ,,v,PDS2LIBF
+.*
+.* PDS2INDC - INDICATOR BYTE
+PDS2ALIS EQUOVR ,,b,PDS2INDC
+DEALIAS  EQUOVR ,,b,PDS2INDC
+.*
+.* PDS2ATR1 - FIRST BYTE OF PROGRAM ATTRIBUTE FIELD
+PDS2RENT EQUOVR ,,b,PDS2ATR1
+DEREEN   EQUOVR ,,b,PDS2ATR1
+PDS2REUS EQUOVR ,,b,PDS2ATR1
+PDS2OVLY EQUOVR ,,b,PDS2ATR1
+DEOVLY   EQUOVR ,,b,PDS2ATR1
+PDS2TEST EQUOVR ,,b,PDS2ATR1
+PDS2LOAD EQUOVR ,,b,PDS2ATR1
+DELODY   EQUOVR ,,b,PDS2ATR1
+PDS2SCTR EQUOVR ,,b,PDS2ATR1
+DESCAT   EQUOVR ,,b,PDS2ATR1
+PDS2EXEC EQUOVR ,,b,PDS2ATR1
+DEXCUT   EQUOVR ,,b,PDS2ATR1
+PDS21BLK EQUOVR ,,b,PDS2ATR1
+.*
+.* PDS2ATR2 - SECOND BYTE OF PROGRAM ATTRIBUTE FIELD
+PDS2FLVL EQUOVR ,,b,PDS2ATR1
+PDS2ORG0 EQUOVR ,,b,PDS2ATR1
+PDS2EP0  EQUOVR ,,b,PDS2ATR1
+PDS2NRLD EQUOVR ,,b,PDS2ATR1
+PDS2NREP EQUOVR ,,b,PDS2ATR1
+PDS2TSTN EQUOVR ,,b,PDS2ATR1
+PDS2LEF  EQUOVR ,,b,PDS2ATR1
+PDS2REFR EQUOVR ,,b,PDS2ATR1
+.*
+.* PDS2FTB1 - BYTE 1 OF PDS2FTBO
+PDSAOSLE EQUOVR ,,b,PDS2FTB1
+PDS2BIG  EQUOVR ,,b,PDS2FTB1
+PDS2PAGA EQUOVR ,,b,PDS2FTB1
+PDS2SSI  EQUOVR ,,b,PDS2FTB1
+PDSAPFLG EQUOVR ,,b,PDS2FTB1
+PDS2PGMO EQUOVR ,,b,PDS2FTB1
+.*
+.* PDS2FTB2 - BYTE 2 OF PDS2FTBO
+PDS2ALTP EQUOVR ,,b,PDS2FTB2
+PDSLRMOD EQUOVR ,,b,PDS2FTB2
+PDSAAMOD EQUOVR ,,b,PDS2FTB2
+PDSMAMOD EQUOVR ,,b,PDS2FTB2
+.*
+.* PDS2FTB3 - BYTE 3 OF PDS2FTBO
+PDS2NMIG EQUOVR ,,b,PDS2FTB3
+PDS2PRIM EQUOVR ,,b,PDS2FTB3
+PDS2PACK EQUOVR ,,b,PDS2FTB3
+.*
+.* PDSSSIFB - SSI FLAG BYTE
+PDSFORCE EQUOVR ,,b,PDSSSIFB
+PDSUSRCH EQUOVR ,,b,PDSSSIFB
+PDSEMFIX EQUOVR ,,b,PDSSSIFB
+PDSDEPCH EQUOVR ,,b,PDSSSIFB
+PDSSYSGN EQUOVR ,,b,PDSSSIFB
+PDSNOSGN EQUOVR ,,v,PDSSSIFB
+PDSCMSGN EQUOVR ,,b,PDSSSIFB
+PDSPTSGN EQUOVR ,,b,PDSSSIFB
+PDSIBMMB EQUOVR ,,b,PDSSSIFB
+.*
+         MNOTE *,'Including IHAPDS mapping macro'
+         IHAPDS ,                      *
+         EQUOVR *END
+.*
+PDS2     DSECT ,                       * Resume PDS Direntry
+         ORG
+PDS2_LEN EQU   *-PDS2                  * Length of PDS2
+.*
+.* TTRN mapping
+.*
+TTRN     DSECT ,                       *
+TTRNTTR  DS    0XL3                    * TTR of member
+TTRNTT   DS    XL2                     * Relative track adress
+TTRNR    DS    XL1                     * Record number (Block address)
+TTRNINDC DS    XL1                     * Indicator byte
+TTRNALIA EQUOVR ,,b,TTRNINDC           *
+TTRNALIA EQU   BIT0                    * On if name is an alias
+TTRNCNT  EQU   BIT1+BIT2               * Nr of user TTRNs in entry
+TTRNUSLN EQU   BIT3+BIT4+BIT5+BIT6+BIT7 * Length of user data in Hwords
+.*
+         ORG
+TTRN_LEN EQU   *-TTRN                  * Length of TTRN
+         EQUOVR *END                   *
+.*
+.* TTRX mapping
+.*
+TTRX     DSECT ,                       *
+TTRXTTR  DS    0XL3                    * TTR of member
+TTRXTT   DS    XL2                     * Relative track adress
+TTRXR    DS    XL1                     * Record number (Block address)
+TTRXFILL DS    XL1                     * Available for any use
+.*
+         ORG
+TTRX_LEN EQU   *-TTRX                  * Length of TTRX
+.*
+.* PDS directory entry as it exists in the PDS
+.*
+PDS      DSECT ,                       *
+PDSNAME  DS    CL8                     * Member name 8X'FF' for EOD
+PDSTTRN  DCL   TTRN                    * TTRN of member 4X'00' for EOD
+.*
+PDSDIRBS EQU   256                     * Size of directory block
+.*
+         ORG
+PDS_LEN  EQU   *-PDS                   * Length of PDS
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

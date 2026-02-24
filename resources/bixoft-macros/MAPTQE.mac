@@ -1,0 +1,133 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Timer Queue Element
+.*
+&LABEL   MAPTQE &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPTQE                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPTQE         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'TQE').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPTQE).MEND
+&BXA_MAC_MAPTQE SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_TQE
+&BXA_CB_TQE SETC 'TQE'
+.*
+.* TQEFLGS - TQE FLAG BYTE 1
+TQEOFF   EQUOVR ,,b,TQEFLGS
+TQETOD   EQUOVR ,,b,TQEFLGS
+TQEGMT   EQUOVR ,,b,TQEFLGS
+TQEWLIM  EQUOVR ,,b,TQEFLGS
+TQEINCOM EQUOVR ,,b,TQEFLGS
+TQEXITSP EQUOVR ,,b,TQEFLGS
+TQETYPE  EQUOVR ,,b,TQEFLGS
+.*
+.* TQEFLGS2 - TQE FLAG BYTE 2
+TQECOMP  EQUOVR ,,b,TQEFLGS2
+TQEUSER  EQUOVR ,,b,TQEFLGS2
+TQEETRSS EQUOVR ,,b,TQEFLGS2
+TQEDUM   EQUOVR ,,b,TQEFLGS2
+TQELM    EQUOVR ,,b,TQEFLGS2
+TQEOPT   EQUOVR ,,b,TQEFLGS2
+TQEMF1   EQUOVR ,,b,TQEFLGS2
+TQEMIDN  EQUOVR ,,b,TQEFLGS2
+.*
+.* TQEEXIT - ADDRESS OF USER EXIT RTN
+TQEXMODE EQUOVR ,,b,TQEEXIT
+.*
+.* TQEFLGS3 - TQE FLAG BYTE 3
+TQEDIE   EQUOVR ,,b,TQEFLGS3
+TQEAMODE EQUOVR ,,b,TQEFLGS3
+TQEPURGE EQUOVR ,,b,TQEFLGS3
+.*
+         MNOTE *,'Including IHATQE mapping macro'
+         IHATQE ,
+         EQUOVR *END
+*
+TQE      DSECT ,                       * Resume TQE DSECT
+         ORG
+TQE_LEN  EQU   *-TQE                   * Length of TQE
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,173 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Macro for testing whether an argument contains a valid numeric
+.*       literal value.
+.*
+&LABEL   CHKNUM &MACRO=,               * Name of invoking macro        *
+               &NAME=,                 * Name of variable being tested *
+               &VAL=,                  * Value of variable to be tested*
+               &MSGLVL=8,              * Msglvl in case of error       *
+               &HEX=OK                 * Any other value disallows HEX
+.*
+.* &MACRO specifies the name of the invoking macro. This name will
+.*        be used on any MNOTEs generated.
+.* &NAME  Specifies the name of the variable being tested. This name
+.*        will be used on any MNOTEs generated.
+.* &VAL   Specifies the value to be tested.
+.* &MSGLVL Specifies the MSGLVL to use when generating an MNOTE.
+.*        Value can be 0-255, * or **. Defaults to 8. If specified as
+.*        ** messages will be suppressed.
+.* &HEX   Specifies whether or not the supplied value may be specified
+.*        as a hexadecimal literal. Defaults to OK.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CHKNUM                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Define global to return SETA-value if VAL is found valid
+          GBLA  &BXA_NUMVAL
+&BXA_NUMVAL SETA 0                     * Reset to default 0
+.*
+.* Define index field to loop through &VAL field
+         LCLA  &I
+.*
+.* Check the MACRO parameter
+         AIF   (K'&MACRO NE 0).NOERR1
+         AIF   ('&MSGLVL' EQ '**').NOERR1
+.ERR1    MNOTE 8,'MACRO parameter not specified'
+.NOERR1  ANOP
+.*
+.* Check the NAME parameter
+         AIF   (K'&NAME NE 0).NOERR2
+         AIF   ('&MSGLVL' EQ '**').NOERR2
+.ERR2    MNOTE 8,'NAME parameter not specified'
+.NOERR2  ANOP
+.*
+.* Check the VAL parameter
+         AIF   (K'&VAL NE 0).NOERR3
+.ERR3    MNOTE 8,'VAL parameter not specified'
+.NOERR3  ANOP
+.*
+&LABEL   LABEL ,
+.*
+.* If argument is empty: issue error
+         AIF   (K'&VAL NE 0).NOTEMPTY
+         AIF   ('&MSGLVL' EQ '**').MEND
+         MNOTE &MSGLVL,'&NAME in &MACRO contains no value'
+         MEXIT
+.NOTEMPTY ANOP
+.*
+.* Check whether the value is in HEX notation
+         AIF   ('&VAL'(1,1) EQ 'X').HEX
+         AIF   ('&VAL'(1,1) EQ 'x').INVALID_HEX1
+.*
+.* Digital number: Check whether each position is in the range 0-9
+&I       SETA  K'&VAL
+.LOOP_D  ANOP
+         AIF   ('&VAL'(&I,1) LT '0').INVALID_DEC1
+         AIF   ('&VAL'(&I,1) GT '9').INVALID_DEC1
+&I       SETA  &I-1
+         AIF   (&I GT 0).LOOP_D
+.* VAL is valid: put value into return field and exit
+&BXA_NUMVAL SETA &VAL
+         MEXIT
+.*
+.* Hexadecimal number: Check whether quotes have been in the range 0-9
+.*                     or A-F.
+.HEX     ANOP
+&I       SETA  K'&VAL
+         AIF   (&I LT 4).INVALID_HEX1
+         AIF   ('&VAL'(2,1) NE '''').INVALID_HEX1
+         AIF   ('&VAL'(&I,1) NE '''').INVALID_HEX1
+&I       SETA  &I-1
+.*
+.LOOP_H  ANOP
+         AIF   ('&VAL'(&I,1) LT 'A').INVALID_HEX2
+         AIF   ('&VAL'(&I,1) LE 'F').VALID_HEX
+         AIF   ('&VAL'(&I,1) LT '0').INVALID_HEX2
+         AIF   ('&VAL'(&I,1) GT '9').INVALID_HEX2
+.VALID_HEX ANOP
+&I       SETA  &I-1
+         AIF   (&I GT 2).LOOP_H
+.* VAL is valid: put value into return field and exit
+&BXA_NUMVAL SETA &VAL
+         MEXIT
+.*
+.* Invalid character detected: issue error
+.INVALID_DEC1 ANOP
+         AIF   ('&MSGLVL' EQ '**').MEND
+         MNOTE &MSGLVL,'&NAME in &MACRO contains invalid decimal digit(*
+               s)'
+         MEXIT
+.*
+.* Invalid hex-specification detected: issue error
+.INVALID_HEX1 ANOP
+         AIF   ('&MSGLVL' EQ '**').MEND
+         MNOTE &MSGLVL,'&NAME in &MACRO contains invalidly specified he*
+               xadecimal number'
+         MEXIT
+.*
+.* Invalid hex character detected: issue error
+.INVALID_HEX2 ANOP
+         AIF   ('&MSGLVL' EQ '**').MEND
+         MNOTE &MSGLVL,'&NAME in &MACRO contains invalid hexadecimal di*
+               git(s)'
+         MEXIT
+.*
+.MEND    MEND

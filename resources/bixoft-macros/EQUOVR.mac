@@ -1,0 +1,191 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro handles the stack of EQU modifications for use by the
+.* EQU macro, which replaces the assembler's EQU instruction
+.*
+&LABEL   EQUOVR &VALUE,                * Value to be assigned          *
+               &LEN,                   * Length attribute              *
+               &TYPE,                  * Type attribute                *
+               &LOC                    * Location
+.*
+.* &LABEL mandatory, except when &VALUE=*END
+.* &VALUE specifies the value to be assigned to &LABEL.
+.*        *END cancels all outstanding EQUOVR requests
+.*        *SUPPRESS suppresses the EQU of &LABEL
+.*        *NEWNAME changes the EQU for &LABEL into one for &LEN,
+.*              i.e. Specify *NEWNAME,newname
+.*        Other values override the EQU-value with the same label
+.* &LEN   specifies an explicit length attribute
+.* &TYPE  specifies an explicit type attribute
+.*        Assigned types are documented in the EQU macro
+.* &LOC   Valid only if &TYPE=C'b' or C'v'. Specifies a relocatable
+.*        expression, which resolves to the location of the byte for
+.*        which the override specifies a mask, bit pattern, or value.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EQUOVR                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_EQUOVR             * Ptr to last valid
+         GBLC  &BXA_EQUOVR_LAB(50)     * Labels
+         GBLC  &BXA_EQUOVR_VAL(50)     * Values
+         GBLC  &BXA_EQUOVR_LEN(50)     * Lengths
+         GBLC  &BXA_EQUOVR_LOC(50)     * Locations
+         GBLC  &BXA_EQUOVR_TYP(50)     * Types
+         LCLA  &I                      * Index
+         LCLC  &_TYPE                  *
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL GT 0).NOERR1
+         AIF   ('&VALUE' EQ '*END').NOERR1
+.ERR1    MNOTE 8,'Missing label parameter on EQUOVR'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* At least 1 parameter must be specified
+         AIF   (K'&VALUE NE 0).NOERR2
+         AIF   (K'&LEN NE 0).NOERR2
+         AIF   (K'&TYPE NE 0).NOERR2
+.ERR2A   MNOTE 8,'No arguments supplied to EQUOVR: ignored'
+         MEXIT ,
+.NOERR2  ANOP  ,
+.*
+.* Check the LEN parameter (must be present if VALUE = *NEWNAME)
+         AIF   ('&VALUE' EQ '*NEWNAME' AND K'&LEN EQ 0).ERR3A
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'New name for &LABEL not specified with option *NEWNAM*
+               E'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check type parameter
+&_TYPE   SETC  '&TYPE'                 * Use specified value
+         AIF   (K'&TYPE EQ 0).NOERR4   * Unless specified as
+         AIF   (K'&TYPE GT 1).NOERR4   *    a single character
+&_TYPE   SETC  'C'''.'&TYPE'.''''      * change to C'.'
+.NOERR4  ANOP
+.*
+.* Check the LOC parameter
+         AIF   ('&_TYPE' EQ 'C''b''' AND K'&LOC EQ 0).ERR5A
+         AIF   ('&_TYPE' EQ 'C''v''' AND K'&LOC EQ 0).ERR5B
+         AIF   ('&_TYPE' EQ 'C''b''').NOERR5
+         AIF   ('&_TYPE' EQ 'C''v''').NOERR5
+         AIF   (K'&LOC NE 0).ERR5C
+         AGO   .NOERR5
+.ERR5A   MNOTE 8,'Overriding &LABEL to a bit field: missing location'
+         MEXIT
+.ERR5B   MNOTE 8,'Overriding &LABEL to a code value: missing location'
+         MEXIT
+.ERR5C   MNOTE 4,'Location not valid for new field type of &LABEL: igno*
+               red'
+.NOERR5  ANOP
+.*
+.* Check number of parameters
+         AIF   ('&VALUE' EQ '*END' AND N'&SYSLIST GT 1).ERR6A
+         AIF   ('&VALUE' EQ '*END').NOERR6
+         AIF   ('&VALUE' EQ '*SUPPRESS' AND N'&SYSLIST GT 1).ERR6A
+         AIF   ('&VALUE' EQ '*SUPPRESS').NOERR6
+         AIF   ('&VALUE' EQ '*NEWNAME' AND N'&SYSLIST GT 2).ERR6B
+         AIF   ('&VALUE' EQ '*NEWNAME').NOERR6
+         AIF   ('&_TYPE' EQ 'C''b''' AND N'&SYSLIST GT 4).ERR6D
+         AIF   ('&_TYPE' EQ 'C''v''' AND N'&SYSLIST GT 4).ERR6D
+         AIF   ('&_TYPE' EQ 'C''b''').NOERR6
+         AIF   ('&_TYPE' EQ 'C''v''').NOERR6
+         AIF   (N'&SYSLIST GT 3).ERR6C
+         AGO   .NOERR6
+.ERR6A   MNOTE 4,'EQUOVR &LABEL with more than 1 argument: remainder ig*
+               nored'
+         AGO   .NOERR6
+.ERR6B   MNOTE 4,'EQUOVR &LABEL with more than 2 arguments: remainder i*
+               gnored'
+         AGO   .NOERR6
+.ERR6C   MNOTE 4,'EQUOVR &LABEL with more than 3 arguments: remainder i*
+               gnored'
+         AGO   .NOERR6
+.ERR6D   MNOTE 4,'EQUOVR &LABEL with more than 4 arguments: remainder i*
+               gnored'
+.NOERR6  ANOP
+.*
+.* *END or a normal EQUOVR?
+         AIF   ('&VALUE' EQ '*END').END
+.*
+.* Normal: add entries to tables
+&I       SETA  &BXA_EQUOVR+1           * Next free entry
+&BXA_EQUOVR_LAB(&I) SETC '&LABEL'      * Insert label, value, length,
+&BXA_EQUOVR_VAL(&I) SETC '&VALUE'      *   and type parameters
+&BXA_EQUOVR_LEN(&I) SETC '&LEN'        *   into tables
+&BXA_EQUOVR_TYP(&I) SETC '&_TYPE'      *
+&BXA_EQUOVR_LOC(&I) SETC '&LOC'        *
+&BXA_EQUOVR SETA &I                    * And update ptr to last valid
+         MEXIT
+.*
+.* Ending current EQUOVR requests. Issue a message for any unused
+.* entries in BXA_EQUOVR tables.
+.END     ANOP
+&I       SETA  0                       * I indexes BXA_EQUOVR_xxx
+.LOOP1   ANOP  ,                       * For all current entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_EQUOVR).LOOP1OK * At end: quit loop
+         MNOTE 4,'EQUOVR for &BXA_EQUOVR_LAB(&I) discarded'
+         AGO   .LOOP1
+.LOOP1OK ANOP
+&BXA_EQUOVR SETA 0                     * Reset valid counter to 0
+.*
+.MEND    MEND

@@ -1,0 +1,296 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Operator Reply Element definition
+.*
+&LABEL   MAPORE &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPORE                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPORE         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ORE').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPORE).MEND
+&BXA_MAC_MAPORE SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ORE
+&BXA_CB_ORE SETC 'ORE'
+.*
+.* OREXA - FLAGS
+OREFORGN EQUOVR ,,b,OREXA
+OREKEY0  EQUOVR ,,b,OREXA
+ORESWAP  EQUOVR ,,b,OREXA
+ORESUSP  EQUOVR ,,b,OREXA
+OREINUSE EQUOVR ,,b,OREXA
+OREDMCMP EQUOVR ,,b,OREXA
+.* ORERSV05 EQUOVR ,,b,OREXA           * Last seen in OS/390 V2R6
+OREDOMD  EQUOVR ,,b,OREXA              * First seen in z/OS V1R4
+ORERSV06 EQUOVR ,,b,OREXA
+.*
+.* OREXC - BUFFER STATUS FLAGS
+OREBUFA  EQUOVR ,,b,OREXC
+OREBUFB  EQUOVR ,,b,OREXC
+OREBUFC  EQUOVR ,,b,OREXC
+OREBUFD  EQUOVR ,,b,OREXC
+OREBUFE  EQUOVR ,,b,OREXC
+.* ORERSV08 EQUOVR ,,b,OREXC           * Last seen in OS/390 V2R6
+ORESAVD  EQUOVR ,,b,OREXC              * First seen in z/OS V1R4
+ORERSV09 EQUOVR ,,b,OREXC
+ORERSV10 EQUOVR ,,b,OREXC
+.*
+.* OREVRSN - VERSION LEVEL
+ORESP13  EQUOVR ,,b,OREVRSN
+ORESP22  EQUOVR ,,b,OREVRSN
+ORESP313 EQUOVR ,,b,OREVRSN
+ORESP410 EQUOVR ,,b,OREVRSN
+OREVRID  EQUOVR ,,b,OREVRSN
+.*
+.* ORERTA - FIRST BYTE OF ROUTING CODES
+ORERT001 EQUOVR ,,b,ORERTA
+ORERT002 EQUOVR ,,b,ORERTA
+ORERT003 EQUOVR ,,b,ORERTA
+ORERT004 EQUOVR ,,b,ORERTA
+ORERT005 EQUOVR ,,b,ORERTA
+ORERT006 EQUOVR ,,b,ORERTA
+ORERT007 EQUOVR ,,b,ORERTA
+ORERT008 EQUOVR ,,b,ORERTA
+.*
+.* ORERTB - SECOND BYTE OF ROUTING CODES
+ORERT009 EQUOVR ,,b,ORERTB
+ORERT010 EQUOVR ,,b,ORERTB
+ORERT011 EQUOVR ,,b,ORERTB
+ORERT012 EQUOVR ,,b,ORERTB
+ORERT013 EQUOVR ,,b,ORERTB
+ORERT014 EQUOVR ,,b,ORERTB
+ORERT015 EQUOVR ,,b,ORERTB
+ORERT016 EQUOVR ,,b,ORERTB
+.*
+.* ORERTC - THIRD BYTE OF ROUTING CODES
+ORERT017 EQUOVR ,,b,.ORERTC
+ORERT018 EQUOVR ,,b,.ORERTC
+ORERT019 EQUOVR ,,b,.ORERTC
+ORERT020 EQUOVR ,,b,.ORERTC
+ORERT021 EQUOVR ,,b,.ORERTC
+ORERT022 EQUOVR ,,b,.ORERTC
+ORERT023 EQUOVR ,,b,.ORERTC
+ORERT024 EQUOVR ,,b,.ORERTC
+.*
+.* ORERTD - FOURTH BYTE OF ROUTING CODES
+ORERT025 EQUOVR ,,b,ORERTD
+ORERT026 EQUOVR ,,b,ORERTD
+ORERT027 EQUOVR ,,b,ORERTD
+ORERT028 EQUOVR ,,b,ORERTD
+ORERT029 EQUOVR ,,b,ORERTD
+ORERT030 EQUOVR ,,b,ORERTD
+ORERT031 EQUOVR ,,b,ORERTD
+ORERT032 EQUOVR ,,b,ORERTD
+.*
+.* ORERTE - FIFTH BYTE OF ROUTING CODES
+ORERT033 EQUOVR ,,b,ORERTE
+ORERT034 EQUOVR ,,b,ORERTE
+ORERT035 EQUOVR ,,b,ORERTE
+ORERT036 EQUOVR ,,b,ORERTE
+ORERT037 EQUOVR ,,b,ORERTE
+ORERT038 EQUOVR ,,b,ORERTE
+ORERT039 EQUOVR ,,b,ORERTE
+ORERT040 EQUOVR ,,b,ORERTE
+.*
+.* ORERTF - SIXTH BYTE OF ROUTING CODES
+ORERT041 EQUOVR ,,b,ORERTF
+ORERT042 EQUOVR ,,b,ORERTF
+ORERT043 EQUOVR ,,b,ORERTF
+ORERT044 EQUOVR ,,b,ORERTF
+ORERT045 EQUOVR ,,b,ORERTF
+ORERT046 EQUOVR ,,b,ORERTF
+ORERT047 EQUOVR ,,b,ORERTF
+ORERT048 EQUOVR ,,b,ORERTF
+.*
+.* ORERTG - SEVENTH BYTE OF ROUTING CODES
+ORERT049 EQUOVR ,,b,ORERTG
+ORERT050 EQUOVR ,,b,ORERTG
+ORERT051 EQUOVR ,,b,ORERTG
+ORERT052 EQUOVR ,,b,ORERTG
+ORERT053 EQUOVR ,,b,ORERTG
+ORERT054 EQUOVR ,,b,ORERTG
+ORERT055 EQUOVR ,,b,ORERTG
+ORERT056 EQUOVR ,,b,ORERTG
+.*
+.* ORERTH - EIGHTH BYTE OF ROUTING CODES
+ORERT057 EQUOVR ,,b,ORERTH
+ORERT058 EQUOVR ,,b,ORERTH
+ORERT059 EQUOVR ,,b,ORERTH
+ORERT060 EQUOVR ,,b,ORERTH
+ORERT061 EQUOVR ,,b,ORERTH
+ORERT062 EQUOVR ,,b,ORERTH
+ORERT063 EQUOVR ,,b,ORERTH
+ORERT064 EQUOVR ,,b,ORERTH
+.*
+.* ORERTI - NINTH BYTE OF ROUTING CODES
+ORERT065 EQUOVR ,,b,ORERTI
+ORERT066 EQUOVR ,,b,ORERTI
+ORERT067 EQUOVR ,,b,ORERTI
+ORERT068 EQUOVR ,,b,ORERTI
+ORERT069 EQUOVR ,,b,ORERTI
+ORERT070 EQUOVR ,,b,ORERTI
+ORERT071 EQUOVR ,,b,ORERTI
+ORERT072 EQUOVR ,,b,ORERTI
+.*
+.* ORERTJ - TENTH BYTE OF ROUTING CODES
+ORERT073 EQUOVR ,,b,ORERTJ
+ORERT074 EQUOVR ,,b,ORERTJ
+ORERT075 EQUOVR ,,b,ORERTJ
+ORERT076 EQUOVR ,,b,ORERTJ
+ORERT077 EQUOVR ,,b,ORERTJ
+ORERT078 EQUOVR ,,b,ORERTJ
+ORERT079 EQUOVR ,,b,ORERTJ
+ORERT080 EQUOVR ,,b,ORERTJ
+.*
+.* ORERTK - ELEVENTH BYTE OF ROUTING CODES
+ORERT081 EQUOVR ,,b,ORERTK
+ORERT082 EQUOVR ,,b,ORERTK
+ORERT083 EQUOVR ,,b,ORERTK
+ORERT084 EQUOVR ,,b,ORERTK
+ORERT085 EQUOVR ,,b,ORERTK
+ORERT086 EQUOVR ,,b,ORERTK
+ORERT087 EQUOVR ,,b,ORERTK
+ORERT088 EQUOVR ,,b,ORERTK
+.*
+.* ORERTL - TWELFTH BYTE OF ROUTING CODES
+ORERT089 EQUOVR ,,b,ORERTL
+ORERT090 EQUOVR ,,b,ORERTL
+ORERT091 EQUOVR ,,b,ORERTL
+ORERT092 EQUOVR ,,b,ORERTL
+ORERT093 EQUOVR ,,b,ORERTL
+ORERT094 EQUOVR ,,b,ORERTL
+ORERT095 EQUOVR ,,b,ORERTL
+ORERT096 EQUOVR ,,b,ORERTL
+.*
+.* ORERTM - THIRTEENTH BYTE OF ROUTING CODES
+ORERT097 EQUOVR ,,b,ORERTM
+ORERT098 EQUOVR ,,b,ORERTM
+ORERT099 EQUOVR ,,b,ORERTM
+ORERT100 EQUOVR ,,b,ORERTM
+ORERT101 EQUOVR ,,b,ORERTM
+ORERT102 EQUOVR ,,b,ORERTM
+ORERT103 EQUOVR ,,b,ORERTM
+ORERT104 EQUOVR ,,b,ORERTM
+.*
+.* ORERTN - FOURTEENTH BYTE OF ROUTING CODES
+ORERT105 EQUOVR ,,b,ORERTN
+ORERT106 EQUOVR ,,b,ORERTN
+ORERT107 EQUOVR ,,b,ORERTN
+ORERT108 EQUOVR ,,b,ORERTN
+ORERT109 EQUOVR ,,b,ORERTN
+ORERT110 EQUOVR ,,b,ORERTN
+ORERT111 EQUOVR ,,b,ORERTN
+ORERT112 EQUOVR ,,b,ORERTN
+.*
+.* ORERTO - FIFTEENTH BYTE OF ROUTING CODES
+ORERT113 EQUOVR ,,b,ORERTO
+ORERT114 EQUOVR ,,b,ORERTO
+ORERT115 EQUOVR ,,b,ORERTO
+ORERT116 EQUOVR ,,b,ORERTO
+ORERT117 EQUOVR ,,b,ORERTO
+ORERT118 EQUOVR ,,b,ORERTO
+ORERT119 EQUOVR ,,b,ORERTO
+ORERT120 EQUOVR ,,b,ORERTO
+.*
+.* ORERTP - SIXTEENTH BYTE OF ROUTING CODES
+ORERT121 EQUOVR ,,b,ORERTP
+ORERT122 EQUOVR ,,b,ORERTP
+ORERT123 EQUOVR ,,b,ORERTP
+ORERT124 EQUOVR ,,b,ORERTP
+ORERT125 EQUOVR ,,b,ORERTP
+ORERT126 EQUOVR ,,b,ORERTP
+ORERT127 EQUOVR ,,b,ORERTP
+ORERT128 EQUOVR ,,b,ORERTP
+.*
+         MNOTE *,'Including IHAORE mapping macro'
+         IHAORE ,                      *
+         EQUOVR *END
+*
+OREF     DSECT ,                       * Resume ORE DSECT
+ORE      EQU   OREF                    * Label for USINGs
+         ORG   ,
+ORE_LEN  EQU   *-ORE                   * Length of ORE
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,154 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the LR instruction
+.* Copying from a register to itself is suppressed.
+.*
+&LABEL   LR    ,                       * Arguments are in SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC LR                     * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_NUMVAL             * Output from CHKREG
+         GBLC  &BXA_PRM(3)             * Parameters
+         LCLC  &FROM                   * Second parameter
+         LCLC  &TO                     * First parameter
+         LCLC  &_FROMR                 * Source displacement value
+         LCLC  &_TOR                   * Destination register
+         LCLA  &I                      * Work var.
+         LCLC  &TXT                    * Text variable for errors
+         LCLA  &REG1                   * To register number
+         LCLA  &REG2                   * From register number
+.*
+.* Extract TO and FROM from SYSLIST
+&TO      SETC  '&SYSLIST(1)'
+&FROM    SETC  '&SYSLIST(2)'
+.*
+.* If FROM is not specified and TO contains an embedded comma, then
+.*    decompose the TO field in its constituent parts.
+         AIF   (K'&FROM NE 0).NOSPLIT  *
+         SPLIT &TO                     *
+&TO      SETC  ''                      *
+         AIF   (&BXA_NUMVAL LT 1).NOSPLIT
+&TO      SETC  '&BXA_PRM(1)'           * TO field is first parameter
+         AIF   (&BXA_NUMVAL LT 2).NOSPLIT
+&FROM    SETC  '&BXA_PRM(2)'           * FROM field is second parameter
+.NOSPLIT ANOP  ,
+.*
+.* Decompose FROM field
+         DISSECT R,&FROM               *
+&_FROMR  SETC  '&BXA_PRM(1)'           * Register
+.*
+.* Decompose TO field
+         DISSECT R,&TO                 *
+&_TOR    SETC  '&BXA_PRM(1)'           * Register
+.*
+.* Check the Destination register
+         AIF   (K'&_TOR EQ 0).ERR1A    * Must not be empty
+         CHKREG &_TOR,g                * A register was specified?
+         AIF   (&BXA_RC EQ 8).ERR1B    * Not a register
+&REG1    SETA  &BXA_NUMVAL             * Save register number
+         AIF   (&BXA_RC EQ 0).NOERR1   * This is a defined register
+.* BXA_RC = 4: a  literal number was specified
+         AIF   (&SYSNEST EQ 1).ERR1C   * LA occurred in open code?
+         AGO   .NOERR1                 *
+.ERR1A   MNOTE 8,'Missing destination register'
+         AGO   .GEN                    *
+.ERR1B   ANOP  ,                       *
+&TXT     SETC  (DOUBLE '&_TOR')        *
+         MNOTE 4,'&TXT is not a valid general purpose register'
+         AGO   .NOERR1                 *
+.ERR1C   MNOTE 4,'You should use a register in stead of &_TOR'
+.NOERR1  ANOP  ,                       *
+.*
+.* Check the Source register
+         AIF   (K'&_FROMR EQ 0).ERR2A  * Must not be empty
+         CHKREG &_FROMR,g              * A register was specified?
+         AIF   (&BXA_RC EQ 8).ERR2B    * Not a register
+&REG2    SETA  &BXA_NUMVAL             * Save register number
+         AIF   (&BXA_RC EQ 0).NOERR2   * This is a defined register
+.* BXA_RC = 4: a  literal number was specified
+         AIF   (&SYSNEST EQ 1).ERR2C   * LR occurred in open code?
+         AGO   .NOERR2                 *
+.ERR2A   MNOTE 8,'Missing source register'
+         AGO   .GEN                    *
+.ERR2B   ANOP  ,                       *
+&TXT     SETC  (DOUBLE '&_FROMR')      *
+         MNOTE 4,'&TXT is not a valid general purpose register'
+         AGO   .NOERR2                 *
+.ERR2C   MNOTE 4,'You should use a register in stead of &_FROMR'
+.NOERR2  ANOP  ,                       *
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST LE 2).NOERR3
+.ERR3A   MNOTE 4,'Expected two arguments: remainder ignored'
+.NOERR3  ANOP  ,
+.*
+.* Check for equal registers
+         AIF   (&REG1 NE &REG2).NOERR4 * Not equal --> Ok!
+.ERR4A   MNOTE 4,'Not useful to copy from register &_FROMR to &_TOR: ig*
+               nored'
+         MEXIT ,
+.NOERR4  ANOP  ,
+.*
+.* Generate code with indentation
+.GEN     ANOP  ,
+&LABEL   GEN   _LR,&_TOR,&_FROMR
+.*
+.MEND    MEND

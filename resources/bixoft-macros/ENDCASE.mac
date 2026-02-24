@@ -1,0 +1,149 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: ENDCASE
+.* Combines with CASE and ELSE to conditionally execute blocks of code
+.*
+&LABEL   ENDCASE ,                     * No arguments allowed
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC ENDCASE                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_LBL(5)         * Labels
+         GBLA  &BXA_STK_LVL(5)         * Levels
+         LCLC  &OP                     * Last opcode on stack
+         LCLA  &LVL                    * Last level on stack
+         LCLC  &LBL                    * Last label on stack
+         LCLA  &I                      * Stack pointer
+.*
+.* Check label parameter
+         AIF   (K'&LABEL EQ 0).NOERR1
+.ERR1    MNOTE 4,'Label ignored'
+.NOERR1  ANOP
+.*
+.* Check nr of parameters
+         AIF   (N'&SYSLIST EQ 0).NOERR2
+         AIF   (K'&SYSLIST(1) GT 0).ERR2A
+         AIF   (N'&SYSLIST EQ 1).NOERR2
+         AIF   (K'&SYSLIST(2) GT 0).ERR2A
+         AIF   (N'&SYSLIST EQ 2).NOERR2
+.ERR2A   MNOTE 4,'No arguments expected: ignored'
+.NOERR2  ANOP
+.*
+.* Check that current stack-entry designates a case or else-block
+&I       SETA  &BXA_STK                * Copy stack pointer
+         AIF   (&I LT 1).ERR3A         * Stack underflow
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract opcode from stack
+         AIF   ('&OP' EQ 'CASE').NOERR3
+         AIF   ('&OP' NE 'ELSE').ERR3B
+&I       SETA  &I-1                    * Point preceding entry
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract preceding opcode
+         AIF   ('&OP' NE 'CASE').ERR3C
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'No preceding CASE statement: ignored'
+         MEXIT
+.ERR3B   MNOTE 8,'Cannot use ENDCASE to terminate a &OP.-block: ignored*
+               '
+         MEXIT
+.ERR3C   MNOTE 8,'Cannot use ENDCASE to terminate an ELSE block for &OP*
+               '
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Remove all stack entries with the current nesting level
+.* If an ELSE-statement precedes this ENDCASE, then the ELSE has
+.* already generated the target label of the last preceding CASE
+.* statement.
+.*
+.* Comment line to delimit the ELSE-block
+*
+.*
+.* Set up to loop thru CASE-entries
+.* If last entry was ELSE, handle the ELSE before entering the loop
+&I       SETA  &BXA_STK                * Point current stack entry
+&LVL     SETA  &BXA_STK_LVL(&I)        * Extract current nesting level
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract last opcode
+         AIF   ('&OP' NE 'ELSE').LOOP1 * Loop to drop CASEs
+.* Terminate ELSE-block
+&LBL     SETC  '&BXA_STK_LBL(&I)'      * Extract end-of-else label
+&LBL     LABEL ,                       * End of ELSE-block
+&I       SETA  &I-2                    * Remove ELSE and last CASE
+         AIF   (&I EQ 0).LOOP1OK       * If nothing left: skip loop
+.*
+.* Now loop to terminate all remaining CASE-blocks of this level
+.LOOP1   ANOP  ,
+         AIF   (&BXA_STK_LVL(&I) NE &LVL).LOOP1OK * LVL-change: endloop
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract last opcode
+         AIF   ('&OP' NE 'CASE').INTERR * Internal error
+&LBL     SETC  '&BXA_STK_LBL(&I)'      * Extract end-of-else label
+&LBL     LABEL ,                       * End of CASE-block
+&I       SETA  &I-1                    * Remove ELSE-entry from stack
+         AIF   (&I GT 0).LOOP1         * If still valid: remove next
+.LOOP1OK ANOP  ,
+.*
+.* Update the real stack pointer
+&BXA_STK SETA  &I
+         AGO   .MEND
+.*
+.INTERR  ANOP  ,
+         MNOTE 12,'Internal error in ENDCASE macro'
+.*
+.MEND    MEND

@@ -1,0 +1,156 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's DC statement
+.*
+&LABEL   DC    ,                       * Arguments in &SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DC                     * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_DC_LASTLAB        * Org. label of last labeled DC
+         GBLA  &BXA_DC_OFFSET         * Nr of unlab'd DCs since LASTLAB
+         GBLA  &BXA_DCOVR             * Ptr to last valid
+         GBLC  &BXA_DCOVR_LAB(50)     * Labels
+         GBLC  &BXA_DCOVR_PRM(50)     * Parameter strings
+         GBLC  &BXA_DCOVR_NAM(50)     * New names
+         LCLA  &I                     * Index
+         LCLC  &_LABEL                *
+         LCLC  &PRMS                  *
+         LCLB  &RESET                 * On if last entry removed
+         LCLC  &LAB                   * LABEL used to search DCOVR_LAB
+         LCLC  &OPCD                  * Opcode to be used: _DC or DS
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST EQ 0).ERR1A
+         AIF   (K'&SYSLIST(1) EQ 0).ERR1A
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'Missing operand(s)'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Set up default values
+&_LABEL  SETC  '&LABEL'                * Copy fieldname
+&OPCD    SETC  '_DC'                   * Set opcode to be used
+.LOOP1   ANOP  ,                       * Collect all parameters
+&I       SETA  &I+1                    * into variable PRMS
+         AIF   (&I GT N'&SYSLIST).LOOP1OK
+&PRMS    SETC  '&PRMS'.','.'&SYSLIST(&I)'
+         AGO   .LOOP1
+.LOOP1OK ANOP  ,
+&PRMS    SETC  '&PRMS'(2,*)            * PRMS cannot be empty
+.*
+.* Determine values relating to unlabeled DC-statements
+         AIF   (K'&_LABEL EQ 0).CRTLAB * DC is labeled?
+&BXA_DC_OFFSET SETA 0                  * Reset unlabeled count
+&BXA_DC_LASTLAB SETC '&_LABEL'         * Set last-used original label
+&LAB     SETC  '&_LABEL'               * Use this label for lookup
+         AGO   .LABOK
+.CRTLAB  ANOP  ,                       * Create LABEL+nnn to identify
+&BXA_DC_OFFSET SETA &BXA_DC_OFFSET+1   * Increment unlabeled count
+&LAB     SETC  '&BXA_DC_LASTLAB'.'+'.'&BXA_DC_OFFSET' * Create label
+.LABOK   ANOP  ,
+.*
+.* Check for overrides from DCOVR
+&I       SETA  0                       * I indexes BXA_DCOVR_xxx
+.LOOP2   ANOP  ,                       * Search entry
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_DCOVR).LOOP2NF * At end: not found
+         AIF   ('&BXA_DCOVR_LAB(&I)' NE '&LAB').LOOP2 *Skip mismatch
+.*
+.* Found a match: set up replacement variables
+         AIF   (K'&BXA_DCOVR_NAM(&I) EQ 0).NOLAB
+&_LABEL  SETC  '&BXA_DCOVR_NAM(&I)'    * NAM contains new field name
+         AIF   ('&_LABEL' NE '*NONAME').NOLAB
+&_LABEL  SETC  ''                      * Remove label for this DC
+.NOLAB   ANOP
+.* Override parameter string?
+         AIF   (K'&BXA_DCOVR_PRM(&I) EQ 0).NOPRM
+         AIF   ('&BXA_DCOVR_PRM(&I)' EQ '*DS').SETDS
+&PRMS    SETC  '&BXA_DCOVR_PRM(&I)'    * Pick up override value
+         AGO   .NOPRM                  *
+.SETDS   ANOP  ,                       *
+&OPCD    SETC  'DS'                    *
+.NOPRM   ANOP
+.*
+.* Remove the entry from the tables
+.* Replace current entry by the last-valid,
+.*    then decrement last-valid pointer
+         AIF   (&I EQ &BXA_DCOVR).DECR * Skip copy if current=last
+&BXA_DCOVR_LAB(&I) SETC '&BXA_DCOVR_LAB(&BXA_DCOVR)'
+&BXA_DCOVR_PRM(&I) SETC '&BXA_DCOVR_PRM(&BXA_DCOVR)'
+&BXA_DCOVR_NAM(&I) SETC '&BXA_DCOVR_NAM(&BXA_DCOVR)'
+.DECR    ANOP  ,                       * Decrement last-valid pointer
+&BXA_DCOVR SETA &BXA_DCOVR-1           *    by one
+         AIF   (&BXA_DCOVR NE 0).LOOP2NF * Stack not empty
+&RESET   SETB  1                       * Last entry just removed
+.*
+.* Generate _DC statement with overrides, unless *SUPPRESS specified
+.LOOP2NF ANOP  ,                       *
+         AIF   ('&PRMS' EQ '*SUPPRESS').SUPPRESS
+.*
+&_LABEL  &OPCD &PRMS
+.SUPPRESS ANOP ,
+.*
+.* If overrides stack has just been emptied, then this macro must be
+.* disabled by replacing the _DC-intruction with the original DC-instr.
+         AIF   (NOT &RESET).MEND
+         OPSYNS _DC                    * Revert to DC-instruction
+.*
+.MEND    MEND

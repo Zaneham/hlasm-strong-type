@@ -1,0 +1,159 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the SMF Timing Control Table
+.*
+&LABEL   MAPTCT &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPTCT                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPTCT         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'TCT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPTCT).MEND
+&BXA_MAC_MAPTCT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_TCT
+&BXA_CB_TCT SETC 'TCT'
+.*
+.* TCTSW - TCT SWITCHES
+TCTJSTI  EQUOVR ,,b,TCTSW
+TCTIEX   EQUOVR ,,b,TCTSW
+TCTISK30 EQUOVR ,,b,TCTSW
+TCTISK32 EQUOVR ,,b,TCTSW
+TCTIABD  EQUOVR ,,b,TCTSW
+TCTSTPRN EQUOVR ,,b,TCTSW
+TCTACTRT EQUOVR ,,b,TCTSW
+TCTDCOPN EQUOVR ,,b,TCTSW
+.*
+.* TCTMSCT - NUMBER OF TIMES I/O MEASUREMENTS TURNED OFF AT JOB START
+TCTMSOFF EQUOVR ,,b,TCTMSCT
+.*
+.* TCTEFLGS - ETCTIOT FLAGS
+TCTCOMP  EQUOVR ,,b,TCTEFLGS
+.*
+.* TCTTMRFL - PREVIOUS INTERVAL TIMER BIT FLAGS
+TCTCTF   EQUOVR ,,b,TCTTMRFL
+TCTCSF   EQUOVR ,,b,TCTTMRFL
+TCTVUF   EQUOVR ,,b,TCTTMRFL
+TCTVAF   EQUOVR ,,b,TCTTMRFL
+TCTISF   EQUOVR ,,b,TCTTMRFL
+TCTICF   EQUOVR ,,b,TCTTMRFL
+TCTIVF   EQUOVR ,,b,TCTTMRFL
+TCTIAF   EQUOVR ,,b,TCTTMRFL
+.*
+TCTIIF   EQUOVR ,,b,TCTTMRFL+1
+TCTHPF   EQUOVR ,,b,TCTTMRFL+1
+TCTRCF   EQUOVR ,,b,TCTTMRFL+1
+TCTASF   EQUOVR ,,b,TCTTMRFL+1
+TCTENF   EQUOVR ,,b,TCTTMRFL+1
+TCTDEF   EQUOVR ,,b,TCTTMRFL+1
+.*
+.* TCTFLAGS - TCT Flags
+TCTTCT2  EQUOVR ,,b,TCTFLAGS
+.*
+.* TCTFLGS - FLAG BYTE
+TCTDDIND EQUOVR ,,b,TCTFLGS
+TCTVAMDS EQUOVR ,,b,TCTFLGS
+TCTNOCNT EQUOVR ,,b,TCTFLGS
+TCTRSV22 EQUOVR ,,b,TCTFLGS
+TCTRSV23 EQUOVR ,,b,TCTFLGS
+TCTRSV24 EQUOVR ,,b,TCTFLGS
+TCTRSV25 EQUOVR ,,b,TCTFLGS
+TCTRSV26 EQUOVR ,,b,TCTFLGS
+.*
+.* TCTBLKSZ - BLOCK SIZE FOR THIS DD NAME
+TCTCBSZ  EQUOVR ,,b,TCTBLKSZ
+.*
+.* ETCTNEXT - NEXT TOKEN
+ETCTIUSE EQUOVR ,,b,ETCTNEXT
+.*
+         MNOTE *,'Including IEFTCT mapping macro'
+         IEFTCT ,
+         EQUOVR *END
+*
+SMFTCT   DSECT ,                       * Resume TCT DSECT
+TCT      EQU   SMFTCT                  * Label for USINGs
+         ORG
+TCT_LEN  EQU   *-TCT                   * Length of TCT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

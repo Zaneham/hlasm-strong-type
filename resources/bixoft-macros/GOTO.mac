@@ -1,0 +1,151 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: GOTO
+.* Conditionally branches to a target
+.*
+&LABEL   GOTO  ,                       * SYSLIST contains condition
+.*
+.* Syntax:
+.* 0) GOTO label
+.* 1) GOTO label,condition
+.* 2) GOTO label,UNLESS,condition
+.* 3) GOTO label,(condition)
+.* 4) GOTO label,(UNLESS,condition)
+.* condition: as in IF macro
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC GOTO                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         LCLC  &ARGS                   * SYSLIST as a string
+         LCLA  &I                      * Stack pointer
+         LCLC  &COND                   * Condition arg for GOTO
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST EQ 0).ERR1
+         AIF   (K'&SYSLIST(1) EQ 0).ERR1
+         AGO   .NOERR1
+.ERR1    MNOTE 8,'No destination for GOTO specified'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST LT 2).BRANCH * No condition: branch
+         AIF   (K'&SYSLIST(2) EQ 0).ERR2
+         AGO   .NOERR2
+.ERR2    MNOTE 4,'No condition specified'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* Check number of parameters for SYSLIST(2) = UNLESS
+&COND    SETC  'TRUE'
+&I       SETA  1                       * Skip destination label
+         AIF   ('&SYSLIST(2)' NE 'UNLESS').NOERR3
+&COND    SETC  'FALSE'
+&I       SETA  2                       * Skip label & UNLESS
+         AIF   (N'&SYSLIST LT 3).ERR3
+         AIF   (K'&SYSLIST(3) EQ 0).ERR3
+         AGO   .NOERR3
+.ERR3    MNOTE 8,'No condition specified'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Build ARGS from &SYSLIST. &I already set for loop
+         AIF   ('&SYSLIST(&I+1)'(1,1) EQ '(' AND N'&SYSLIST EQ &I+1).PA*
+               ROK
+.LOOP1   ANOP  ,                       * For all entries in SYSLIST
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&ARGS    SETC  '&ARGS'.','.'&SYSLIST(&I)' * Add entry to ARGS
+         AGO   .LOOP1                  * And go process next entry
+.LOOP1OK ANOP
+&ARGS    SETC  '('.'&ARGS'(2,*).')'    * Parenthesize and remove lead ,
+         AGO   .GOTO
+.*
+.* Condition already parenthesized
+.PAROK   ANOP  ,
+&ARGS    SETC  '&SYSLIST(&I+1)'        * Copy condition
+.*
+.* Generate embedded IF statement with specified label
+.GOTO    ANOP  ,
+&I       SETA  &BXA_STK                * Copy current stack pointer
+&LABEL   IF    &ARGS,                  * Condition for GOTO            *
+               TARGET=&SYSLIST(1),     * Target for branch             *
+               COND=&COND              * FALSE if UNLESS specified
+         AIF   (&I EQ &BXA_STK).MEND   * No new stack entry!
+.*
+.* Remove new stack entry
+&BXA_STK SETA  &BXA_STK-1              * Remove new IF-entry from stack
+         MEXIT
+.*
+.* For an unconditional GOTO we generate a Branch to the label
+.BRANCH  ANOP  ,                       *
+&ARGS    SETC  '&SYSLIST(1)'           * Extract branch target
+         AIF   ('&ARGS'(1,1) EQ '(').BRANREG
+         B     &ARGS                   *
+         MEXIT ,                       *
+.*
+.* Branch to a target which is a register
+.BRANREG ANOP  ,                       *
+&ARGS    SETC  '&SYSLIST(1,1)'         * Extract branch target
+         BR    &ARGS                   *
+.*
+.MEND    MEND

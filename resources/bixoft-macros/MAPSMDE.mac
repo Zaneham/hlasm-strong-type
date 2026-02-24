@@ -1,0 +1,142 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the System Managed Directory Entry
+.*
+.* Warning: Field SMDE_LEN has been renamed to SMDE_SIZE
+.*
+&LABEL   MAPSMDE &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSMDE                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSMDE        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SMDE').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSMDE).MEND
+&BXA_MAC_MAPSMDE SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SMDE
+         GBLC  &BXA_CB_SMDE_FD
+         GBLC  &BXA_CB_SMDE_NAME
+         GBLC  &BXA_CB_SMDE_NLST
+         GBLC  &BXA_CB_SMDE_PNAME
+         GBLC  &BXA_CB_SMDE_TOKEN
+&BXA_CB_SMDE SETC 'SMDE'
+&BXA_CB_SMDE_FD SETC 'SMDE'
+&BXA_CB_SMDE_NAME SETC 'SMDE'
+&BXA_CB_SMDE_NLST SETC 'SMDE'
+&BXA_CB_SMDE_PNAME SETC 'SMDE'
+&BXA_CB_SMDE_TOKEN SETC 'SMDE'
+.*
+         GENMAPS (PMAR)
+.*
+.* SMDE_LEN - LENGTH OF CONTROL BLOCK.
+SMDE_LEN           DSOVR  *NEWNAME,SMDE_SIZE
+.*
+.* SMDE_LVL - SMDE VERSION NUMBER
+SMDE_LVL_VAL       EQUOVR ,,v,SMDE_LVL
+.*
+.* SMDE_LIBTYPE - SOURCE LIBRARY TYPE.
+SMDE_LIBTYPE_C370LIB EQUOVR ,,v,SMDE_LIBTYPE
+SMDE_LIBTYPE_HFS   EQUOVR ,,v,SMDE_LIBTYPE
+SMDE_LIBTYPE_PDSE  EQUOVR ,,v,SMDE_LIBTYPE
+SMDE_LIBTYPE_PDS   EQUOVR ,,v,SMDE_LIBTYPE
+.*
+.* SMDE_FLAG - FLAG BYTE
+SMDE_FLAG_ALIAS    EQUOVR ,,b,SMDE_FLAG
+SMDE_FLAG_LMOD     EQUOVR ,,b,SMDE_FLAG
+SMDE_SYSTEM_DCB    EQUOVR ,,b,SMDE_FLAG
+.*
+.* SMDE_LIBF - LIBRARY FLAG (Z-BYTE)
+SMDE_LIBF_TASKLIB  EQUOVR ,,v,SMDE_LIBF
+SMDE_LIBF_LINKLIB  EQUOVR ,,v,SMDE_LIBF
+SMDE_LIBF_PRIVATE  EQUOVR ,,v,SMDE_LIBF
+.*
+         MNOTE *,'Including IGWSMDE mapping macro'
+         IGWSMDE ,                     * Generate IGWSMDE
+         EQUOVR *END
+*
+SMDE     DSECT ,                       * Resume SMDE DSECT
+         ORG   ,                       *
+SMDE_LEN EQU   *-SMDE                  * Length of SMDE
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

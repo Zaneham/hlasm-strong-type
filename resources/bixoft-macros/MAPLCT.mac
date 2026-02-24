@@ -1,0 +1,183 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Linkage Control Table
+.*
+&LABEL   MAPLCT &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPLCT                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPLCT         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'LCT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPLCT).MEND
+&BXA_MAC_MAPLCT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_LCT
+&BXA_CB_LCT SETC 'LCT'
+.*
+.* LCTQENTY
+LCTTIMAB EQUOVR ,,b,LCTQENTY
+LCTTIMNG EQUOVR ,,b,LCTQENTY
+LCTTIMDN EQUOVR ,,b,LCTQENTY
+LCTNOTIM EQUOVR ,,b,LCTQENTY
+LCTERRM  EQUOVR ,,b,LCTQENTY
+.*
+.* LCTERR - LCTERR bits
+LCTJFAIL EQUOVR ,,b,LCTERR
+LCTSALCD EQUOVR ,,b,LCTERR
+LCTPALCD EQUOVR ,,b,LCTERR
+LCTSFAIL EQUOVR ,,b,LCTERR
+LCTACOMP EQUOVR ,,b,LCTERR
+LCTJCFAL EQUOVR ,,b,LCTERR
+LCTVTERM EQUOVR ,,b,LCTERR
+LCTCANCL EQUOVR ,,b,LCTERR
+.*
+.* LCTINTSW - INITIATOR INTERNAL SWITCHES
+LCTINPPT EQUOVR ,,b,LCTINTSW
+LCTPRIV  EQUOVR ,,b,LCTINTSW
+LCTPPAA  EQUOVR ,,b,LCTINTSW
+LCTSTART EQUOVR ,,b,LCTINTSW
+LCTSTOP  EQUOVR ,,b,LCTINTSW
+LCTABEND EQUOVR ,,b,LCTINTSW
+.*
+.* LCTPUBYT - PREFERRED USAGE FLAGS
+LCT2LPU  EQUOVR ,,b,LCTPUBYT
+LCT1LPU  EQUOVR ,,b,LCTPUBYT
+LCTN2LP  EQUOVR ,,b,LCTPUBYT
+LCTNSWP  EQUOVR ,,b,LCTPUBYT
+.*
+.* LCTOPSW2 - INIT OPTIONS BYTE 2
+LCTTIMEF EQUOVR ,,b,LCTOPSW2
+LCTCRF   EQUOVR ,,b,LCTOPSW2
+LCTCKRST EQUOVR ,,b,LCTOPSW2
+LCTINRES EQUOVR ,,b,LCTOPSW2
+LCTBPRAC EQUOVR ,,b,LCTOPSW2
+LCTNORC  EQUOVR ,,b,LCTOPSW2
+LCTENQU  EQUOVR ,,b,LCTOPSW2
+.*
+.* LCTOPSW3 - INIT OPTION BYTE 3
+LCTNSYS  EQUOVR ,,b,LCTOPSW3
+LCTALERR EQUOVR ,,b,LCTOPSW3
+LCTJESCE EQUOVR ,,b,LCTOPSW3
+.*
+.* LCTTMBYT - Flag Byte
+LCTTIFJ  EQUOVR ,,b,LCTTMBYT
+.*
+.* LCTOPSW1 - INIT OPTION BYTE 1
+LCTDPSWA EQUOVR ,,b,LCTOPSW1
+LCTCANF  EQUOVR ,,b,LCTOPSW1
+LCTONEJF EQUOVR ,,b,LCTOPSW1
+.*
+.* LCTRFB - RESTART FUNCTION SWITCHES
+LCTRFBSM EQUOVR ,,b,LCTRFB
+LCTRFBCR EQUOVR ,,b,LCTRFB
+LCTRFBRV EQUOVR ,,b,LCTRFB
+LCTRFBDC EQUOVR ,,b,LCTRFB
+LCTRFBMS EQUOVR ,,b,LCTRFB
+LCTRFBEF EQUOVR ,,b,LCTRFB
+LCTRFBRP EQUOVR ,,b,LCTRFB
+LCTRFBND EQUOVR ,,b,LCTRFB
+.*
+.* LCTRFB1 - RESERVED FOR WARMSTART/RESTART
+LCTRSTST EQUOVR ,,b,LCTRFB1
+.*
+.* LCTINTS2 - INTERNAL SWITCHES, BYTE 2
+LCTSYS   EQUOVR ,,b,LCTINTS2
+LCTBPPAS EQUOVR ,,b,LCTINTS2
+LCTTSWPC EQUOVR ,,b,LCTINTS2
+LCTATTC  EQUOVR ,,b,LCTINTS2
+LCTJSRGN EQUOVR ,,b,LCTINTS2
+LCTSPREM EQUOVR ,,b,LCTINTS2
+.*
+.* IEFALLCT does no provide a DSECT statement
+LCT      DSECT ,
+.*
+         MNOTE *,'Including IEFALLCT mapping macro'
+         IEFALLCT ,
+         EQUOVR *END
+*
+LCT      DSECT ,                       * Resume LCT DSECT
+         ORG
+LCT_LEN  EQU   *-LCT                   * Length of LCT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

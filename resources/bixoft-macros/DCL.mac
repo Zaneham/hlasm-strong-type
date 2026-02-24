@@ -1,0 +1,329 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro expands 1 mapping macro to reserve storage
+.*
+&LABEL   DCL   &CB,                    * Control block name            *
+               &LBL                    * Label for dependent using
+.*
+.* The following syntaxes have been defined:
+.* 1 - Embedded control block
+.*     &LABEL is the label for the embedded control block
+.*            if omitted, dependent USINGs will not be generated
+.*            automatically.
+.*     &CB    is name (acronym) of control block to embed
+.*     &LBL   is label for automatic dependent usings. If omitted
+.*            unlabeled dependent usings will be generated. If
+.*            specified as *NOUSE, no USING will be generated
+.*            automatically.
+.* 2 - Define bit names
+.*     &LABEL is the label of the field containing the bits. Must not
+.*            be omitted.
+.*     &CB=*BITS
+.*     &SYSLIST(2) ff are names of bits to be allocated to consecutive
+.*                 bit positions. More than 8 may be specified.
+.*                 To define a name for more than bit at a time,
+.*                 EQUOVR and EQU must be used.
+.* 3 - Define code field and code values
+.*     &LABEL is the label of the field containing the bits. Must not
+.*            be omitted.
+.*     &CB=*CODE
+.*     &LBL   is field type designation. E.g. XL1 or H.
+.*     &SYSLIST(3) ff are names of codes to be assigned to the code
+.*                 field. Each may be specified as a name or as a
+.*                 pair (name,value). Omitted values are assigned in
+.*                 ascending order from the last value specified, or
+.*                 (by default) from 0 upward.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DCL                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &MAP                    * Name of mapping macro
+         LCLC  &PRFX                   * Prefix to generate fld names
+         LCLC  &BIT                    * Bitname to generate
+         LCLC  &BITLOC                 * Bit location
+         LCLC  &CODE                   * Codename to generate
+         LCLC  &VALUE                  * Value to assign
+         LCLC  &BASEVAL                * Base value to be assigned
+         LCLA  &I                      * index for &_CB + &BXA_USE_...
+         LCLA  &J                      * Bit number to allocate
+         LCLA  &O                      * Offset in bits field
+         LCLA  &X                      * Temp index field
+         GBLC  &BXA_USE_DS(50)         * Enclosing DSECT names
+         GBLC  &BXA_USE_FLD(50)        * Defined complex fields
+         GBLC  &BXA_USE_LBL(50)        * Labels to be used
+         GBLC  &BXA_USE_SDS(50)        * Enclosed DSECT names
+.*
+.* Check syntax type
+         AIF   (K'&CB EQ 0).ERR1A
+         AIF   ('&CB' EQ '*BITS').CHKBITS
+         AIF   ('&CB' EQ '*CODE').CHKCODE
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'Missing parameter'
+         MEXIT
+.NOERR1  ANOP  ,
+.*
+.* Check the LABEL parameter for syntax 1
+         AIF   (K'&LABEL NE 0).NOERR2  * Specified: always ok
+         AIF   (K'&LBL NE 0).ERR2A     * Error if LBL specified
+         AGO   .ERR2B
+.ERR2A   MNOTE 8,'No label specified: dependent USINGs will not be gene*
+               rated'
+         AGO   .NOERR2
+.ERR2B   MNOTE 4,'No label specified: unlabeled dependent USINGs will b*
+               e generated'
+.NOERR2  ANOP
+.*
+.* Check the CB parameter for syntax 1
+         AIF   (K'&CB EQ 0).ERR3A
+         GBLC  &(BXA_CB_&CB)           * Acronym to macro translation
+&MAP     SETC  'MAP'.'&(BXA_CB_&CB)'   * Extract mapname
+         AIF   ('&MAP' EQ 'MAP').ERR3B
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'No control block name specified'
+         MEXIT
+.ERR3B   MNOTE 8,'&CB is not a supported control block'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check the LBL parameter for syntax 1
+         AIF   (K'&LBL EQ 0).NOERR4
+         AIF   ('&LBL' EQ '&LABEL').ERR4A
+         AGO   .NOERR4
+.ERR4A   MNOTE 8,'LBL-parameter must not be equal to the field name'
+         MEXIT
+.NOERR4  ANOP
+.*
+.* Check number of parameters for syntax 1
+         AIF   (N'&SYSLIST GT 2).ERR5A
+         AGO   .NOERR5
+.ERR5A   MNOTE 4,'More than 2 parameters specified: remainder ignored'
+.NOERR5  ANOP
+.*
+.* Determine prefix to use for field names
+&PRFX    SETC  '&LABEL'                * Default to Label
+         AIF   (K'&PRFX NE 0).PRFXOK   * If not specified,
+&PRFX    SETC  '&SYSECT'               *   use current dsect name
+.PRFXOK  ANOP
+         AIF   (K'&PRFX LE 3).GEN1     * If longer than 3 characters
+&PRFX    SETC  '&PRFX'(1,3)            *   truncate to three
+.GEN1    ANOP
+.*
+.* Put relevant data into the &BXA_USE_... tables.
+         AIF   (K'&LABEL EQ 0).NOLABEL * Skip if LABEL omitted
+&I       SETA  N'&BXA_USE_DS+1         * Point to first free entry
+&BXA_USE_DS(&I) SETC '&SYSECT'         * Current DSECT encloses field
+&BXA_USE_FLD(&I) SETC '&LABEL'         * Name of the generated field
+&BXA_USE_SDS(&I) SETC '&CB'            * DSECT for the complex field
+&BXA_USE_LBL(&I) SETC '&LBL'           * Label for dependent USING
+.NOLABEL ANOP
+.*
+.* Generate requested control block
+&LABEL   &MAP  DSECT=NO,CB=&CB,PRFX=&PRFX
+         MEXIT
+.**********************************************************************
+.CHKBITS ANOP  ,
+.*
+.* Check the LABEL parameter for syntax 2
+         AIF   (K'&LABEL NE 0).NOERR6  * Specified: always ok
+.ERR6A   MNOTE 8,'No label specified on *BITS-declaration'
+         MEXIT
+.NOERR6  ANOP
+.*
+.* Check number of parameters for syntax 2
+         AIF   (N'&SYSLIST GE 2).NOERR7
+.ERR7A   MNOTE 8,'No bit names specified: declaration ignored'
+         MEXIT
+.NOERR7  ANOP
+.*
+.* Generate bits field
+&I       SETA  N'&SYSLIST+6            * -1 (*BITS) +7 (rounding up)
+&I       SETA  &I/8                    * Number of bytes to allocate
+&LABEL   DS    BL&I                    * Define the complete bit field
+.*
+.* Generate mask equates
+&I       SETA  2                       * Point after *BITS
+&J       SETA  0                       * Next to generate will be 0
+&O       SETA  0                       * Start at offset 0
+         AGO   .BITOK                  * Skip next-logic on first pass
+.LOOP1NX ANOP  ,                       * For all other entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+.* Increment bit nr to be allocated and offset if necessary
+&J       SETA  &J+1                    * Address next bit
+         AIF   (&J LE 7).BITOK         * 0-7 are valid
+&J       SETA  0                       * otherwise: reset to zero
+&O       SETA  &O+1                    * Increment offset to next byte
+.BITOK   ANOP
+.* Generate EQU for bit mask - unless no bitname specified
+&BIT     SETC  '&SYSLIST(&I)'
+         AIF   (K'&BIT EQ 0).LOOP1NX   * Skip omitted parameter
+&X       SETA  ('&BIT' FIND '+-*/''(=).')
+         AIF   (&X EQ 0).NOERR8        * Illegal character found?
+&BIT     SETC  (DOUBLE '&BIT')
+         MNOTE 8,'&BIT is an illegal name: ignored'
+         AGO   .LOOP1NX
+.NOERR8  ANOP  ,                       * Valid name: generate equate
+&BIT     EQU   BIT&J,BIT&J,C'b'        * Set length to mask value
+.*
+.* Add entries to BXA_BITF_... table
+&BITLOC  SETC  '&LABEL'                * Label is location
+         AIF   (&O EQ 0).OFFSETOK      * No offset if offset is 0
+&BITLOC  SETC  '&LABEL'.'+'.'&O'       * Use label + offset in bytes
+.OFFSETOK ANOP ,
+         GBLC  &(BXA_BITF_&BIT)        * Declare fieldname
+&(BXA_BITF_&BIT) SETC '&BITLOC'        * Add bit location to table
+         AGO   .LOOP1NX
+.LOOP1OK ANOP
+         MEXIT
+.**********************************************************************
+.CHKCODE ANOP  ,
+.*
+.* Check the LABEL parameter for syntax 3
+         AIF   (K'&LABEL NE 0).NOERR9  * Specified: always ok
+.ERR9A   MNOTE 8,'No label specified on *CODE-declaration'
+         MEXIT
+.NOERR9  ANOP
+.*
+.* Check LBL parameter for syntax 3 (field type)
+         AIF   (K'&LBL EQ 0).ERR10A
+         AGO   .NOERR10
+.ERR10A  MNOTE 8,'Field type (and optional length) not specified'
+.NOERR10 ANOP  ,
+.*
+.* Check number of parameters for syntax 3
+         AIF   (N'&SYSLIST GE 3).NOERR11
+.ERR11A  MNOTE 8,'No codes specified: declaration ignored'
+         MEXIT
+.NOERR11 ANOP
+.*
+.* Generate code field
+&LABEL   DS    &LBL                    * Define the complete code field
+.*
+.* Generate code value equates
+&I       SETA  3                       * Point after *CODE and &LBL
+&O       SETA  0                       * Value offset for omitted value
+&BASEVAL SETC  '0'                     * Default base value
+         AGO   .CODEOK                 * Skip next-logic on first pass
+.LOOP2NX ANOP  ,                       * For all other entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP2OK * At end: quit loop
+&O       SETA  &O+1                    * Increment value offset
+.CODEOK  ANOP  ,
+&CODE    SETC  '&SYSLIST(&I)'          * Extract operand
+         AIF   (K'&CODE EQ 0).LOOP2NX  * Skip omitted operand
+         AIF   ('&CODE'(1,1) EQ '(').LOOP2_2 * Value specified too?
+.* Only value name specified: check its validity
+&X       SETA  ('&CODE' FIND '+-*/''(=).')
+         AIF   (&X EQ 0).NOERR12       * Illegal character found?
+&CODE    SETC  (DOUBLE '&CODE')
+.ERR12A  MNOTE 8,'&CODE is an illegal name: ignored'
+         AGO   .LOOP2NX
+.NOERR12 ANOP  ,                       * Valid name:
+         AGO   .LOOP2GEN               * go generate EQUate
+.* Both value name and value specified: check parm
+.LOOP2_2 ANOP  ,
+         AIF   ('&CODE'(K'&CODE,1) NE ')').ERR13A
+         AIF   (N'&SYSLIST(&I) LT 2).ERR13B
+         AIF   (K'&SYSLIST(&I,1) EQ 0).ERR13C
+         AIF   (K'&SYSLIST(&I,2) EQ 0).ERR13D
+&X       SETA  ('&SYSLIST(&I,1)' FIND '+-*/''(=).')
+         AIF   (&X GT 0).ERR13E        * Illegal character found?
+         AIF   (N'&SYSLIST(&I) GT 2).ERR13F
+         AGO   .NOERR13
+.ERR13A  MNOTE 8,'Operand &I misses ending parenthesis: ignored'
+         AGO   .LOOP2NX
+.ERR13B  MNOTE 8,'Operand &I has insufficient subparameters: ignored'
+         AGO   .LOOP2NX
+.ERR13C  MNOTE 8,'Operand &I missing first subparameter: ignored'
+         AGO   .LOOP2NX
+.ERR13D  MNOTE 8,'Operand &I missing second subparameter: ignored'
+         AGO   .LOOP2NX
+.ERR13E  ANOP  ,
+&CODE    SETC  (DOUBLE '&SYSLIST(&I,1)')
+         MNOTE 8,'&CODE is an illegal name: ignored'
+         AGO   .LOOP2NX
+.ERR13F  MNOTE 8,'Operand &I more than two subparameters: remainder ign*
+               ored'
+.NOERR13 ANOP  ,
+.* No errors found: prepare for generating the EQUate
+&CODE    SETC  '&SYSLIST(&I,1)'        * Extract real code field name
+&BASEVAL SETC  '&SYSLIST(&I,2)'        * Extract new base value
+&O       SETA  0                       * Reset value offset to 0
+.LOOP2GEN ANOP ,                       * Generate the EQUate
+         AIF   ('&BASEVAL' EQ '0').LOOP2O
+         AIF   (&O EQ 0).LOOP2B
+&VALUE   SETC  '&BASEVAL.+&O'          * Value = Base value + Offset
+         AGO   .VALUEOK
+.LOOP2O  ANOP  ,
+&VALUE   SETC  '&O'                    * BASEVAL = 0: use offset only
+         AGO   .VALUEOK
+.LOOP2B  ANOP  ,
+&VALUE   SETC  '&BASEVAL'              * Offset = 0: omit offset
+.VALUEOK ANOP  ,
+&CODE    EQU   &VALUE,&VALUE,C'v'      * Set length to code value
+.*
+.* Add entries to BXA_BITF_... table
+         GBLC  &(BXA_BITF_&CODE)       * Declare fieldname
+&(BXA_BITF_&CODE) SETC '&LABEL'        * Add field location to table
+         AGO   .LOOP2NX
+.LOOP2OK ANOP
+.*
+.MEND    MEND

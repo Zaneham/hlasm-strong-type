@@ -1,0 +1,150 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the JES Communication Table
+.*
+&LABEL   MAPJESCT &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPJESCT               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPJESCT       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'JESCT').EMBED
+         AIF   ('&CB' EQ 'JESMNTBL').EMBED
+         AIF   ('&CB' EQ 'JESPEXT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPJESCT).MEND
+&BXA_MAC_MAPJESCT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_JESCT
+         GBLC  &BXA_CB_JESMNTBL
+         GBLC  &BXA_CB_JESPEXT
+&BXA_CB_JESCT SETC 'JESCT'
+&BXA_CB_JESMNTBL SETC 'JESCT'
+&BXA_CB_JESPEXT SETC 'JESCT'
+.*
+.* JESFLG - FLAG BYTE
+JESJSSNT EQUOVR ,,b,JESFLG
+JESFSIT  EQUOVR ,,b,JESFLG
+JESFRQEX EQUOVR ,,b,JESFLG
+JESRSV15 EQUOVR ,,b,JESFLG
+JESRSV16 EQUOVR ,,b,JESFLG
+JESRSV17 EQUOVR ,,b,JESFLG
+JESRSV18 EQUOVR ,,b,JESFLG
+JESRSV19 EQUOVR ,,b,JESFLG
+.*
+.* JESJESFG - PRIMARY SUBSYSTEM FLAGS
+JESPSUBA EQUOVR ,,b,JESJESFG
+JESPSUBI EQUOVR ,,b,JESJESFG
+JES3ACTV EQUOVR ,,b,JESJESFG
+JES3OUTD EQUOVR ,,b,JESJESFG
+JESRSV24 EQUOVR ,,b,JESJESFG
+JESRSV25 EQUOVR ,,b,JESJESFG
+JESRSV26 EQUOVR ,,b,JESJESFG
+JESRSV27 EQUOVR ,,b,JESJESFG
+.*
+.* JESALLOF - ALLOCATION FUNCTION FLAGS
+JESUASR  EQUOVR ,,b,JESALLOF
+JESUASF  EQUOVR ,,b,JESALLOF
+JESUPLER EQUOVR ,,b,JESALLOF
+JESALRDY EQUOVR ,,b,JESALLOF
+JESV2EDT EQUOVR ,,b,JESALLOF
+JESRSV05 EQUOVR ,,b,JESALLOF
+JESRSV06 EQUOVR ,,b,JESALLOF
+JESRSV07 EQUOVR ,,b,JESALLOF
+.*
+         MNOTE *,'Including IEFJESCT mapping macro'
+         IEFJESCT MNTBL=YES            * Include JESMNTBL
+         EQUOVR *END
+*
+JESCT    DSECT ,                       * Restart JESCT
+         ORG   ,                       *
+JESCT_LEN EQU  *-JESCT                 * Length of JESCT
+*
+JESMNTBL DSECT ,                       * Restart JESMNTBL
+         ORG   ,                       *
+JESMNTBL_LEN EQU *-JESMNTBL            * Length of JESMNTBL
+*
+JESPEXT  DSECT ,                       * Restart JESPEXT
+         ORG   ,                       *
+JESPEXT_LEN EQU *-JESPEXT              * Length of JESPEXT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

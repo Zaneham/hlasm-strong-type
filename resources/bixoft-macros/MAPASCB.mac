@@ -1,0 +1,227 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Address Space Control Block
+.*
+&LABEL   MAPASCB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPASCB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPASCB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ASCB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPASCB).MEND
+&BXA_MAC_MAPASCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ASCB
+&BXA_CB_ASCB SETC 'ASCB'
+.*
+.* Flag bit overrides
+ASCBURRQ EQUOVR ,,b,ASCBSAWQ
+ASCBS3S  EQUOVR ,,b,ASCBLL5
+.*
+.* ASCBRSMF - RSM ADDRESS SPACE FLAGS
+ASCB2LPU EQUOVR ,,b,ASCBRSMF
+ASCB1LPU EQUOVR ,,b,ASCBRSMF
+ASCBN2LP EQUOVR ,,b,ASCBRSMF
+ASCBVEQR EQUOVR ,,b,ASCBRSMF
+.*
+.* ASCBRCTF - FLAGS FOR RCT SERIALIZED BY COMPARE
+ASCBTMNO EQUOVR ,,b,ASCBRCTF
+ASCBFRS  EQUOVR ,,b,ASCBRCTF
+ASCBFQU  EQUOVR ,,b,ASCBRCTF
+ASCBJSTE EQUOVR ,,b,ASCBRCTF
+ASCBWAIT EQUOVR ,,b,ASCBRCTF
+ASCBOUT  EQUOVR ,,b,ASCBRCTF
+ASCBTMLW EQUOVR ,,b,ASCBRCTF
+ASCBTOFF EQUOVR ,,b,ASCBRCTF
+.*
+.* ASCBFLG1 - FLAG FIELD
+ASCBLSAS EQUOVR ,,b,ASCBFLG1
+ASCBDSTK EQUOVR ,,b,ASCBFLG1
+ASCBDSTZ EQUOVR ,,b,ASCBFLG1
+ASCBTERM EQUOVR ,,b,ASCBFLG1
+ASCBABNT EQUOVR ,,b,ASCBFLG1
+ASCBMEMP EQUOVR ,,b,ASCBFLG1
+.*
+.* ASCBDSP1 - NONDISPATCHABILITY FLAGS.
+ASCBSSND EQUOVR ,,b,ASCBDSP1
+ASCBFAIL EQUOVR ,,b,ASCBDSP1
+ASCBSNQS EQUOVR ,,b,ASCBDSP1
+ASCBSSSS EQUOVR ,,b,ASCBDSP1
+ASCBSTND EQUOVR ,,b,ASCBDSP1
+ASCBUWND EQUOVR ,,b,ASCBDSP1
+ASCBNOQ  EQUOVR ,,b,ASCBDSP1
+.*
+.* ASCBFLG2 - FLAG BYTE.
+ASCBXMPT EQUOVR ,,b,ASCBFLG2
+ASCBPXMT EQUOVR ,,b,ASCBFLG2
+ASCBCEXT EQUOVR ,,b,ASCBFLG2
+ASCBS2S  EQUOVR ,,b,ASCBFLG2
+ASCBNCML EQUOVR ,,b,ASCBFLG2
+ASCBNOMT EQUOVR ,,b,ASCBFLG2
+ASCBNOMD EQUOVR ,,b,ASCBFLG2
+.*
+.* ASCBLSWQ - ADDRESS SPACE LOCAL LOCK WEB SUSPEND QUEUE
+ASCBS3NL EQUOVR ,,b,ASCBLSWQ
+ASCBLTCL EQUOVR ,,b,ASCBLSWQ+3
+.*
+.* ASCBLEVL - LEVEL NUMBER OF ASCB
+ASCBVS00 EQUOVR ,,v,ASCBLEVL
+ASCBVS01 EQUOVR ,,v,ASCBLEVL
+ASCBVS02 EQUOVR ,,v,ASCBLEVL
+ASCBVS03 EQUOVR ,,v,ASCBLEVL
+ASCBVERS EQUOVR ,,v,ASCBLEVL
+.*
+.* ASCBFL2A - FLAG BYTE.
+ASCBNOPR EQUOVR ,,b,ASCBFL2A
+.*
+.* ASCBSRQ1 - FIRST BYTE OF ASCBSRQ
+ASCBDSG4 EQUOVR ,,b,ASCBSRQ1
+ASCBDFLT EQUOVR ,,b,ASCBSRQ1
+.*
+.* ASCBSRQ2 - SECOND BYTE OF ASCBSRQ
+ASCBDSG3 EQUOVR ,,b,ASCBSRQ2
+ASCBSRM1 EQUOVR ,,b,ASCBSRQ2
+ASCBQVER EQUOVR ,,b,ASCBSRQ2
+.*
+.* ASCBSRQ3 - THIRD BYTE OF ASCBSRQ
+ASCBDSG2 EQUOVR ,,b,ASCBSRQ3
+ASCBRCTI EQUOVR ,,b,ASCBSRQ3
+ASCBTCBV EQUOVR ,,b,ASCBSRQ3
+ASCBACHA EQUOVR ,,b,ASCBSRQ3
+ASCBMTER EQUOVR ,,b,ASCBSRQ3
+ASCBMINI EQUOVR ,,b,ASCBSRQ3
+ASCBCBVE EQUOVR ,,b,ASCBSRQ3
+.*
+.* ASCBSRQ4 - FOURTH BYTE OF ASCBSRQ
+ASCBDSG1 EQUOVR ,,b,ASCBSRQ4
+ASCBDETA EQUOVR ,,b,ASCBSRQ4
+ASCBATTA EQUOVR ,,b,ASCBSRQ4
+ASCBRTM2 EQUOVR ,,b,ASCBSRQ4
+ASCBRTM1 EQUOVR ,,b,ASCBSRQ4
+ASCBCHAP EQUOVR ,,b,ASCBSRQ4
+ASCBSTAT EQUOVR ,,b,ASCBSRQ4
+ASCBPURD EQUOVR ,,b,ASCBSRQ4
+.*
+.* ASCBSRBM - MODEL PSW BYTE 0 USED BY SRB DISPATCHER
+ASCBPER  EQUOVR ,,b,ASCBSRBM
+.*
+.* ASCBSSO4 - SPACE SWITCH EVENT OWNER MASK BYTE 4.
+ASCBSSSP EQUOVR ,,b,ASCBSSO4
+ASCBSSJS EQUOVR ,,b,ASCBSSO4
+.*
+.* ASCBCS1 - FIRST BYTE OF COMPARE AND SWAP FLAGS.
+ASCBXMET EQUOVR ,,b,ASCBCS1
+ASCBXMEC EQUOVR ,,b,ASCBCS1
+ASCBXMPA EQUOVR ,,b,ASCBCS1
+ASCBXMLK EQUOVR ,,b,ASCBCS1
+ASCBPERS EQUOVR ,,b,ASCBCS1
+ASCBDTER EQUOVR ,,b,ASCBCS1
+ASCBPERO EQUOVR ,,b,ASCBCS1
+ASCBSWOP EQUOVR ,,b,ASCBCS1
+.*
+.* ASCBCS2 - SECOND BYTE OF COMPARE AND SWAP FLAGS.
+ASCBSAS  EQUOVR ,,b,ASCBCS2
+.*
+.* ASCBLL1 - FIRST BYTE OF FLAGS.
+ASCBSSPC EQUOVR ,,b,ASCBLL1
+.*
+.* ASCBLL4 - FOURTH BYTE OF FLAGS.
+ASCBTYP1 EQUOVR ,,b,ASCBLL4
+.*
+.* BYTE 0 OF ASCBGQIR
+ASCBGQAB EQUOVR ,,b,ASCBGQIR
+.*
+.* ASCBGQI3 - BYTE 3 OF ASCBGQIR
+ASCBGQDS EQUOVR ,,b,ASCBGQI3
+.*
+         MNOTE *,'Including IHAASCB mapping macro'
+         IHAASCB DSECT=YES,            * Generate ASCB                 *
+               LIST=YES                * with unchanged PRINT option
+         EQUOVR *END
+*
+ASCB     DSECT ,                       * Reset to ASCB DSECT
+         ORG
+ASCB_LEN EQU   *-ASCB                  * Length of ASCB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

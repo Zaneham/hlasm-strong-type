@@ -1,0 +1,163 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro splits a parameter string in its constituent parts
+.*
+.* The number of parameters found is returned in BXA_NUMVAL
+.* The parameters are returned in BXA_PRM(n)
+.*
+&LABEL   SPLIT &INPUT                  * Parameter to be split
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC SPLIT                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_PRM(3)             * Output parameters
+         GBLA  &BXA_NUMVAL             * Nr of parameters found
+         LCLC  &IN                     * Copy of INPUT
+         LCLC  &C                      * Single character from input
+         LCLC  &PRM(3)                 * Parameters found
+         LCLA  &P                      * Index for BXA_PRM
+         LCLA  &I,&J                   * Work var.
+         LCLA  &PAR                    * Nr of parentheses levels
+         LCLA  &COMMA                  * Comma location
+         LCLB  &STRING                 * On if scanning within quotes
+.*
+.* Input string is empty?
+         AIF   (K'&INPUT LE 0).EXIT    * Skip all if input empty
+.*
+.* Remove leading blanks
+&IN      SETC  '&INPUT'                * Copy input string
+.LOOP0   ANOP  ,                       *
+         AIF   ('&IN'(1,1) NE ' ').LOOP0OK
+         AIF   (K'&IN LE 1).EXIT       * Skip all if nothing remains
+&IN      SETC  '&IN'(2,*)              * Remove leading blank
+         AGO   .LOOP0                  *
+.LOOP0OK ANOP  ,                       *
+.*
+.* Remove trailing commas
+.LOOP1   ANOP  ,                       *
+         AIF   ('&IN'(K'&IN,1) NE ',').LOOP1OK
+         AIF   (K'&IN LE 1).EXIT       * Skip all if nothing remains
+&IN      SETC  '&IN'(1,K'&IN-1)        * Remove trailing comma
+         AGO   .LOOP1                  *
+.LOOP1OK ANOP  ,                       *
+.*
+.* Arguments are passed as a single string without trailing commas.
+.* Decompose the INPUT field in its constituent parameters.
+.* Discard trailing comments - if any.
+&P       SETA  1                       * First output string is target
+.LOOP2   ANOP  ,                       * Search next character
+&I       SETA  ('&IN' FIND '(, '')')   * Locate comma or parenthesis
+         AIF   (&I EQ 0).LOOP2ND       * End: go copy remainder
+&C       SETC  '&IN'(&I,1)             * Extract character found
+         AIF   ('&C' EQ '''').LOOP2QU  * Quote
+         AIF   (&STRING).LOOP2CP       * Within string: just copy
+         AIF   ('&C' EQ '(').LOOP2LP   * Left Parenthesis
+         AIF   ('&C' EQ ')').LOOP2RP   * Right Parenthesis
+         AIF   ('&C' EQ ' ').LOOP2SP   * Space
+.* Must be a comma: check parentheses level
+         AIF   (&PAR GT 0).LOOP2CP     * Within parentheses: copy
+         AIF   (&I EQ 1).LOOP2C1       * Leading comma?
+&PRM(&P) SETC  '&PRM(&P)'.'&IN'(1,&I-1) * Up to & excluding comma
+.LOOP2C1 ANOP  ,                       *
+&IN      SETC  '&IN'(&I+1,*)           * Remainder remains in IN
+&P       SETA  &P+1                    * Point next parameter
+         AGO   .LOOP2                  *
+.*
+.LOOP2LP ANOP  ,                       * Found Left Parenthesis
+&PAR     SETA  &PAR+1                  * Increment parenthesis level
+         AGO   .LOOP2CP                * Go copy up to parenthesis
+.LOOP2RP ANOP  ,                       * Found Right Parenthesis
+&PAR     SETA  &PAR-1                  * Increment parenthesis level
+         AGO   .LOOP2CP                * Go copy up to parenthesis
+.LOOP2SP ANOP  ,                       * Found a space
+&IN      SETC  '&IN'(1,&I-1)           * Discard all comments
+         AGO   .LOOP2ND                * Go copy remainder
+.LOOP2QU ANOP  ,                       * Found a quote
+&STRING  SETB  (&STRING XOR 1)         * Flip String status
+         AGO   .LOOP2CP                * Go copy up to quote
+.LOOP2CP ANOP  ,                       * Copy part of input
+         AIF   (&I GE K'&IN).LOOP2ND   * Copy up to end of string?
+&PRM(&P) SETC  '&PRM(&P)'.'&IN'(1,&I)  * Up to & including delimiter
+&IN      SETC  '&IN'(&I+1,*)           * Remainder remains in IN
+         AGO   .LOOP2                  *
+.LOOP2ND ANOP  ,                       *
+&PRM(&P) SETC  '&PRM(&P)'.'&IN'        * Copy remainder of input
+.*
+.* Copy results to global variables
+.EXIT    ANOP  ,                       *
+&BXA_NUMVAL SETA &P                    * Nr of parms found
+&I       SETA  0                       * Index for BXA_PRM
+.LOOP3   ANOP  ,                       *
+&I       SETA  &I+1                    * Point next parm
+         AIF   (&I GT &P).LOOP3OK      * End-of-parmlist?
+&BXA_PRM(&I) SETC '&PRM(&I)'           * Copy parameter
+         AGO   .LOOP3                  *
+.LOOP3OK ANOP  ,                       *
+.*
+.* Wipe any remaining entries in BXA_PRM
+&I       SETA  &P                      * Point last valid
+.LOOP4   ANOP  ,                       *
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&BXA_PRM).LOOP4OK * End-of-table?
+&BXA_PRM(&I) SETC ''                   * Wipe parameter
+         AGO   .LOOP4                  *
+.LOOP4OK ANOP  ,                       *
+.*
+.MEND    MEND

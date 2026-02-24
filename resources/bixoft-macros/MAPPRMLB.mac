@@ -1,0 +1,138 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the return and reason codes for IEFPRMLB as well as
+.* its parameter areas
+.*
+&LABEL   MAPPRMLB &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPPRMLB               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_MAPS_LST           * Maps listing option
+         GBLC  &BXA_PGM_TITLE          * Title for the listing
+         GBLB  &SP_SHOWALL             * Show all statements?
+         GBLB  &BXA_MAC_MAPPRMLB       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'PRM_LIST_BUFFER').EMBED
+         AIF   ('&CB' EQ 'PRM_MESSAGE_BUFFER').EMBED
+         AIF   ('&CB' EQ 'PRM_READ_BUFFER').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPPRMLB).MEND
+&BXA_MAC_MAPPRMLB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_PRM_LIST_BUFFER
+         GBLC  &BXA_CB_PRM_MESSAGE_BUFFER
+         GBLC  &BXA_CB_PRM_READ_BUFFER
+&BXA_CB_PRM_LIST_BUFFER    SETC 'PRMLB'
+&BXA_CB_PRM_MESSAGE_BUFFER SETC 'PRMLB'
+&BXA_CB_PRM_READ_BUFFER    SETC 'PRMLB'
+.*
+.* PRM_MSG_BUFFER_FLAGS
+PRM_MSG_BUFFER_FULL EQUOVR ,,b,PRM_MSG_BUFFER_FLAGS
+.*
+         MNOTE *,'Including IEFZPMAP mapping macro'
+         IEFZPMAP DSECT=YES,           * Include IEFPRMLB areas        *
+               LIST=&BXA_MAPS_LST      *
+         EQUOVR *END
+.*
+.* Length equates not included here: IBM supplies them in IEFZPMAP
+* Length of PRM_LIST_BUFFER is to be incremented by 56 for each        *
+                                     additional entry
+* Length of PRM_READ_BUFFER is to be incremented by 80 for each        *
+                                     additional entry
+* Length of PRM_MESSAGE_BUFFER is to be incremented by 256 for each    *
+                                        additional entry
+.*
+.* Add equates from IEFZPRC
+         MNOTE *,'Including IEFZPRC mapping macro'
+BXA_EQU  DSECT ,                       * Fancy dsect name
+         IEFZPRC ,                     * Include IEFPRMLB equates
+.*
+.* Return to our original CSECT name
+.* Since IEFZPMAP changes the listing's title: reset title too
+&SYSECT  &SYSSTYP
+         TITLE '&BXA_PGM_TITLE'
+         AIF   (&SP_SHOWALL).TITLE
+.* Generate comment line in stead of a MNOTE line
+*
+         AGO   .TITLEOK
+.TITLE   ANOP
+         MNOTE *,'Previous STMT: TITLE ''&BXA_PGM_TITLE'''
+.TITLEOK ANOP
+.*
+.MEND    MEND

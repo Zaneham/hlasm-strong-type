@@ -1,0 +1,152 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for Latch Management
+.*
+&LABEL   MAPLMASM &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPLMASM               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPLMASM       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'LCRTPL').EMBED
+         AIF   ('&CB' EQ 'LOBTPL').EMBED
+         AIF   ('&CB' EQ 'LPRGPL').EMBED
+         AIF   ('&CB' EQ 'LRELPL').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPLMASM).MEND
+&BXA_MAC_MAPLMASM SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_LCRTPL
+         GBLC  &BXA_CB_LOBTPL
+         GBLC  &BXA_CB_LPRGPL
+         GBLC  &BXA_CB_LRELPL
+&BXA_CB_LCRTPL SETC 'LMASM'
+&BXA_CB_LOBTPL SETC 'LMASM'
+&BXA_CB_LPRGPL SETC 'LMASM'
+&BXA_CB_LRELPL SETC 'LMASM'
+.*
+         MNOTE *,'Including ISGLMASM'
+.*
+.* Put equates in a DSECT to prevent warning messages in ASM listing
+BXA_EQU  DSECT
+         ISGLMASM
+         ORG   ,                       * Reset to end of DSECT
+*
+* Plist for ISGLCRT - Latch Create
+LCRTPL   DSECT
+LCRTNR   DS    A                       * Count: pointer to fullword
+LCRTNAM  DS    A                       * Latch set name: ptr to CL48
+LCRTOPT  DS    A                       * Create option: ptr to F
+LCRTTOK  DS    A                       * Latch set token: ptr to 2F
+LCRTRCD  DS    A                       * Return code: pointer to F
+LCRTPL_LEN EQU *-LCRTPL                * Length of parmlist
+*
+* Plist for ISGLOBT - Latch Obtain
+LOBTPL   DSECT
+LOBTSTOK DS    A                       * Latch Set token: ptr to XL8
+LOBTLAT  DS    A                       * Latch nr: ptr to F
+LOBTRQID DS    A                       * Requestor ID: ptr to XL8
+LOBTOOPT DS    A                       * Obtain option: ptr to F
+LOBTAOPT DS    A                       * Access option: ptr to F
+LOBTECBP DS    A                       * ECB address: ptr to A(ECB-ptr)
+LOBTLTOK DS    A                       * Latch token: ptr to XL8
+LOBTWORK DS    A                       * Work area: ptr to XL256
+LOBTRCD  DS    A                       * Return code: ptr to F
+LOBTPL_LEN EQU *-LOBTPL                * Length of parmlist
+*
+* Plist for ISGLPRG - Latch Purge
+LPRGPL   DSECT
+LPRGSTOK DS    A                       * Latch Set token: ptr to XL8
+LPRGRQID DS    A                       * Requestor ID: ptr to XL8
+LPRGRCD  DS    A                       * Return code: ptr to F
+LPRGPL_LEN EQU *-LPRGPL                * Length of parmlist
+*
+* Plist for ISGLREL - Latch Release
+LRELPL   DSECT
+LRELSTOK DS    A                       * Latch Set token: ptr to XL8
+LRELLTOK DS    A                       * Latch token: ptr to XL8
+LRELROPT DS    A                       * Release option: ptr to F
+LRELWORK DS    A                       * Work area: ptr to XL256
+LRELRCD  DS    A                       * Return code: ptr to F
+LRELPL_LEN EQU *-LRELPL                * Length of parmlist
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

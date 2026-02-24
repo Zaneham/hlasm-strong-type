@@ -1,0 +1,1855 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: IF$
+.* This macro takes 1 argument, which is a list of the actual arguments
+.* The arguments come in 6 different syntax types. IF$ is a sub-macro
+.* for use by the IF-macro. IF$ tests a single condition for IF.
+.*
+&LABEL   IF$   &TARGET=,               * Optional target if cond. met  *
+               &COND=                  * Condition for TARGET
+.*                                     * Condition in &SYSLIST(1)
+.*
+.* Syntax - 9 different versions allowed; each may or may not have
+.* the target label specified.
+.* 0 - cond                            * condition mnemonic
+.* 1 - bitfield,...                    * Must share byte-location
+.* 2 - NOT,bitfield,...                * Must share byte-location
+.* 3 - ANY,bitfield,...                * Must share byte-location
+.* 4 - field1,cond                     * storage or register
+.*     cond: Z,NZ,M,NM,P,NP
+.* 5 - field1,rel,field2               * storage and/or register
+.*     rel: EQ,NE,LT,LE,GT,GE
+.* 6 - cond,opcode,oper1,oper2         * condition with operation
+.* 7 - codefield                       * only 1 can be specified
+.* 8 - NOT,codefield                   * only 1 can be specified
+.*
+.* TARGET may be specified as a label-na, i.e. a RX-type address, or
+.*        it may be specified as (register).
+.* If TARGET is not specified, COND is ignored and a normal
+.*    IF-THEN-ELSE-ENDIF of IF-THEN-ENDIF sequence will be generated.
+.* If TARGET is specified, COND must be TRUE (which is the default)
+.*    or it must specify FALSE. For COND=TRUE a branch to TARGET will
+.*    be taken if the condition in &SYSLIST(1) is true, otherwise
+.*    the branch to TARGET will be taken whenever the condition in
+.*    &SYSLIST(1) is false.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC IF$                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * USE status of registers
+         GBLA  &BXA_NUMVAL             * Return value from CHKNUM
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_LBL(5)         * Labels
+         GBLA  &BXA_STK_LVL(5)         * Levels
+         LCLC  &_LABEL                 * Label used by GEN5 logic
+         LCLC  &LBL                    * End-of-then-block label
+         LCLA  &LVL                    * Level for this IF struct
+         LCLA  &I,&J                   * Array pointer
+         LCLA  &SYNTAX                 * 1 thru 5
+         LCLC  &ARG                    * Single argument from SYSLIST
+         LCLC  &ARG1                   * First argument from SYSLIST
+         LCLA  &LEN1                   * Length of &ARG1 field
+         LCLC  &ARG2                   * Second argument from SYSLIST
+         LCLA  &LEN2                   * Length of &ARG2 field
+         LCLC  &ARGNAM                 * Actual field name from &ARG
+         LCLC  &ARGLBL                 * Label prefix from &ARG
+         LCLC  &PRFLBL                 * Label prefix
+         LCLA  &A                      * Pointer within &ARG
+         LCLC  &LOC                    * Byte location
+         LCLC  &_LOC                   * Current byte location
+         LCLC  &MASK(8)                * Mask names for bit fields
+         LCLA  &M                      * Pointer within &MASK
+         LCLB  &BITS(8)                * Bits to be tested
+         LCLA  &B                      * Pointer within &BITS
+         LCLA  &MASKVAL                * Mask value
+         LCLB  &MOREBITS               * On if more than 1 bit field
+         LCLB  &ERROR                  * A serious error occurred
+         LCLC  &TYPE1                  * Field type
+         LCLC  &TYPE2                  * Field type
+         LCLC  &COMBI(50)              * Field type combinations
+         LCLC  &MNEM                   * Condition mnemonic
+         LCLC  &TST                    * Test-condition (1-letter mnem)
+         LCLC  &OPCD                   * Opcode for branching to ELSE
+         LCLC  &OPCDINV                * Opcode for inverted compares
+         LCLA  &REG                    * Temporary register number
+         LCLA  &LITLEN                 * Length of &ARG2 as a literal
+         LCLA  &LITLENN                * Length of &ARG2 as a number
+         LCLB  &LITERAL                * 2nd argument is a literal
+         LCLB  &DODROP                 * DROP required yes/no
+         LCLB  &_TARGET                * TARGET with COND=TRUE?
+         LCLC  &_TREG                  * TARGET register name/number
+         LCLC  &CODEVAL                * Code value to test
+.*
+.* Check nr of arguments
+         AIF   (N'&SYSLIST EQ 0).ERR1A
+         AIF   (K'&SYSLIST(1) EQ 0).ERR1A
+         AIF   ('&SYSLIST(1)'(1,1) NE '(').ERR1B
+         AIF   ('&SYSLIST(1)'(K'&SYSLIST(1),1) NE ')').ERR1B
+         AIF   (K'&SYSLIST(1) LT 3).ERR1C
+&ARG     SETC  '&SYSLIST(1,1)'
+         AIF   (K'&ARG EQ 0).ERR1C
+         AIF   (N'&SYSLIST GT 1).ERR1D
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'Missing argument(s)'
+         MEXIT
+.ERR1B   MNOTE 8,'Condition not properly enclosed in parentheses'
+         MEXIT
+.ERR1C   MNOTE 8,'No valid condition found in first sublist'
+         MEXIT
+.ERR1D   MNOTE 4,'More than 1 condition: remainder ignored'
+.NOERR1  ANOP
+.*
+.* Check COND parameter
+         AIF   (K'&COND EQ 0).NOERR11
+         AIF   (K'&TARGET EQ 0).ERR11A
+         AIF   ('&COND' NE 'TRUE' AND '&COND' NE 'FALSE').ERR11B
+         AGO   .NOERR11
+.ERR11A  MNOTE 4,'COND specified without TARGET: COND ignored'
+         AGO   .NOERR11
+.ERR11B  MNOTE 8,'COND must be either TRUE or FALSE'
+&ERROR   SETB  1                       * Signal error
+.NOERR11 ANOP
+.*
+.* Check TARGET parameter
+.* COND=TRUE must alter the branching logic, COND=FALSE only changes
+.*    the target label for a false condition.
+         AIF   (K'&TARGET EQ 0).NOERR18
+         AIF   ('&TARGET'(1,1) NE '(').NOERR18
+&_TREG   SETC  '&TARGET(1)'            *
+         CHKREG &_TREG,g               * Must be a valid GPR
+         AIF   (&BXA_RC GT 4).ERR18A   * Invalid register
+         AGO   .NOERR18                *
+.ERR18A  ANOP  ,                       *
+&_TREG   SETC  (DOUBLE '&_TREG')       *
+         MNOTE 8,'&_TREG is not a valid target register'
+&ERROR   SETB  1                       * Signal error
+.NOERR18 ANOP
+         AIF   (K'&TARGET EQ 0).NOTARGT
+         AIF   ('&COND' EQ 'FALSE').NOTARGT
+&_TARGET SETB  1                       * Indicate TARGET with COND=TRUE
+.NOTARGT ANOP
+.*
+.* Determine syntax type
+&ARG     SETC  '&SYSLIST(1,1)'           * Extract first argument
+         AIF   (K'&ARG NE 1).ARGNOT1
+         AIF   ('&ARG' EQ 'E').SYNTAX06  * If the first argument is
+         AIF   ('&ARG' EQ 'H').SYNTAX06  *  a valid condition
+         AIF   ('&ARG' EQ 'L').SYNTAX06  *  mnemonic, then this is
+         AIF   ('&ARG' EQ 'M').SYNTAX06  *  syntax 0
+         AIF   ('&ARG' EQ 'O').SYNTAX06  *
+         AIF   ('&ARG' EQ 'P').SYNTAX06  *
+         AIF   ('&ARG' EQ 'Z').SYNTAX06  *
+.ARGNOT1 ANOP  ,                         *
+         AIF   (K'&ARG NE 2).ARGNOT2
+         AIF   ('&ARG' EQ 'NE').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NH').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NL').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NM').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NO').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NP').SYNTAX06 *
+         AIF   ('&ARG' EQ 'NZ').SYNTAX06 *
+.ARGNOT2 ANOP  ,                         *
+         AIF   ('&ARG' EQ 'NOT').SYNTAX28 * Keywords are easy
+         AIF   ('&ARG' EQ 'ANY').SYNTAX3 * syntax identifiers
+.* first argument must be a field: check type
+&A       SETA  ('&ARG' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&A NE 0).SYNTAX45      * Must be either type 4 or 5
+         AIF   (T'&ARG EQ 'b').SYNTAX1 * Bit-field defines syntax 1
+         AIF   (T'&ARG EQ 'v').SYNTAX7 * Value-field defines syntax 7
+.SYNTAX45 ANOP ,
+         AIF   (N'&SYSLIST(1) EQ 2).SYNTAX4 * Only two arguments
+         AIF   (K'&SYSLIST(1,3) EQ 0).SYNTAX4 * Third argument empty
+         AGO   .SYNTAX5                * Remaining option
+.*
+.* Syntax 0 or 6: condition code checking with(out) operation
+.SYNTAX06 ANOP
+         AIF   (N'&SYSLIST(1) LT 4).SYNTAX0
+         AGO   .SYNTAX6
+.*
+.* Syntax 2 or 8: NOT with either bitfield(s) or codefield value
+.SYNTAX28 ANOP
+         AIF   (N'&SYSLIST(1) LT 2).ERR13A * No field name
+&ARG     SETC  '&SYSLIST(1,2)'         * Extract first field after NOT
+         AIF   (K'&ARG EQ 0).ERR13A    * Field name omitted
+&A       SETA  ('&ARG' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&A NE 0).ERR13B        * Cannot determine type
+         AIF   (T'&ARG EQ 'b').SYNTAX2 * Bit-field defines syntax 1
+         AIF   (T'&ARG EQ 'v').SYNTAX8 * Value-field defines syntax 7
+         AGO   .ERR13C
+.ERR13A  MNOTE 8,'Missing field name after NOT'
+         MEXIT
+.ERR13B  ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Field name &ARG contains invalid characters'
+         MEXIT
+.ERR13C  MNOTE 8,'Field name &ARG is neither a bit field nor a code val*
+               ue'
+         MEXIT
+.*
+.* Syntax 0: condition code checking
+.SYNTAX0 ANOP
+&SYNTAX  SETA  0                       * Set syntax type
+         AGO   .CHKCC
+.*
+.* Syntax 1: a list of bit-fields
+.SYNTAX1 ANOP
+&SYNTAX  SETA  1                       * Set syntax type
+&I       SETA  0                       * List of fields starts at 1
+         AGO   .CHKBITS
+.*
+.* Syntax 2: NOT, followed by a list of bit-fields
+.SYNTAX2 ANOP
+&SYNTAX  SETA  2                       * Set syntax type
+&I       SETA  1                       * List of fields starts at 2
+         AGO   .CHKBITS
+.*
+.* Syntax 3: ANY, followed by a list of bit-fields
+.SYNTAX3 ANOP
+&SYNTAX  SETA  3                       * Set syntax type
+&I       SETA  1                       * List of fields starts at 2
+         AGO   .CHKBITS
+.*
+.* Syntax 4: field, followed by a condition mnemonic
+.SYNTAX4 ANOP
+&SYNTAX  SETA  4                       * Set syntax type
+         AGO   .CHKFLD1
+.*
+.* Syntax 5: field, followed by a condition, and another field
+.SYNTAX5 ANOP
+&SYNTAX  SETA  5                       * Set syntax type
+         AGO   .CHKFLD1
+.*
+.* Syntax 6: condtion code test after specified operation
+.SYNTAX6 ANOP
+&SYNTAX  SETA  6                       * Set syntax type
+         AGO   .CHKCC
+.*
+.* Syntax 7: code value test
+.SYNTAX7 ANOP
+&SYNTAX  SETA  7                       * Set syntax type
+&I       SETA  1                       * Field name in subparm 1
+         AGO   .CHKCODE
+.*
+.* Syntax 8: negative code value test
+.SYNTAX8 ANOP
+&SYNTAX  SETA  8                       * Set syntax type
+&I       SETA  2                       * Field name in subparm 2
+         AGO   .CHKCODE
+.**********************************************************************
+.*
+.* Logic for condition code checking: syntax 0 and 6
+.* - For syntax 0 no other parameters allowed
+.* - For syntax 6 three additional parameters required
+.*
+.**********************************************************************
+.*
+.* Check number of arguments
+.CHKCC   ANOP  ,
+         AIF   (&SYNTAX EQ 0 AND N'&SYSLIST(1) GT 1).ERR12A
+         AIF   (&SYNTAX EQ 6 AND N'&SYSLIST(1) GT 4).ERR12B
+         AIF   (&SYNTAX EQ 0).NOERR12
+         AIF   (&SYNTAX EQ 6).NOERR12
+         MNOTE 12,'Internal error 12'
+         MEXIT
+.ERR12A  MNOTE 4,'More than one argument passed: remainder ignored'
+         AGO   .NOERR12
+.ERR12B  MNOTE 4,'More than four arguments passed: remainder ignored'
+.NOERR12 ANOP  ,
+.*
+.* For syntax 0 - no more checks needed
+         AIF   (&SYNTAX EQ 0).GENLBL   * Syntax 0: done
+.*
+.* Check operation code: must set the condition code
+&ARG     SETC  '&SYSLIST(1,2)'         * Extract opcode
+         AIF   (K'&ARG EQ 0).SYNTAX0   * Must be syntax 0 after all
+&ARG     SETC  ' &ARG '                * Embed between blanks
+&I       SETA  (' CR C CFC CS CDS CH CLR CL CLC CLI CLM CLCL EXCLC ' IN*
+               DEX '&ARG')             * Is it a compare instruction?
+         AIF   (&I NE 0).NOERR17
+&I       SETA  (' AR A AH ALR AL SR S SH SLR SL ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * Is it an arithmetic operation?
+&I       SETA  (' NR N NC NI XR X XC XI OR O OC OI ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * Is it a logical operation?
+&I       SETA  (' ICM LTR LCR LNR LPR MVCL MVPG SLDA SLA SRDA SRA STCK *
+               TS TM  TRT UPT ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * Some other valid instruction?
+&I       SETA  (' AP CP ED EDMK SRP SP ZAP ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * Is it a decimal instruction?
+&I       SETA  (' AXR ADR AD AER AE AWR AW AUR AU CDR CD CER CE LTDR   *
+               LTER LCDR LCER LNDR LNER LPDR LPER SXR SDR SD SER SE    *
+               SWR SW SUR SU ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * A floating point instruction?
+&I       SETA  (' ESTA IAC LASP LRA MVCP MVCS MVCK RRBE SCK SIGP TAR   *
+               TB TPROT ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * Some control instruction?
+&I       SETA  (' EXTRT EXXC LT LTA24 LTC LTH LTHU ' INDEX '&ARG')
+         AIF   (&I NE 0).NOERR17       * A macro of our own?
+&ARG     SETC  (DOUBLE '&SYSLIST(1,2)')
+.ERR17A  MNOTE 8,'Opcode &ARG is not known to set the condition code'
+&ERROR   SETB  1                       * Signal error
+.NOERR17 ANOP  ,
+.*
+         AGO   .GENLBL
+.**********************************************************************
+.*
+.* Logic for bit-field checking: syntaxes 1, 2, and 3.
+.* - All bit-names specified must specify the same byte of storage
+.* - No bit name may be specified more than once
+.* - All masks must be ored together
+.*
+.**********************************************************************
+.*
+.* Check all bit-field names for consistency
+.CHKBITS ANOP  ,                       * Check all bit fields specified
+&J       SETA  &I+1                    * Index of first bit field arg
+         AIF   (&J EQ N'&SYSLIST(1)).ONLY1BF * Only 1 bit field?
+&MOREBITS SETB 1                       * Indicate more than 1 bit-field
+.ONLY1BF ANOP  ,
+.*
+&LOC     SETC  ''                      * Init location to 'unknown'
+&M       SETA  0                       * Init pointer for MASK array
+.*
+.LOOP2   ANOP  ,                       * Loop thru bit-field names
+&I       SETA  &I+1                    * Point next name
+         AIF   (&I GT N'&SYSLIST(1)).LOOP2OK * At end: quit loop
+&ARG     SETC  '&SYSLIST(1,&I)'        * Extract bit name
+         AIF   (K'&ARG EQ 0).LOOP2     * Skip omitted entry
+&A       SETA  ('&ARG' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&A NE 0).ERR2A         * Error: not a field-name
+         AIF   (T'&ARG NE 'b').ERR2B   * Error: not a bit-field
+.* Remove leading USING labels
+&ARGNAM  SETC  '&ARG'                  * Copy complete field name
+.LOOP6   ANOP  ,                       *   to remove USE-labels
+&A       SETA  ('&ARGNAM' FIND '.')    * Check for a period
+         AIF   (&A EQ 0).LOOP6OK       * No more labels: quit loop
+&ARGNAM  SETC  '&ARGNAM'(&A+1,*)       * Remove leading label + period
+&A       SETA  (K'&ARG-K'&ARGNAM)      * Length of labels
+&ARGLBL  SETC  '&ARG'(1,&A)            * Retrieve label
+         AGO   .LOOP6
+.LOOP6OK ANOP
+.* Check that no duplicate name be entered
+&J       SETA  0                       * J indexes MASK
+.LOOP3   ANOP  ,                       * Loop thru defined mask names
+&J       SETA  &J+1                    * Point next mask name
+         AIF   (&J GT &M).LOOP3NF      * At end: name not found
+         AIF   ('NAM' NE '&MASK(&J)').LOOP3 * Skip mismatch
+         AGO   .ERR2E                  * Duplicate entry
+.LOOP3NF ANOP  ,                       * Not found: add name to MASK
+&M       SETA  &M+1                    * Point next available entry
+&MASK(&M) SETC '&ARGNAM'               * Insert bit name into table
+.* Safe to use created set symbol: continue checks
+         GBLC  &(BXA_BITF_&ARGNAM)     * Name for byte location
+&_LOC    SETC  '&(BXA_BITF_&ARGNAM)'   * Extract byte location
+         AIF   (K'&_LOC EQ 0).ERR2C    * Error: no loction
+         AIF   (K'&LOC EQ 0).LOOP2P1   * Unknown on first pass
+         AIF   ('&_LOC' NE '&LOC').ERR2D * Error: different locations
+         AGO   .LOOP2P2                * Skip first-pass logic
+.LOOP2P1 ANOP  ,                       * First pass: set location
+&LOC     SETC  '&_LOC'                 * LOC set from first bit-field
+&PRFLBL  SETC  '&ARGLBL'               * Set prefix label
+.LOOP2P2 ANOP  ,                       * First pass logic done
+         AIF   ('&ARGLBL' NE '&PRFLBL').ERR2D
+.* Now set on the bits in &BITS to be tested
+&MASKVAL SETA  L'&ARGNAM               * Retrieve mask value
+         AIF   (NOT &MOREBITS).LOOP2   * Skip this if there's 1 field
+&B       SETA  0                       * B indexes BITS array
+&J       SETA  256                     * J is compare value
+.LOOP4   ANOP  ,                       * Loop thru bits 0-7
+&B       SETA  &B+1                    * Index to next bit
+         AIF   (&B GT 8).LOOP4OK       * At end: quit loop
+&J       SETA  (&J SRA 1)              * Halve the compare value
+         AIF   (&MASKVAL LT &J).LOOP4  * This bit off: check next
+&BITS(&B) SETB 1                       * This bit to be tested
+&MASKVAL SETA  (&MASKVAL-&J)           * Subtract tested bit
+         AGO   .LOOP4                  * And go check next bit
+.LOOP4OK ANOP  ,
+         AGO   .LOOP2                  * Go check next bit field
+.*
+.ERR2A   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid name for a bit field'
+&ERROR   SETB  1                       * Signal error
+         AGO   .LOOP2                  * Go check next entry
+.ERR2B   ANOP  ,
+         MNOTE 8,'&ARG is not defined as a bit field'
+&ERROR   SETB  1                       * Signal error
+         AGO   .LOOP2                  * Go check next entry
+.ERR2C   ANOP  ,
+         MNOTE 8,'Location of bit field &ARG is unknown'
+&ERROR   SETB  1                       * Signal error
+         AGO   .LOOP2                  * Go check next entry
+.ERR2D   ANOP  ,
+         MNOTE 8,'Location of bit field &ARG differs from preceding one*
+                '
+&ERROR   SETB  1                       * Signal error
+         AGO   .LOOP2                  * Go check next entry
+.ERR2E   ANOP  ,
+         MNOTE 4,'Duplicate mention of bit field &ARG: ignored'
+         AGO   .LOOP2                  * Go check next entry
+.*
+.* All bit fields checked: create compare value
+.LOOP2OK ANOP  ,
+         AIF   (NOT &MOREBITS).LOOP5OK * MASKVAL correct if 1 field
+&MASKVAL SETA  0                       * Initialize mask value
+&B       SETA  0                       * B indexes BITS array
+&J       SETA  256                     * J is corresponding bit value
+.LOOP5   ANOP  ,                       * Loop thru bits 0-7
+&B       SETA  &B+1                    * Index to next bit
+         AIF   (&B GT 8).LOOP5OK       * At end: quit loop
+&J       SETA  (&J SRA 1)              * Halve the bit's value
+         AIF   (NOT &BITS(&B)).LOOP5   * This bit off: check next
+&MASKVAL SETA  (&MASKVAL+&J)           * Add value of bit to test
+         AGO   .LOOP5                  * And go check next bit
+.LOOP5OK ANOP  ,
+.*
+         AIF   (&MASKVAL NE 0).NOERR4  * Mask value 0: not a real test
+.ERR4    MNOTE 4,'Condition mask is zero: not a useful test'
+.NOERR4  ANOP
+         AGO   .GENLBL
+.**********************************************************************
+.*
+.* Logic for first field checking: syntaxes 4 and 5.
+.* - The field must have a supported type
+.*
+.**********************************************************************
+.CHKFLD1 ANOP  ,
+.*
+.* Argument 1 must be a field of a valid type
+&ARG     SETC  '&SYSLIST(1,1)'         * Extract field name
+&A       SETA  ('&ARG' FIND '+-*/(),''') * Check for invalid chars
+         AIF   (&A NE 0).ERR5A         * Error: not a field-name
+&TYPE1   SETC  T'&ARG                  * Extract field type
+&A       SETA  ('ABCFGHRVXag' FIND '&TYPE1')
+         AIF   (&A EQ 0).ERR5B         * Not a supported type
+         AIF   ('&TYPE1' EQ 'C' AND &SYNTAX EQ 4).ERR5C
+         AIF   (L'&ARG EQ 0).ERR5D     * Cannot normally happen
+         AGO   .NOERR5
+.ERR5A   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid field name'
+&ERROR   SETB  1
+         AGO   .NOERR5
+.ERR5B   MNOTE 8,'Field &ARG has an unsupported type: &TYPE1'
+&ERROR   SETB  1
+         AGO   .NOERR5
+.ERR5C   MNOTE 8,'Cannot test a character field without a compare value*
+               '
+&ERROR   SETB  1
+         AGO   .NOERR5
+.ERR5D   MNOTE 8,'Field &ARG has zero length: cannot compare'
+&ERROR   SETB  1
+.NOERR5  ANOP  ,
+.*
+.* Other checks depend on syntax type
+         AIF   (&SYNTAX EQ 4).CHKCOND
+         AIF   (&SYNTAX EQ 5).CHKREL
+         MNOTE 12,'Internal error 1'
+         MEXIT
+.**********************************************************************
+.*
+.* Logic for condition checking: syntax 4.
+.* - Condition mnemonic must be a supported one
+.* - Nr of arguments must be exactly 2
+.*
+.**********************************************************************
+.CHKCOND ANOP  ,
+.*
+.* Operand 2 must be a valid condition mnemonic
+         AIF   (N'&SYSLIST(1) LT 2).ERR3A * 2nd operand must be there
+&ARG     SETC  '&SYSLIST(1,2)'         * Extract condition
+         AIF   (K'&ARG EQ 0).ERR3A     * Error: empty parm
+         AIF   ('&ARG' EQ 'M').NOERR3
+         AIF   ('&ARG' EQ 'P').NOERR3
+         AIF   ('&ARG' EQ 'Z').NOERR3
+         AIF   ('&ARG' EQ 'NM').NOERR3
+         AIF   ('&ARG' EQ 'NP').NOERR3
+         AIF   ('&ARG' EQ 'NZ').NOERR3
+         AGO   .ERR3B                  * Error: unknown condition
+.ERR3A   MNOTE 8,'No condition entered'
+&ERROR   SETB  1                       * Signal error
+         AGO   .NOERR3
+.ERR3B   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a supported condition mnemonic'
+&ERROR   SETB  1                       * Signal error
+.NOERR3  ANOP  ,
+.*
+.* Check the number of parameters for syntax 4
+         AIF   (N'&SYSLIST(1) LE 2).NOERR6A
+.ERR6A   MNOTE 4,'More than two parameters passed: remainder ignored'
+.NOERR6A ANOP
+         AGO   .GENLBL                 * No more checks for syntax 4
+.**********************************************************************
+.*
+.* Logic for relation checking: syntax 5.
+.* - relation mnemonic must be a supported one
+.* - Nr of arguments must be exactly 3
+.* - Second field or literal must be of a supported type
+.* - Types of both fields must be a supported combination
+.*
+.**********************************************************************
+.CHKREL  ANOP
+.*
+.* Operand 2 must be a valid condition mnemonic
+         AIF   (N'&SYSLIST(1) LT 2).ERR10A * 2nd operand must be there
+&ARG     SETC  '&SYSLIST(1,2)'         * Extract relation
+         AIF   (K'&ARG EQ 0).ERR10A    * Error: empty parm
+&OPCD    SETC  'BNE'                    * Set branch-over-then opcode
+&OPCDINV SETC  'BNE'                    *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'EQ').NOERR10 *  for EQ condition
+&OPCD    SETC  'BE'                     * Set branch-over-then opcode
+&OPCDINV SETC  'BE'                     *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'NE').NOERR10 *  for NE condition
+&OPCD    SETC  'BNL'                    * Set branch-over-then opcode
+&OPCDINV SETC  'BNH'                    *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'LT').NOERR10 *  for LT condition
+&OPCD    SETC  'BNH'                    * Set branch-over-then opcode
+&OPCDINV SETC  'BNL'                    *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'GT').NOERR10 *  for GT condition
+&OPCD    SETC  'BH'                     * Set branch-over-then opcode
+&OPCDINV SETC  'BL'                     *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'LE').NOERR10 *  for LE condition
+&OPCD    SETC  'BL'                     * Set branch-over-then opcode
+&OPCDINV SETC  'BH'                     *  and inverted comp. opcode
+         AIF   ('&ARG' EQ 'GE').NOERR10 *  for GE condition
+         AGO   .ERR10B                  * Error: unknown relation
+.ERR10A  MNOTE 8,'No relation entered'
+&ERROR   SETB  1                       * Signal error
+         AGO   .NOERR10
+.ERR10B  ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a supported relation mnemonic'
+&ERROR   SETB  1                       * Signal error
+.NOERR10 ANOP  ,
+.*
+.* Second field or literal Required
+         AIF   (N'&SYSLIST(1) LT 3).ERR7A * 3d operand must be there
+&ARG     SETC  '&SYSLIST(1,3)'         * Extract field name
+         AIF   (K'&ARG EQ 0).ERR7A     * Error: empty parm
+&A       SETA  ('0123456789' FIND '&ARG'(1,1)) * This is a number?
+         AIF   (&A NE 0).ERR7NUM       * Yes: different checks!
+         AIF   ('&ARG'(1,1) EQ '-').ERR7NNUM * Negative number!
+         AIF   ('&ARG'(1,1) EQ '=').ERR7LIT * Literal: yet other checks
+&A       SETA  ('&ARG' FIND '+-*/(=),''') * Check for invalid chars
+         AIF   (&A NE 0).ERR7B         * Error: not a field-name
+&TYPE2   SETC  T'&ARG                  * Extract field type
+&A       SETA  ('ABCFGHRVXagv0' FIND '&TYPE2')
+         AIF   (&A EQ 0).ERR7C         * Not a supported type
+         AIF   ('&ARG' EQ '&SYSLIST(1,1)').ERR7G * Compare with self
+&BXA_NUMVAL SETA L'&ARG                * Needed for equated literals
+         AIF   ('&TYPE2' EQ '0' AND L'&ARG GE 0).LITLEN  * equated lit.
+         AIF   ('&TYPE2' EQ '0' AND L'&ARG LT 0).LITLENN * find length
+         AIF   ('&TYPE2' EQ 'v').ERR7VAL * Still other specific tests
+         AIF   (L'&ARG EQ 0).ERR7H     * Cannot normally happen
+         AGO   .NOERR7                 *
+.*
+.ERR7VAL ANOP  ,                       * Check value field comparison
+.* Remove leading USING labels
+&ARGNAM  SETC  '&ARG'                  * Copy complete field name
+.LOOPA   ANOP  ,                       *   to remove USE-labels
+&A       SETA  ('&ARGNAM' FIND '.')    * Check for a period
+         AIF   (&A EQ 0).LOOPAOK       * No more labels: quit loop
+&ARGNAM  SETC  '&ARGNAM'(&A+1,*)       * Remove leading label + period
+&A       SETA  (K'&ARG-K'&ARGNAM)      * Length of labels
+&ARGLBL  SETC  '&ARG'(1,&A)            * Retrieve label including dot
+         AGO   .LOOPA                  *
+.LOOPAOK ANOP  ,                       *
+.* Safe to use created set symbol: extract location of field
+         GBLC  &(BXA_BITF_&ARGNAM)     * Name for field location
+&_LOC    SETC  '&(BXA_BITF_&ARGNAM)'   * Extract field location
+         AIF   (K'&_LOC EQ 0).ERR7J    * Error: no location
+&LOC     SETC  '&_LOC'                 * LOC set from code-field
+&PRFLBL  SETC  '&ARGLBL'               * Set prefix label
+&CODEVAL SETC  '&ARGNAM'               * Set code value to test
+&ARG     SETC  '&PRFLBL'.'&LOC'        * Location of codefield
+         AIF   ('&SYSLIST(1,1)' NE '&ARG').ERR7K * Must match!
+         AGO   .NOERR7                 *
+.*
+.ERR7NUM ANOP  ,                       * Check literal number
+&LITERAL SETB  1                       * Indicate this is a literal
+&TYPE2   SETC  '0'                     * Set type to literal number
+         CHKNUM VAL=&ARG,              *                               *
+               MSGLVL=**,              * Suppress messages             *
+               HEX=NO                  * Disallow hex
+         AIF   (&BXA_NUMVAL EQ 0 AND '&ARG' NE '0'                     *
+               AND '&ARG' NE '00' AND '&ARG' EQ '000').ERR7D
+.LITLEN  ANOP  ,                       *
+&LITLENN SETA  0                       * Determine length of literal
+         AIF   (&BXA_NUMVAL EQ 0).NOERR7 * by cascading through the
+&LITLENN SETA  1                           * possibilities
+         AIF   (&BXA_NUMVAL LT 128).NOERR7
+&LITLENN SETA  2
+         AIF   (&BXA_NUMVAL LT 32768).NOERR7
+&LITLENN SETA  3
+         AIF   (&BXA_NUMVAL LT 8388608).NOERR7
+&LITLENN SETA  4
+         AIF   (&BXA_NUMVAL LE 2147483647).NOERR7
+         AGO   .ERR7D
+.*
+.ERR7NNUM ANOP ,                       * Check negative literal number
+&LITERAL SETB  1                       * Indicate this is a literal
+&TYPE2   SETC  '0'                     * Set type to literal number
+&ARG2    SETC  '&ARG'(2,*)             * Extract numerical part
+         CHKNUM VAL=&ARG2,             *                               *
+               MSGLVL=**,              * Suppress messages             *
+               HEX=NO                  * Disallow hex
+.LITLENN ANOP  ,                       *
+         AIF   (&BXA_NUMVAL EQ 0).ERR7D
+&LITLENN SETA  1                       * Determine length of literal
+         AIF   (&BXA_NUMVAL LE 128).NOERR7 * by cascading thru the
+&LITLENN SETA  2                             * possibilities
+         AIF   (&BXA_NUMVAL LE 32768).NOERR7
+&LITLENN SETA  3
+         AIF   (&BXA_NUMVAL LE 8388608).NOERR7
+&LITLENN SETA  4
+         AIF   (&BXA_NUMVAL LE 2147483647).NOERR7
+         AGO   .ERR7D
+.*
+.ERR7LIT ANOP  ,                       * Check a literal
+&LITERAL SETB  1                       * Indicate this is a literal
+&A       SETA  ('&ARG' FIND ',')       * Check for invalid chars
+         AIF   (&A NE 0).ERR7E         * Error: not a literal
+&TYPE2   SETC  '&ARG'(2,1)             * Extract field type
+&A       SETA  ('ABCFHVX' FIND '&TYPE2') * Valid literal type?
+         AIF   (&A EQ 0).ERR7F         * Not a supported type
+.* Determine length of literal
+         AIF   ('&ARG'(3,1) EQ 'L').LITLEN_X * Explicit length?
+         AIF   ('&TYPE2' EQ 'A').LITLEN4 * Implicit length for A: 4
+         AIF   ('&TYPE2' EQ 'F').LITLEN4 * Implicit length for F: 4
+         AIF   ('&TYPE2' EQ 'H').LITLEN2 * Implicit length for H: 2
+         AIF   ('&TYPE2' EQ 'V').LITLEN4 * Implicit length for V: 4
+&LITLEN  SETA  (K'&ARG-4)                * Length of literal sec
+         AIF   ('&TYPE2' EQ 'B').LITLENB * Implicit length for B
+         AIF   ('&TYPE2' EQ 'X').LITLENX * Implicit length for X
+.* Implicit length for character strings
+&ARG2    SETC  '&ARG'(4,&LITLEN)       * Extract text of string
+&I       SETA  ('&ARG2' FIND '''')     * Embedded quotes?
+         AIF   (&I EQ 0).NOERR7        * No: length is ok.
+.* Deduct half the number of embedded quotes from length
+&I       SETA  0                       * I indexes &ARG2 string
+&J       SETA  0                       * J is count of quotes
+.LOOP8   ANOP  ,                       * Count all quotes
+&I       SETA  &I+1                    * Point next character
+         AIF   (&I GT K'&ARG2).LOOP8OK * At end: quit loop
+         AIF   ('&ARG2'(&I,1) NE '''').LOOP8 * Skip mismatch
+&J       SETA  &J+1                    * Increment quote count
+         AGO   .LOOP8                  * And go check next character
+.LOOP8OK ANOP  ,
+&J       SETA  &J/2                    * Half the number of quotes
+&LITLEN  SETA  &LITLEN-&J              * does not count as a character
+         AGO   .NOERR7
+.* Length of a binary constant is one eighth the number of digits
+.LITLENB ANOP
+&LITLEN  SETA  (&LITLEN+7)/8           * Always rounding up
+         AGO   .NOERR7
+.* Length of a hex constant is half the number of digits
+.LITLENX ANOP
+&LITLEN  SETA  (&LITLEN+1)/2           * Always rounding up
+         AGO   .NOERR7
+.* Implicit length for halfword literals
+.LITLEN2 ANOP
+&LITLEN  SETA  2
+         AGO   .NOERR7
+.* Implicit length for fullword, and address literals
+.LITLEN4 ANOP
+&LITLEN  SETA  4
+         AGO   .NOERR7
+.*
+.* Find length of a literal with explicit length field
+.LITLEN_X ANOP ,
+         AIF   ('&TYPE2' EQ 'A').SETTYPR * Set type to R to reflect
+         AIF   ('&TYPE2' EQ 'V').SETTYPR *  explicit length
+         AIF   ('&TYPE2' EQ 'F').SETTYPG * Set type to G to reflect
+         AIF   ('&TYPE2' EQ 'H').SETTYPG *  explicit length
+         AIF   ('&TYPE2' EQ 'C').SETTYP_ * Type remains as is
+         AIF   ('&TYPE2' EQ 'B').SETTYP_ * Type remains as is
+         AIF   ('&TYPE2' EQ 'X').SETTYP_ * Type remains as is
+         MNOTE 12,'Internal error 2 for type &TYPE2'
+         MEXIT
+.SETTYPR ANOP  ,
+&TYPE2   SETC  'R'                     * Address, explicit length
+&I       SETA  ('&ARG' FIND '(')       * Locate literal delimiter
+         AGO   .LITLEN_X2
+.SETTYPG ANOP  ,
+&TYPE2   SETC  'G'                     * Fixed-point, explicit length
+&I       SETA  ('&ARG' FIND '''')      * Locate literal delimiter
+         AGO   .LITLEN_X2
+.SETTYP_ ANOP  ,                       * Type does not change
+&I       SETA  ('&ARG' FIND '''')      * Locate literal delimiter
+.LITLEN_X2 ANOP ,
+         AIF   (&I EQ 0).ERR7I         * Invalid value
+&I       SETA  &I-4                    * Nr of chars in length value
+&ARG2    SETC  '&ARG'(4,&I)            * Extract length value
+&LITLEN  SETA  &ARG2                   * Copy length from modifier
+         AGO   .NOERR7
+.*
+.ERR7A   MNOTE 8,'Missing third parameter (second field name)'
+&ERROR   SETB  1                       * Signal error
+         AGO   .NOERR7
+.ERR7B   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid field name'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7C   MNOTE 8,'Field &ARG has an unsupported type: &TYPE2'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7D   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid literal number'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7E   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid literal'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7F   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Literal &ARG has an unsupported type: &TYPE2'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7G   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Not very useful to compare with self!'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7H   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Field &ARG has zero length: cannot compare'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7I   ANOP  ,
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'Literal &ARG contains no valid literal value'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7J   ANOP  ,
+&ARGNAM  SETC  (DOUBLE '&ARGNAM')
+         MNOTE 8,'Location of &ARGNAM is not defined'
+&ERROR   SETB  1
+         AGO   .NOERR7
+.ERR7K   ANOP  ,
+&ARGNAM  SETC  (DOUBLE '&ARGNAM')
+         MNOTE 8,'Location of &ARGNAM does not match compared field'
+&ERROR   SETB  1
+.NOERR7  ANOP  ,
+.*
+.* Check the number of parameters for syntax 5
+         AIF   (N'&SYSLIST(1) LE 3).NOERR8
+.ERR8    MNOTE 4,'More than three parameters passed: remainder ignored'
+.NOERR8  ANOP
+.*
+.* Check the combination of types
+         AIF   ('&TYPE1' EQ '&TYPE2').NOERR9 * Equal types: always ok
+&COMBI(1) SETC 'AA','AR','AV','Ag',                                    *
+               'BB','BX','Bg',                                         *
+               'CC',                                                   *
+               'FF','FG','FH','Fa','Fg','F0',                          *
+               'GF','GH','GG','Gg','G0',                               *
+               'HF','HG','HH','Hg','H0',                               *
+               'RA','RR','RV','Rg',                                    *
+               'VA','VR','VV','Vg',                                    *
+               'XB','XX','Xa','Xg','Xv',                               *
+               'aF','aX','aa','ag',                                    *
+               'gA','gB','gF','gG','gH','gR','gV','gX','ga','gg','g0'
+&I       SETA  0                       * I indexes COMBI array
+&ARG     SETC  '&TYPE1'.'&TYPE2'       * Search this combination in
+.LOOP7   ANOP  ,                       *   the COMBI array
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&COMBI).ERR9A  * Not supported
+         AIF   ('&ARG' NE '&COMBI(&I)').LOOP7 * Skip mismatch
+         AGO   .NOERR9
+.ERR9A   MNOTE 8,'Unsupported combination of types: &TYPE1 and &TYPE2'
+&ERROR   SETB  1
+.NOERR9  ANOP
+         AGO   .GENLBL
+.**********************************************************************
+.*
+.* Logic for code-value checking: syntaxes 7 and 8.
+.* - Only 1 value may be specified
+.*
+.**********************************************************************
+.CHKCODE ANOP  ,                       * Check code-value
+.*
+.* Retrieve location of field containing the specified value
+&ARG     SETC  '&SYSLIST(1,&I)'        * Extract field name
+.* Remove leading USING labels
+&ARGNAM  SETC  '&ARG'                  * Copy complete field name
+.LOOP9   ANOP  ,                       *   to remove USE-labels
+&A       SETA  ('&ARGNAM' FIND '.')    * Check for a period
+         AIF   (&A EQ 0).LOOP9OK       * No more labels: quit loop
+&ARGNAM  SETC  '&ARGNAM'(&A+1,*)       * Remove leading label + period
+&A       SETA  (K'&ARG-K'&ARGNAM)      * Length of labels
+&ARGLBL  SETC  '&ARG'(1,&A)            * Retrieve label
+         AGO   .LOOP9
+.LOOP9OK ANOP
+.* Safe to use created set symbol: extract location of field
+         GBLC  &(BXA_BITF_&ARGNAM)     * Name for field location
+&_LOC    SETC  '&(BXA_BITF_&ARGNAM)'   * Extract field location
+         AIF   (K'&_LOC EQ 0).ERR15A   * Error: no loction
+&LOC     SETC  '&_LOC'                 * LOC set from first code-field
+&PRFLBL  SETC  '&ARGLBL'               * Set prefix label
+&CODEVAL SETC  '&ARGNAM'               * Set code value to test
+         AGO   .NOERR15
+.ERR15A  ANOP  ,
+&ARGNAM  SETC  (DOUBLE '&ARGNAM')
+         MNOTE 8,'Location of &ARGNAM is not defined'
+&ERROR   SETB  1
+.NOERR15 ANOP  ,
+.*
+.* Check the number of parameters for syntax 7 or 8
+         AIF   (&SYNTAX EQ 7 AND N'&SYSLIST(1) GT 1).ERR16A
+         AIF   (&SYNTAX EQ 8 AND N'&SYSLIST(1) GT 2).ERR16B
+         AIF   (&SYNTAX EQ 7).NOERR16
+         AIF   (&SYNTAX EQ 8).NOERR16
+         MNOTE 12,'Internal error 13'
+         MEXIT
+.ERR16A  MNOTE 4,'More than one parameter passed: remainder ignored'
+         AGO   .NOERR16
+.ERR16B  MNOTE 4,'More than two parameters passed: remainder ignored'
+.NOERR16 ANOP
+         AGO   .GENLBL
+.**********************************************************************
+.*
+.* Generate end-of-then label and add to stack
+.* For TARGET specified, the branch-logic must be altered:
+.* -   for COND=TRUE the false-condition normally branches to the
+.*     end-of-then label, now the true-condition must branch to the
+.*     TARGET label, while a false condition drops thru.
+.* -   for COND=FALSE the the false condition that normally branches
+.*     to the end-of-then-label must now branch to the TARGET label.
+.*
+.**********************************************************************
+.GENLBL  ANOP  ,
+         AIF   (&ERROR).MEND           * Do not generate if error found
+&LBL     SETC  '_IF_&SYSNDX'           * Create end-of-then label
+         AIF   (K'&TARGET EQ 0).LBLOK  * Ok if target missing
+         AIF   ('&COND' NE 'FALSE').LBLOK * TARGET with COND=FALSE?
+&LBL     SETC  '&TARGET'               * Yes: replace target label
+.LBLOK   ANOP
+&LVL     SETA  1                       * Level is 1 if ...
+         AIF   (&BXA_STK EQ 0).LVLOK   * the stack is empty
+&LVL     SETA  &BXA_STK_LVL(&BXA_STK)+1 * otherwise: create next level
+.LVLOK   ANOP  ,
+&I       SETA  &BXA_STK+1              * Point next stack entry
+&BXA_STK_OP(&I)  SETC 'IF$'            * Indicate IF block in progress
+&BXA_STK_LBL(&I) SETC '&LBL'           * Label for ELSE or ENDIF
+&BXA_STK_LVL(&I) SETA &LVL             * Level for this structure
+&BXA_STK SETA  &I                      * Update stack pointer
+.*
+.* Select code generation logic
+         AIF   (&SYNTAX EQ 0).GEN0
+         AIF   (&SYNTAX EQ 1).GEN1     * Go generate code
+         AIF   (&SYNTAX EQ 2).GEN2     * According to determined
+         AIF   (&SYNTAX EQ 3).GEN3     * Sytax type
+         AIF   (&SYNTAX EQ 4).GEN4
+         AIF   (&SYNTAX EQ 5).GEN5
+         AIF   (&SYNTAX EQ 6).GEN6
+         AIF   (&SYNTAX EQ 7).GEN7
+         AIF   (&SYNTAX EQ 8).GEN8
+         MNOTE 12,'Internal error 3'
+         MEXIT
+.**********************************************************************
+.*
+.* Test condition code, either current or after an operation
+.*
+.**********************************************************************
+.GEN0    ANOP  ,
+&MNEM    SETC  '&SYSLIST(1,1)'         * Extract condition
+         AIF   (&_TARGET).GEN0_T       * TARGET with COND=TRUE?
+         AIF   (K'&MNEM EQ 1).CC1      * 1 or 2 characters menmonic?
+&TST     SETC  '&MNEM'(2,1)            * Set test-type = E/H/L/M/O/P/Z
+&OPCD    SETC  'B&TST'                 * Create Bx-instruction
+         AGO   .CCOK                   *
+.CC1     ANOP  ,                       *
+&TST     SETC  '&MNEM'                 * Set test-type = E/H/L/M/O/P/Z
+&OPCD    SETC  'BN'.'&TST'             * Create BNx-instruction
+.CCOK    ANOP  ,                       *
+         AIF   ('&LBL'(1,1) EQ '(').GEN0_R
+&LABEL   &OPCD &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.GEN0_R  ANOP  ,                       *
+&OPCD    SETC  '&OPCD'.'R'             * Add R for BxR/BNxR
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         AGO   .CCOK                   *
+.*
+.GEN0_T  ANOP  ,                       *
+         AIF   ('&TARGET'(1,1) EQ '(').GEN0_TR
+&OPCD    SETC  'B&MNEM'                * Create Bx/BNx-instruction
+&LABEL   &OPCD &TARGET                 * Yes: branch to then-target
+         MEXIT ,                       *
+.GEN0_TR ANOP  ,                       *
+&OPCD    SETC  'B&MNEM'.'R'            * Create BxR/BNxR-instruction
+&LABEL   &OPCD &_TREG                  * Yes: branch to then-target
+         MEXIT ,                       *
+.**********************************************************************
+.*
+.* Test for bits being all on
+.*
+.**********************************************************************
+.GEN1    ANOP  ,
+&LABEL   TM    &PRFLBL.&LOC,&MASKVAL   * All bits on?
+         AIF   (&_TARGET).GEN1_T       * TARGET with COND=TRUE?
+         AIF   ('&LBL'(1,1) EQ '(').GEN1_R
+         BNO   &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.GEN1_R  ANOP  ,                       *
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         BNOR  &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.*
+.GEN1_T  ANOP  ,                       *
+         AIF   ('&TARGET'(1,1) EQ '(').GEN1_TR
+         BO    &TARGET                 * Yes: branch to then-target
+         MEXIT ,                       *
+.GEN1_TR ANOP  ,                       *
+         BOR   &_TREG                  * Yes: branch to then-target
+         MEXIT ,                       *
+.**********************************************************************
+.*
+.* Test for bits being all off
+.*
+.**********************************************************************
+.GEN2    ANOP  ,
+&LABEL   TM    &PRFLBL.&LOC,&MASKVAL   * All bits off?
+         AIF   (&_TARGET).GEN2_T       * TARGET with COND=TRUE?
+         AIF   ('&LBL'(1,1) EQ '(').GEN2_R
+         BNZ   &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.GEN2_R  ANOP  ,                       *
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         BNZR  &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.*
+.GEN2_T  ANOP  ,                       *
+         AIF   ('&TARGET'(1,1) EQ '(').GEN2_TR
+         BZ    &TARGET                 * Yes: branch to then-target
+         MEXIT ,                       *
+.GEN2_TR ANOP  ,                       *
+         BZR   &_TREG                  * Yes: branch to then-target
+         MEXIT ,                       *
+.**********************************************************************
+.*
+.* Test for at least 1 bit being on
+.*
+.**********************************************************************
+.GEN3    ANOP  ,
+&LABEL   TM    &PRFLBL.&LOC,&MASKVAL   * At least 1 bit on?
+         AIF   (&_TARGET).GEN3_T       * TARGET with COND=TRUE?
+         AIF   ('&LBL'(1,1) EQ '(').GEN3_R
+         BZ    &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.GEN3_R  ANOP  ,                       *
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         BZR   &LBL                    * No: skip then-logic
+         MEXIT ,                       *
+.*
+.GEN3_T  ANOP  ,                       *
+         AIF   ('&TARGET'(1,1) EQ '(').GEN3_TR
+         BNZ   &TARGET                 * Yes: branch to then-target
+         MEXIT ,                       *
+.GEN3_TR ANOP  ,                       *
+         BNZR  &_TREG                  * Yes: branch to then-target
+         MEXIT ,                       *
+.**********************************************************************
+.*
+.* Test a field, depending on type, using inverted condition
+.*
+.**********************************************************************
+.GEN4    ANOP  ,
+&MNEM    SETC  '&SYSLIST(1,2)'         * Extract condition
+         AIF   (K'&MNEM EQ 1).COND1    * 1 or 2 characters menmonic?
+&TST     SETC  '&MNEM'(2,1)            * Set test-type = Z/P/M
+&OPCD    SETC  'B&TST'                 * Create Bx-instruction
+         AGO   .CONDOK                 *
+.COND1   ANOP  ,                       *
+&TST     SETC  '&MNEM'                 * Set test-type = Z/P/M
+&OPCD    SETC  'BN'.'&TST'             * Create BNx-instruction
+.CONDOK  ANOP
+.*
+&ARG     SETC  '&SYSLIST(1,1)'         * Extract name of field to test
+         AIF   ('&TYPE1' EQ 'A').GEN4LT  * Address
+         AIF   ('&TYPE1' EQ 'B').GEN4X   * Binary
+         AIF   ('&TYPE1' EQ 'F').GEN4LT  * Fullword
+         AIF   ('&TYPE1' EQ 'G').GEN4X   * Explicit length fixed-point
+         AIF   ('&TYPE1' EQ 'H').GEN4LH  * Halfword
+         AIF   ('&TYPE1' EQ 'R').GEN4X   * Explicit length address
+         AIF   ('&TYPE1' EQ 'V').GEN4LT  * Address
+         AIF   ('&TYPE1' EQ 'X').GEN4X   * Hexadecimal
+         AIF   ('&TYPE1' EQ 'a').GEN4EAR * Access register
+         AIF   ('&TYPE1' EQ 'g').GEN4LTR * General purpose register
+         MNOTE 12,'Internal error 4, type &TYPE1 not supported'
+         MEXIT
+.*
+.* Test a field with explicit length
+.GEN4X   ANOP  ,
+         AIF   (L'&ARG EQ 1).GEN4LT1   * Load and test 1 character
+         AIF   (L'&ARG EQ 2).GEN4LH    * Load and test 2 characters
+         AIF   (L'&ARG EQ 3).GEN4LT3   * Load and test 3 characters
+         AIF   (L'&ARG EQ 4).GEN4LT    * Load and test 4 characters
+.* Length exceeds 4: test on minus uses first bit only
+         AIF   ('&TST' EQ 'M').GEN4TM  * M or NM: check first bit (TM)
+         AIF   ('&TST' EQ 'Z').GEN4CLC * Z or NZ: use CLC
+.* Test a field of more than 4 bytes for being > 0
+         AIF   ('&MNEM' EQ 'P').GEN4P  * Big number Positive?
+         AIF   ('&MNEM' EQ 'NP').GEN4NP * Big number Not Positive?
+         MNOTE 12,'Internal error 5'
+         MEXIT
+.*
+.* Test a four-byte value
+.GEN4LT  ANOP  ,                       *
+&LABEL   ICM   R0,YYYY,&ARG            * Test value
+         AGO   .TERM
+.*
+.* Test a two-byte value
+.GEN4LH  ANOP  ,                       *
+&LABEL   ICM   R0,NNYY,&ARG            * Test value
+         AGO   .TERM
+.*
+.* Test a one-byte value
+.GEN4LT1 ANOP  ,                       *
+&LABEL   ICM   R0,NNNY,&ARG            * Test value
+         AGO   .TERM
+.*
+.* Test a three-byte value
+.GEN4LT3 ANOP  ,                       *
+&LABEL   ICM   R0,NYYY,&ARG            * Test value
+         AGO   .TERM
+.*
+.* Test a value in a general purpose register
+.GEN4LTR ANOP  ,                       * General purpose register
+&LABEL   LTR   &ARG,&ARG               * Test value
+         AGO   .TERM
+.*
+.* Test a value in an access register
+.GEN4EAR ANOP  ,                       * General purpose register
+         AIF   ('&OPCD' EQ 'BZ').GEN4EAR_1
+         AIF   ('&OPCD' EQ 'BNZ').GEN4EAR_1
+         MNOTE 4,'ALET can be checked only with Z or NZ'
+.GEN4EAR_1 ANOP ,
+&LABEL   EAR   R0,&ARG                 * Copy value to be tested
+         LTR   R0,R0                   * Test ALET from access register
+         AGO   .TERM
+.*
+.* Test a storage operand for being negative
+.GEN4TM  ANOP  ,                       * A storage operand
+&LABEL   TM    &ARG,X'80'              * Is it negative?
+         AIF   ('&MNEM' EQ 'M').GEN4BZ
+         AIF   ('&MNEM' EQ 'NM').GEN4BO
+         MNOTE 12,'Internal error 6'
+         MEXIT
+.GEN4BZ  ANOP
+&OPCD    SETC  'BZ'                    * If value is Minus: skip THEN
+         AGO   .TERM
+.GEN4BO  ANOP  ,
+&OPCD    SETC  'BO'                    * If value not Minus: skip THEN
+         AGO   .TERM
+.*
+.* Test a storage operand for being all zeroes
+.GEN4CLC ANOP  ,                       * General purpose register
+&LABEL   CLC   &ARG,=XL(L'&ARG)'00'    * Test value
+         AGO   .TERM
+.*
+.* Test a large field (>4 bytes) for being Positive
+.* Skip the THEN-block if BIT0 is on (negative number) or
+.*   if the whole field contains zeroes only
+.GEN4P   ANOP  ,                       *
+         AIF   (&_TARGET).GEN4P_T      * TARGET with COND=TRUE?
+         AIF   ('&LBL'(1,1) EQ '(').GEN4P_R
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BO    &LBL                    * If value is Minus: skip THEN
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         BE    &LBL                    * If value is zero: skip THEN
+         MEXIT ,                       *
+.GEN4P_R ANOP  ,                       *
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BOR   &LBL                    * If value is Minus: skip THEN
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         BER   &LBL                    * If value is zero: skip THEN
+         MEXIT ,                       *
+.*
+.* Branch to TARGET if BIT0 is off (not-negative number) and
+.*   the whole field does not contain zeroes only
+.GEN4P_T ANOP  ,                       *
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BO    &LBL                    * If value is Minus: skip THEN
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         AIF   ('&TARGET'(1,1) EQ '(').GEN4P_TR
+         BNE   &TARGET                 * If value not 0: goto TARGET
+&LBL     LABEL ,                       *
+         MEXIT ,                       *
+.GEN4P_TR ANOP ,                       *
+         BNER  &_TREG                  * If value not 0: goto TARGET
+&LBL     LABEL ,                       *
+         MEXIT ,                       *
+.*
+.* Test a large field (>4 bytes) for being Not Positive
+.* Skip the THEN-block if BIT0 is off (negative number) and
+.*      the whole field contains zeroes only
+.GEN4NP  ANOP  ,                       *
+         AIF   (&_TARGET).GEN4P_T      * TARGET with COND=TRUE?
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BO    _THEN&SYSNDX            * If value is Minus: goto THEN
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         AIF   ('&LBL'(1,1) EQ '(').GEN4NP_R
+         BNE   &LBL                    * If value is zero: skip THEN
+_THEN&SYSNDX LABEL ,                   * Start of THEN-block
+         MEXIT ,                       *
+.GEN4NP_R ANOP ,                       *
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         BNER  &LBL                    * If value is zero: skip THEN
+_THEN&SYSNDX LABEL ,                   * Start of THEN-block
+         MEXIT ,                       *
+.*
+.* Branch to TARGET if BIT0 is on (negative number) or
+.*      the whole field contains zeroes only
+.GEN4NP_T ANOP ,                       *
+         AIF   ('&LBL'(1,1) EQ '(').GEN4NP_TR
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BO    &TARGET                 * If value is Minus: goto TARGET
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         BE    &TARGET                 * If value is zero: goto TARGET
+         MEXIT ,                       *
+.GEN4NP_TR ANOP ,                      *
+&LABEL   TM    &ARG,X'80'              * Negative bit on?
+         BOR   &_TREG                  * If value is Minus: goto TARGET
+         CLC   &ARG,=XL(L'&ARG)'00'    * Value is exactly zero?
+         BER   &_TREG                  * If value is zero: goto TARGET
+         MEXIT ,                       *
+.**********************************************************************
+.*
+.* Compare two fields
+.*
+.**********************************************************************
+.GEN5    ANOP  ,
+&_LABEL  SETC  '&LABEL'                * Label to generate
+&ARG1    SETC  '&SYSLIST(1,1)'         * Extract first field
+&ARG2    SETC  '&SYSLIST(1,3)'         *  and second field for compare
+&LEN1    SETA  L'&ARG1                 * Determine length of operand 1
+&LEN2    SETA  &LITLEN                 *  and operand 2
+         AIF   (&LITERAL).GEN5_LN      * If it is not a literal...
+&LEN2    SETA  L'&ARG2                 *  we use the field length
+.GEN5_LN ANOP  ,                       *
+.*
+         AIF   ('&TYPE1' EQ 'A').GEN5A * Address field
+         AIF   ('&TYPE1' EQ 'B').GEN5X * Unsigned binary field
+         AIF   ('&TYPE1' EQ 'C').GEN5C * Character field
+         AIF   ('&TYPE1' EQ 'F').GEN5F * Signed fullword
+         AIF   ('&TYPE1' EQ 'G').GEN5G * Signed field 1-4 bytes
+         AIF   ('&TYPE1' EQ 'H').GEN5H * Signed halfword
+         AIF   ('&TYPE1' EQ 'R').GEN5R * Unsigned unaligned field
+         AIF   ('&TYPE1' EQ 'V').GEN5A * V-type address same as A
+         AIF   ('&TYPE1' EQ 'X').GEN5X * X-type field same as B
+         AIF   ('&TYPE1' EQ 'a').GEN5R_A * access register compare
+         AIF   ('&TYPE1' EQ 'g').GEN5R_G * General purpose register
+         MNOTE 12,'Internal error 7, type &TYPE1 not supported'
+         MEXIT
+.*
+.* Error messages for .GEN5 logic
+.ERR14A  ANOP  ,
+         MNOTE 8,'Cannot allocate any register to hold compare value'
+         MEXIT
+.ERR14B  ANOP  ,
+&ARG2    SETC  (DOUBLE '&ARG2')
+         MNOTE 8,'&ARG2 is more than 4 bytes long: cannot compare'
+         MEXIT
+.ERR14C  ANOP  ,
+&ARG1    SETC  (DOUBLE '&ARG1')
+         MNOTE 8,'&ARG1 is more than 4 bytes long: cannot compare'
+         MEXIT
+.ERR14D  MNOTE 12,'Internal error 8 for type &TYPE1 and &TYPE2'
+         MEXIT
+.ERR14E  ANOP  ,
+&ARG1    SETC  (DOUBLE '&ARG1')
+&ARG2    SETC  (DOUBLE '&ARG2')
+         MNOTE 8,'Not a useful compare: range mismatch for &ARG1 and &A*
+               RG2'
+         MEXIT
+.ERR14F  ANOP  ,
+&ARG1    SETC  (DOUBLE '&ARG1')
+         MNOTE 8,'Cannot compare: &ARG1 too long for this compare'
+         MEXIT
+.ERR14G  ANOP  ,
+&ARG2    SETC  (DOUBLE '&ARG2')
+         MNOTE 8,'Cannot compare: &ARG2 not valid for an ALET'
+         MEXIT
+.ERR14H  ANOP  ,
+&ARG1    SETC  (DOUBLE '&ARG1')
+         MNOTE 8,'Cannot compare: &ARG1 not valid for an ALET'
+         MEXIT
+.*
+.* Compare an aligned unsigned fullword with something
+.GEN5A   ANOP  ,
+         AIF   ('&TYPE2' EQ 'A').GEN5_CLC * Compare direct
+         AIF   ('&TYPE2' EQ 'R').GEN5AX   * Check length
+         AIF   ('&TYPE2' EQ 'V').GEN5_CLC * Compare direct
+         AIF   ('&TYPE2' EQ 'g').GEN5_CL_ * Inverted compare logical
+         AGO   .ERR14D
+.*
+.* Compare an aligned unsigned fullword with an unaligned unsigned
+.*             field of a different length
+.GEN5AX  ANOP  ,
+         AIF   (&LEN EQ 4).GEN5_CLC    * Compare direct
+         AIF   (&LEN GT 4).ERR14B      * Too long to hold in a reg
+         IF$LU R0,&ARG2,&LITLEN,&TYPE2 * Load second arg in R0
+&ARG2    SETC  'R0'                    * Second argument now in R0
+         AGO   .GEN5_CL_               * And do an inverted compare
+.*
+.* Compare two character fields
+.GEN5C   ANOP  ,
+         AIF   ('&TYPE2' NE 'C').ERR14D  * ARG2 must be char too
+         AIF   (L'&ARG1 EQ &LEN2).GEN5_CLC * Ok to compare direct
+.* Unequal lengths: use CLCL
+         AGO   .GEN5_CLCL
+.*
+.* Compare an aligned signed fullword with something
+.GEN5F   ANOP  ,
+         AIF   ('&TYPE2' EQ 'F').GEN5FF * Load op1, then compare
+         AIF   ('&TYPE2' EQ 'G').GEN5FX * Check length
+         AIF   ('&TYPE2' EQ 'H').GEN5FH * Load op1, then compare
+         AIF   ('&TYPE2' EQ 'a').GEN5FAR * Copy AR, then compare
+         AIF   ('&TYPE2' EQ 'g').GEN5_C_ * Inverted compare
+         AIF   ('&TYPE2' EQ '0').GEN5FX  * Compare with a number
+         AGO   .ERR14D
+.*
+.* Compare an aligned signed fullword with an access register
+.* ALETs are unsigned: therefore a logical compare is used
+.GEN5FAR ANOP  ,
+         AIF   ('&OPCD' EQ 'BE').GEN5FAR_1
+         AIF   ('&OPCD' EQ 'BNE').GEN5FAR_1
+         MNOTE 4,'ALET can be compared only with EQ or NE'
+.GEN5FAR_1 ANOP ,
+&_LABEL  EAR   R0,&ARG2                * Load comparand
+&ARG2    SETC  'R0'                    * Argument now in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+         AGO   .GEN5_CL_               * Inverted logical compare
+.*
+.* Compare an aligned signed fullword with another one
+.GEN5FF  ANOP  ,
+&_LABEL  L     R0,&ARG1                * Load compare value
+&ARG1    SETC  'R0'                    * Argument now in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+         AGO   .GEN5_C                 * And go compare
+.*
+.* Compare an aligned signed fullword with an aligned signed halfword
+.GEN5FH  ANOP  ,
+&_LABEL  L     R0,&ARG1                * Load compare value
+&ARG1    SETC  'R0'                    * Argument now in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+         AGO   .GEN5_CH                * And go compare
+.*
+.* Compare an aligned signed fullword with an unaligned signed field
+.GEN5FX  ANOP  ,
+&_LABEL  IF$LS R0,&ARG2,&LITLEN,&TYPE2 * Load field into register
+&_LABEL  SETC  ''                      * Do not generate Label again
+&ARG2    SETC  'R0'                    * Comparand value now in R0
+         AGO   .GEN5_C_                * Inverted compare
+.*
+.* Compare an unaligned signed field with something
+.GEN5G   ANOP  ,
+         AIF   ('&TYPE2' EQ 'F').GEN5GX  * Check lengths
+         AIF   ('&TYPE2' EQ 'G').GEN5GX  * Check lengths
+         AIF   ('&TYPE2' EQ 'H').GEN5GX  * Check lengths
+         AIF   ('&TYPE2' EQ 'g').GEN5GR  * Check length, use a register
+         AIF   ('&TYPE2' EQ '0').GEN5G0  * Check value
+         AGO   .ERR14D
+.*
+.* Compare an unaligned signed field with a register
+.GEN5GR  ANOP  ,
+         IF$ALC &ARG2                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  IF$LS R&REG,&ARG1,,&TYPE1     * Load argument in Register
+&_LABEL  SETC  ''                      * Do not generate LABEL again
+&ARG1    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CR                * And compare values in regs
+.*
+.* Compare an unaligned signed field with some other storage field
+.* An EQ/NE condition with operands of equal length uses CLC
+.GEN5GX  ANOP  ,
+         AIF   ('&OPCD'(K'&OPCD,1) NE 'E').GEN5GX_NE * Test for Equal?
+         AIF   (&LITERAL).GEN5GX_L     * Literal or field?
+         AIF   (L'&ARG1 EQ L'&ARG2).GEN5_CLC * Ok to use CLC
+         AGO   .GEN5GX_NE
+.GEN5GX_L ANOP ,
+         AIF   (L'&ARG1 EQ &LITLEN).GEN5_CLC * Ok to use CLC
+.GEN5GX_NE ANOP ,
+&_LABEL  IF$LS R0,&ARG1,,&TYPE1        * Load first argument into R0
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * First argument now in R0
+         AIF   ('&TYPE2' EQ 'F').GEN5_C * Compare with fullword
+         AIF   ('&TYPE2' EQ 'H').GEN5_CH * Compare with halfword
+         IF$LS R1,&ARG2,&LITLEN,&TYPE2 * Load second argument into R1
+&ARG2    SETC  'R1'                    * Second argument now in R1
+         AGO   .GEN5_CR                * Compare values in registers
+.*
+.* Compare an unaligned signed field with a literal decimal number
+.GEN5G0  ANOP  ,
+         AIF   ('&ARG2'(1,1) EQ '-').GEN5G0_N
+&I       SETA  &ARG2                   * Load decimal value
+         AIF   (&I EQ 0).GEN5G0_0      * Use ICM to set cond.code
+         AIF   (&I GT 127 AND L'&ARG1 LE 1).ERR14E
+         AIF   (&I GT 32767 AND L'&ARG1 LE 2).ERR14E
+         AIF   (&I GT 8388607 AND L'&ARG1 LE 3).ERR14E
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'E').GEN5G0_E
+&_LABEL  IF$LS R0,&ARG1,,&TYPE1        * Load first argument into R0
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * First argument now in R0
+         AIF   (&I LT 4096).GEN5G0_LA
+&ARG2    SETC  '=H''&I'''              * Assume halfword value
+         AIF   (&I LT 32768).GEN5_CH
+&ARG2    SETC  '=F''&I'''              * Assume fullword value
+         AGO   .GEN5_C
+.* Decimal number is negative
+.GEN5G0_N ANOP ,
+&ARG     SETC  '&ARG2'(2,*)            * Extract numerical part
+&I       SETA  &ARG
+         AIF   (&I EQ 0).GEN5G0_0      * Set cond.code with ICM
+         AIF   (&I GT 127 AND L'&ARG1 LE 1).ERR14E
+         AIF   (&I GT 32767 AND L'&ARG1 LE 2).ERR14E
+         AIF   (&I GT 8388607 AND L'&ARG1 LE 3).ERR14E
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'E').GEN5G0_E
+&_LABEL  IF$LS R0,&ARG1,,&TYPE1        * Load first argument into R0
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * First argument now in R0
+&ARG2    SETC  '=H''-&I'''             * Assume halfword value
+         AIF   (&I LT 32768).GEN5_CH
+&ARG2    SETC  '=F''-&I'''             * Assume fullword value
+         AGO   .GEN5_C
+.* Check is for EQ/NE: use CLC or CLI
+.GEN5G0_E ANOP ,
+         AIF   (L'&ARG1 EQ 1).GEN5G0_E1
+         AIF   (L'&ARG1 EQ 2).GEN5G0_E2
+         AIF   (L'&ARG1 EQ 3).GEN5G0_E3
+         AIF   (L'&ARG1 EQ 4).GEN5G0_E4
+         MNOTE 12,'Internal error 9'
+         MEXIT
+.GEN5G0_E1 ANOP ,
+         AIF   ('&ARG2'(1,1) NE '-').GEN5_CLI * CLI for positive nrs
+         CLC   &ARG1,=HL1'&ARG2'       * CLI refuses negative argument
+         AGO   .TERM
+.GEN5G0_E2 ANOP ,
+         CLC   &ARG1,=H'&ARG2'
+         AGO   .TERM
+.GEN5G0_E3 ANOP ,
+         CLC   &ARG1,=FL3'&ARG2'
+         AGO   .TERM
+.GEN5G0_E4 ANOP ,
+         CLC   &ARG1,=F'&ARG2'
+         AGO   .TERM
+.* Decimal number is between 1 and 4095 inclusive
+.GEN5G0_LA ANOP ,
+         LA    R1,&ARG2                * Load comparand
+&ARG2    SETC  'R1'                    * Second argument now in R1
+         AGO   .GEN5_CR                * Go compare values in regs
+.* Decimal number is 0, use ICM to test ARG1
+.GEN5G0_0 ANOP ,
+         AIF   (L'&ARG1 EQ 1).GEN5G0_1
+         AIF   (L'&ARG1 EQ 2).GEN5G0_2
+         AIF   (L'&ARG1 EQ 3).GEN5G0_3
+         AIF   (L'&ARG1 EQ 4).GEN5G0_4
+.* Field is too long for ICM. Use CLC instead.
+         AIF   ('&OPCD'(K'&OPCD,1) NE 'E').ERR14F
+&I       SETA  L'&ARG1
+         CLC   &ARG1,=FL&I.'0'
+         AGO   .TERM
+.GEN5G0_1 ANOP ,                       * Test EQ/NE may use CLI, others
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'E').GEN5_CLI * must use ICM
+&_LABEL  ICM   R0,NNNY,&ARG1           * Test for zero value
+         AGO   .TERM
+.GEN5G0_2 ANOP ,
+&_LABEL  ICM   R0,NNYY,&ARG1           * Test for zero value
+         AGO   .TERM
+.GEN5G0_3 ANOP ,
+&_LABEL  ICM   R0,NYYY,&ARG1           * Test for zero value
+         AGO   .TERM
+.GEN5G0_4 ANOP ,
+&_LABEL  ICM   R0,YYYY,&ARG1           * Test for zero value
+         AGO   .TERM
+.*
+.* Compare an aligned signed halfword with something
+.GEN5H   ANOP  ,
+         AIF   ('&TYPE2' EQ 'F').GEN5HF * Load op1, then compare
+         AIF   ('&TYPE2' EQ 'G').GEN5HX * Check length
+         AIF   ('&TYPE2' EQ 'H').GEN5HH * Load op2, then compare
+         AIF   ('&TYPE2' EQ 'g').GEN5_CH_ * Inverted compare
+         AIF   ('&TYPE2' EQ '0').GEN5HX  * Compare with a number
+         AGO   .ERR14D
+.*
+.* Compare an aligned signed halfword with an aligned signed fullword
+.GEN5HF  ANOP  ,
+&_LABEL  LH    R0,&ARG1                * Load compare value
+&ARG1    SETC  'R0'                    * Argument now in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+         AGO   .GEN5_C                 * And go compare
+.*
+.* Compare an aligned signed halfword with another one
+.GEN5HH  ANOP  ,
+&_LABEL  LH    R0,&ARG1                * Load compare value
+&ARG1    SETC  'R0'                    * Argument now in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+         AGO   .GEN5_CH                * And go compare
+.*
+.* Compare an aligned signed halfword with an unaligned signed field
+.GEN5HX  ANOP  ,
+         AIF   (&LITLENN GT 2).ERR14E
+&_LABEL  IF$LS R0,&ARG2,&LITLEN,&TYPE2 * Load field into register
+&_LABEL  SETC  ''                      * Do not generate Label again
+&ARG2    SETC  'R0'                    * Comparand value now in R0
+         AGO   .GEN5_CH_               * Inverted compare
+.*
+.* Compare an unaligned unsigned address field with something
+.GEN5R   ANOP  ,
+         AIF   ('&TYPE2' EQ 'g').GEN5XR  * Compare with a register
+         AIF   ('&TYPE2' EQ 'A').GEN5RA  * Second operand aligned
+         AIF   ('&TYPE2' EQ 'R').GEN5RR  * Check alignement&lengths
+         AIF   ('&TYPE2' EQ 'V').GEN5RA  * Second operand aligned
+         AGO   .ERR14D
+.*
+.* Compare an unaligned unsigned field with an aligned unsigned word
+.GEN5RA  ANOP  ,
+         AIF   (&LEN1 EQ &LEN2).GEN5_CLC * Lengths equal: use CLC
+&_LABEL  IF$LU R0,&ARG1,,&TYPE1          * Load comparand value
+&_LABEL  SETC  ''                        * Do not generate label again
+&ARG1    SETC  'R0'                      * Operand 1 now in R0
+         AGO   .GEN5_CL                  * And do logical compare
+.*
+.* Compare an unaligned unsigned field with an unaligned unsigned field
+.GEN5RR  ANOP  ,
+         AIF   (&LEN1 EQ &LEN2).GEN5_CLC * Equal lengths:compare direct
+         AIF   (&LEN1 GT 4).ERR14C     * Check lengths for
+         AIF   (&LEN2 GT 4).ERR14B     *  validity
+         AIF   (&LEN2 EQ 4 AND '&ARG2'(1,1)  EQ '=').GEN5RA * Aligned!
+&_LABEL  IF$LU R0,&ARG1,,&TYPE1        * Insert operand 1 in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * Operand 1 now in R0
+         IF$LU R1,&ARG2,&LITLEN,&TYPE2 * Load second operand
+&ARG2    SETC  'R1'                    * Comparand now in R1
+         AGO   .GEN5_CLR               * And go compare
+.*
+.* Compare an access register with something
+.GEN5R_A ANOP  ,
+         AIF   ('&TYPE2' EQ 'F').GEN5R_AF * Compare with a fullword
+         AIF   ('&TYPE2' EQ 'X').GEN5R_AX * Second operand not aligned
+         AIF   ('&TYPE2' EQ 'a').GEN5R_AA * Compare with other AR
+         AIF   ('&TYPE2' EQ 'g').GEN5R_AG * Second operand a GPR
+         AGO   .ERR14D
+.*
+.* Compare an access register with an aligned fullword
+.GEN5R_AF ANOP ,
+&_LABEL  CPY   R0,&ARG1                * Copy ALET
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * ALET from AR now in R0
+         AGO   .GEN5_CL                * And do compare logical
+.*
+.* Compare an access register with an unaligned field
+.GEN5R_AX ANOP ,
+         AIF   (&LEN2 NE 4).ERR14G     * Length of ALET always 4!
+         AIF   ('&ARG2'(1,1) EQ '=').GEN5R_AF
+&_LABEL  CPY   R0,&ARG1                * Copy ALET
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * ALET from AR now in R0
+         IF$LU R1,&ARG2,&LITLEN,&TYPE2 * Load comparand value
+&ARG2    SETC  'R1'                    * Operand 2 now in R1
+         AGO   .GEN5_CLR               * And do compare logical
+.*
+.* Compare an access register with an access register
+.GEN5R_AA ANOP ,
+&_LABEL  CPY   R0,&ARG1                * Copy ALET
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * ALET from AR now in R0
+         CPY   R1,&ARG2                * Load comparand value
+&ARG2    SETC  'R1'                    * Operand 2 now in R1
+         AGO   .GEN5_CLR               * And do compare logical
+.*
+.* Compare an access register with a general purpose register
+.GEN5R_AG ANOP ,
+         IF$ALC &ARG2                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  CPY   R&REG,&ARG1             * Load ALET in Register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CLR               * And compare values in regs
+.*
+.* Compare a register with something
+.GEN5R_G ANOP  ,
+         AIF   ('&TYPE2' EQ 'A').GEN5_CL  * Compare with unsigned word
+         AIF   ('&TYPE2' EQ 'B').GEN5R_GX * Compare with unsigned field
+         AIF   ('&TYPE2' EQ 'F').GEN5_C   * Compare with signed word
+         AIF   ('&TYPE2' EQ 'G').GEN5R_GG * Compare with signed field
+         AIF   ('&TYPE2' EQ 'H').GEN5_CH  * Compare with signed halfwd
+         AIF   ('&TYPE2' EQ 'R').GEN5R_GX * Compare with unsigned field
+         AIF   ('&TYPE2' EQ 'V').GEN5_CL  * Compare with unsigned word
+         AIF   ('&TYPE2' EQ 'X').GEN5R_GX * Compare with unsigned field
+         AIF   ('&TYPE2' EQ 'a').GEN5R_G_A * Compare with access reg.
+         AIF   ('&TYPE2' EQ 'g').GEN5_CR  * Compare with GPR
+         AIF   ('&TYPE2' EQ '0').GEN5R_G0 * Compare with number
+         AGO   .ERR14D
+.*
+.* Compare a register with an access register
+.GEN5R_G_A ANOP ,
+         IF$ALC &ARG1                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  CPY   R&REG,&ARG2             * Load ALET in Register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG2    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CLR               * And compare values in regs
+.*
+.* Compare a register with a signed field
+.GEN5R_GG ANOP ,
+         AIF   (&LEN2 EQ 4 AND '&ARG2'(1,1) EQ '=').GEN5_C
+         IF$ALC &ARG1                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  IF$LS R&REG,&ARG2,&LITLEN,&TYPE2 * Copy comparand to register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG2    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CR                * And compare values in regs
+.*
+.* Compare a register with an unsigned field
+.GEN5R_GX ANOP ,
+         AIF   (&LEN2 EQ 4 AND '&ARG2'(1,1) EQ '=').GEN5_CL
+         AIF   (&LEN2 EQ 4).GEN5_CLM4
+         IF$ALC &ARG1                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  IF$LU R&REG,&ARG2,&LITLEN,&TYPE2 * Copy comparand to register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG2    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CLR               * And compare values in regs
+.*
+.* Compare a register with a literal decimal constant
+.GEN5R_G0 ANOP ,
+         AIF   (&LITLENN EQ 0).GEN5_LTR * Compare with zero value?
+         AIF   (NOT &LITERAL).GEN5R_G0_A * Equated literal!
+         AIF   (&LITLENN GT 2).GEN5R_G0_2
+&ARG2    SETC  '=H''&ARG2'''           * Create a halfword literal
+         AGO   .GEN5_CH                * And go compare
+.GEN5R_G0_2 ANOP ,
+&ARG2    SETC  '=F''&ARG2'''           * Create a fullword literal
+         AGO   .GEN5_C                 * And go compare
+.GEN5R_G0_A ANOP ,                     * Use address constants
+         AIF   (&LITLENN GT 2).GEN5R_G0_B
+&ARG2    SETC  '=AL2(&ARG2)'           * Create a halfword literal
+         AGO   .GEN5_CH                * And go compare
+.GEN5R_G0_B ANOP ,
+&ARG2    SETC  '=A(&ARG2)'             * Create a fullword literal
+         AGO   .GEN5_C                 * And go compare
+.*
+.* Compare an unaligned unsigned field with something
+.GEN5X   ANOP  ,
+         AIF   ('&TYPE2' EQ 'a').GEN5XAR * Compare with an access reg.
+         AIF   ('&TYPE2' EQ 'g').GEN5XR  * Compare with a register
+         AIF   ('&TYPE2' EQ 'v').GEN5XV  * Compare with a code value
+         AIF   ('&TYPE2' EQ 'X').GEN5XX  * Check lengths
+         AIF   ('&TYPE2' EQ 'B').GEN5XX  * Check lengths
+         AGO   .ERR14D
+.*
+.* Compare an unaligned unsigned field with an access register
+.GEN5XAR ANOP  ,
+         AIF   (&LEN1 NE 4).ERR14H
+&_LABEL  ICM   R0,YYYY,&ARG1           * Copy field to register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * Operand 1 now in R0
+         CPY   R1,&ARG2                * Copy ALET to R1
+&ARG2    SETC  'R1'                    * Comparand value now in R1
+         AGO   .GEN5_CLR               * And go compare registers
+.*
+.* Compare an unaligned unsigned field with a register
+.GEN5XR  ANOP  ,
+         IF$ALC &ARG2                  * Assign some other register nr
+&REG     SETA  &BXA_NUMVAL             * assigned register number
+&_LABEL  IF$LU R&REG,&ARG1,,&TYPE1     * Load argument in Register
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R&REG'                 * First argument now in Reg.
+         AGO   .GEN5_CLR               * And compare values in regs
+.*
+.* Compare an unaligned unsigned field with a code value
+.GEN5XV  ANOP  ,
+         AIF   (&LEN1 EQ 1).GEN5_CLI   * Use CLI to compare
+         AGO   .GEN5_CLC               * Too long for CLI: use CLC
+.*
+.* Compare an unaligned unsigned field with an unaligned unsigned field
+.GEN5XX  ANOP  ,
+         AIF   (&LEN1 EQ &LEN2).GEN5_CLC * Equal lengths:compare direct
+         AIF   (&LEN1 GT 4).ERR14C     * Check lengths for
+         AIF   (&LEN2 GT 4).ERR14B     *  validity
+&_LABEL  IF$LU R0,&ARG1,,&TYPE1        * Insert operand 1 in R0
+&_LABEL  SETC  ''                      * Do not generate label again
+&ARG1    SETC  'R0'                    * Operand 1 now in R0
+         IF$LU R1,&ARG2,&LITLEN,&TYPE2 * Insert operand 2 in R1
+&ARG2    SETC  'R1'                    * Operand 2 now in R1
+         AGO   .GEN5_CLR               * And go compare registers
+.*
+.* Compare a register with an aligned signed fullword
+.GEN5_C  ANOP  ,
+&_LABEL  C     &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare an aligned signed fullword with a register (inversion)
+.GEN5_C_ ANOP  ,
+&_LABEL  C     &ARG2,&ARG1             * Compare 2nd operand with 1st
+&OPCD    SETC  '&OPCDINV'              * Use inverted opcode
+         AGO   .TERM
+.*
+.* Compare a register with an aligned signed halfword
+.GEN5_CH ANOP  ,
+&_LABEL  CH    &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare an aligned signed halfword with a register (inversion)
+.GEN5_CH_ ANOP ,
+&_LABEL  CH    &ARG2,&ARG1             * Compare 2nd operand with 1st
+&OPCD    SETC  '&OPCDINV'              * Use inverted opcode
+         AGO   .TERM
+.*
+.* Compare a register with an aligned unsigned fullword
+.GEN5_CL ANOP  ,
+&_LABEL  CL    &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare an aligned unsigned fullword with a register (inversion)
+.GEN5_CL_ ANOP ,
+&_LABEL  CL    &ARG2,&ARG1             * Compare 2nd operand with 1st
+&OPCD    SETC  '&OPCDINV'              * Use inverted opcode
+         AGO   .TERM
+.*
+.* Compare two unsigned or char fields with same length
+.* If operand length exceeds 256 we must use CLCL in stead of CLC.
+.* To compare a 1-byte first operand with a literal, use CLI.
+.GEN5_CLC ANOP ,
+         AIF   (&LEN1 GT 256).GEN5_CLCL * Too long for CLC? Use CLCL!
+         AIF   (&LEN1 EQ 1 AND &LITERAL).GEN5_CLC_CLI * Use CLI!
+&_LABEL  CLC   &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.GEN5_CLC_CLI ANOP ,                   * 1-byte literal: use CLI
+&ARG2    SETC  '&ARG2'(2,*)            * Remove =sign
+         AGO   .GEN5_CLI
+.*
+.* Compare two unsigned or char fields with different or long length
+.GEN5_CLCL ANOP ,
+&_LABEL  LA    R14,&ARG2               * Point to compare value
+         AIF   (&LEN2 LT 4096).GEN5_CLCL_LA15
+         AIF   (&LEN2 LT 32768).GEN5_CLCL_LH15
+         L     R15,=A(&LEN2)           * Load comparand length
+         AGO   .GEN5_CLCL_15
+.GEN5_CLCL_LH15 ANOP ,
+         LH    R15,=Y(&LEN2)           * Load comparand length
+         AGO   .GEN5_CLCL_15
+.GEN5_CLCL_LA15 ANOP ,
+         LA    R15,&LEN2               * Load comparand length
+.GEN5_CLCL_15 ANOP ,                   * Register 15 loaded with len2
+.* For char fields of unequal length: insert pad=X'40'
+         AIF   ('&TYPE1' NE 'C').NOPAD
+         AIF   (&LEN1 EQ &LEN2).NOPAD
+         LA    R1,X'40'                * Load padding character
+         SLL   R1,24                   *  into left-most byte
+         OR    R15,R1                  *  of comparand length register
+.NOPAD   ANOP  ,
+.*
+         LA    R0,&ARG1                * Point to first argument
+         AIF   (&LEN1 LT 4096).GEN5_CLCL_LA1
+         AIF   (&LEN1 LT 32768).GEN5_CLCL_LH1
+         L     R1,=A(&LEN1)            * Load comparand length
+         AGO   .GEN5_CLCL_1
+.GEN5_CLCL_LH1 ANOP ,
+         LH    R1,=Y(&LEN1)            * Load comparand length
+         AGO   .GEN5_CLCL_1
+.GEN5_CLCL_LA1 ANOP ,
+         LA    R1,&LEN1                * Load comparand length
+.GEN5_CLCL_1 ANOP ,                    * Register 1 loaded with len1
+         CLCL  R0,R14                  * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare an unsigned byte with a 1-byte literal value
+.GEN5_CLI ANOP ,
+&_LABEL  CLI   &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare a register with an unsigned 4-byte field
+.GEN5_CLM4 ANOP ,
+&_LABEL  CLM   &ARG1,YYYY,&ARG2        * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare two unsigned values in registers
+.GEN5_CLR ANOP ,
+&_LABEL  CLR   &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare two signed values in registers
+.GEN5_CR ANOP  ,
+&_LABEL  CR    &ARG1,&ARG2             * Compare 1st operand with 2nd
+         AGO   .TERM
+.*
+.* Compare a register with zero
+.GEN5_LTR ANOP ,
+&_LABEL  LTR   &ARG1,&ARG1             * Compare 1st operand with 0
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'E').GEN5_LTR_Z
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'H').GEN5_LTR_P
+         AIF   ('&OPCD'(K'&OPCD,1) EQ 'L').GEN5_LTR_M
+         MNOTE 'Internal error 10: invalid opcode'
+         MEXIT
+.GEN5_LTR_Z ANOP ,
+&OPCD    SETC  '&OPCD'(1,K'&OPCD-1).'Z'
+         AGO   .TERM
+.GEN5_LTR_P ANOP ,
+&OPCD    SETC  '&OPCD'(1,K'&OPCD-1).'P'
+         AGO   .TERM
+.GEN5_LTR_M ANOP ,
+&OPCD    SETC  '&OPCD'(1,K'&OPCD-1).'M'
+         AGO   .TERM
+.**********************************************************************
+.*
+.* Test condition code, after specified operation
+.*
+.**********************************************************************
+.GEN6    ANOP  ,
+&OPCD    SETC  '&SYSLIST(1,2)'         * Extract opcode for operation
+&ARG1    SETC  '&SYSLIST(1,3)'         * Extract first operand
+&ARG2    SETC  '&SYSLIST(1,4)'         * Extract second operand
+&LABEL   &OPCD &ARG1,&ARG2             * Condition met?
+.*
+&MNEM    SETC  '&SYSLIST(1,1)'         * Extract condition
+         AIF   (K'&MNEM EQ 1).GEN6_1   * 1 or 2 characters menmonic?
+&TST     SETC  '&MNEM'(2,1)            * Set test-type = E/H/L/M/O/P/Z
+&OPCD    SETC  'B&TST'                 * Create Bx-instruction
+         AGO   .TERM                   *
+.GEN6_1  ANOP  ,                       *
+&TST     SETC  '&MNEM'                 * Set test-type = E/H/L/M/O/P/Z
+&OPCD    SETC  'BN'.'&TST'             * Create BNx-instruction
+         AGO   .TERM                   * No: skip then-logic
+.**********************************************************************
+.*
+.* Test code-value
+.*
+.**********************************************************************
+.GEN7    ANOP  ,
+.*
+.* Set OPCD to BNE: if code is not equal, skip then-logic
+&OPCD    SETC  'BNE'                   * Skip then-logic if not equal
+.*
+         AIF   (L'&LOC NE 1).GEN7_CLC
+&LABEL   CLI   &PRFLBL.&LOC,&CODEVAL   * Correct code?
+         AGO   .TERM
+.*
+.GEN7_CLC ANOP ,
+&MASKVAL SETA  L'&CODEVAL              * Retrieve value of code to test
+&LABEL   CLC   &PRFLBL.&LOC,=HL(L'&LOC)'&MASKVAL'
+         AGO   .TERM
+.**********************************************************************
+.*
+.* Negative test on code-value
+.*
+.**********************************************************************
+.GEN8    ANOP  ,
+.*
+.* Set OPCD to BE: if code is equal, skip then-logic
+&OPCD    SETC  'BE'                    * Skip then-logic if equal
+.*
+         AIF   (L'&LOC NE 1).GEN8_CLC
+&LABEL   CLI   &PRFLBL.&LOC,&CODEVAL   * Correct code?
+         AGO   .TERM
+.*
+.GEN8_CLC ANOP ,
+&MASKVAL SETA  L'&CODEVAL              * Retrieve value of code to test
+&LABEL   CLC   &PRFLBL.&LOC,=HL(L'&LOC)'&MASKVAL'
+         AGO   .TERM
+.**********************************************************************
+.*
+.* Terminate IF by branching over the THEN block if condition not met
+.*
+.**********************************************************************
+.TERM    ANOP  ,
+         AIF   (&_TARGET).TERM_T       * TARGET with COND=TRUE?
+         AIF   ('&LBL'(1,1) EQ '(').TERM_R
+         &OPCD &LBL                    * If false: skip then-block
+         MEXIT ,                       *
+.TERM_R  ANOP  ,                       *
+&OPCD    SETC  '&OPCD'.'R'             * Create branch-to-register
+&LBL     SETC  '&LBL'(2,K'&LBL-2)      * Extract register name
+         &OPCD &LBL                    * If false: skip then-block
+         MEXIT ,                       *
+.*
+.* Terminate IF by branching to the specifed target if condition is met
+.TERM_T  ANOP  ,
+         AIF   (K'&OPCD EQ 2).TERM_T2
+         AIF   (K'&OPCD EQ 3).TERM_T3
+         MNOTE 'Internal error 11: invalid opcode'
+         MEXIT
+.*
+.TERM_T2 ANOP  ,                       *
+&OPCD    SETC  'BN'.'&OPCD'(2,1)       * Change Bx --> BNx
+         AIF   ('&TARGET'(1,1) EQ '(').TERM_TR
+         &OPCD &TARGET                 * If true: branch to target
+         MEXIT ,                       *
+.*
+.TERM_T3 ANOP  ,                       *
+&OPCD    SETC  'B'.'&OPCD'(3,1)        * Change BNx --> Bx
+         AIF   ('&TARGET'(1,1) EQ '(').TERM_TR
+         &OPCD &TARGET                 * If true: branch to target
+         MEXIT ,                       *
+.*
+.TERM_TR ANOP  ,                       *
+&OPCD    SETC  '&OPCD'.'R'             * Create branch-to-register
+         &OPCD &_TREG                  * If true: branch to target
+         MEXIT ,                       *
+.**********************************************************************
+.MEND    MEND

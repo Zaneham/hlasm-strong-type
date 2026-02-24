@@ -1,0 +1,134 @@
+{
+  "name": "hlasm-strong-type",
+  "displayName": "HLASM Strong Type Toolkit",
+  "description": "Strong type checking, macro browser, and control block reference for HLASM/assembler development",
+  "version": "0.3.0",
+  "publisher": "ZaneHam",
+  "license": "GPL-2.0-or-later",
+  "icon": "icon.png",
+  "homepage": "https://github.com/hlasm-tooling/hlasm-strong-type",
+  "bugs": {
+    "url": "https://github.com/hlasm-tooling/hlasm-strong-type/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "hlasm",
+    "assembler",
+    "mainframe",
+    "z/OS",
+    "s390"
+  ],
+  "activationEvents": [
+    "onLanguage:hlasm",
+    "onLanguage:asm"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "hlasm-explorer",
+          "title": "HLASM",
+          "icon": "$(symbol-misc)"
+        }
+      ]
+    },
+    "views": {
+      "hlasm-explorer": [
+        {
+          "id": "hlasmMacroBrowser",
+          "name": "Macro Browser",
+          "icon": "$(library)",
+          "contextualTitle": "HLASM Macros"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "hlasm",
+        "aliases": ["HLASM", "High Level Assembler", "Assembler"],
+        "extensions": [".asm", ".mac", ".mlc", ".bal", ".hlasm"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "hlasm.showMacroBrowser",
+        "title": "HLASM: Show Macro Browser"
+      },
+      {
+        "command": "hlasm.insertMacro",
+        "title": "HLASM: Insert Macro Template"
+      },
+      {
+        "command": "hlasm.refreshMacros",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "hlasm.refreshMacros",
+          "when": "view == hlasmMacroBrowser",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "HLASM Strong Type",
+      "properties": {
+        "hlasm.enableTypeChecking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable strong type checking for registers"
+        },
+        "hlasm.macroLibraries": {
+          "type": "array",
+          "default": [],
+          "description": "Additional macro library paths"
+        },
+        "hlasm.showControlBlockHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show control block field hints on hover"
+        },
+        "hlasm.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to hlasm-lsp binary (auto-detected if empty)"
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "hlasm",
+        "path": "./snippets/hlasm.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hlasm-tooling/hlasm-strong-type"
+  }
+}

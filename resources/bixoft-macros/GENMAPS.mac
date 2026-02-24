@@ -1,0 +1,161 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro expands 1 or more mapping macro's
+.* Used by PGM-macro
+.*
+&LABEL   GENMAPS &MAPS,                * Sublist of map-macro's        *
+               &LIST=NO                * YES/NO create map-listing
+.*
+.* &MAPS specifies - in sublist notation - the mapping macro's to be
+.*       expanded. Must be in sublist notation.
+.* &LIST specifies whether or not the listing of the expanded mapping
+.*       macro's are to be included in the assembly listing.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC GENMAPS                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &SP_SHOWALL             * List suppression switch
+         GBLC  &BXA_MAPS_LST           * List option on highest level
+         LCLB  &LVL1                   * On if first level invocation
+         LCLC  &_GEN                   * GEN/NOGEN option for PRINT
+         LCLC  &_PRINT                 * Print option for PRINT
+         LCLC  &_PROPT                 * Print option for PUSH/POP
+         LCLC  &SLIST                  * Copy of SYSLIST
+         LCLA  &S                      * Index for SYSLIST
+         LCLA  &I                      * Index into list of map-macro's
+         LCLC  &MACRO                  * Name of macro to generate
+.*
+.* If parameter LIST not yes or no: issue error
+         AIF   ('&LIST' EQ 'YES').NOERR1
+         AIF   ('&LIST' EQ 'NO').NOERR1
+.ERR1    MNOTE 8,'Parameter LIST must specify either YES or NO'
+.NOERR1  ANOP
+.*
+.* If this is not a recursive invocation, then copy the LIST-option to
+.* a global, for use in subsequent (recursive) invocations.
+         AIF   (K'&BXA_MAPS_LST NE 0).NOTLVL1
+&LVL1    SETB  1                       * First level invocation:
+&BXA_MAPS_LST SETC '&LIST'             *       set global
+         AIF   (NOT &SP_SHOWALL).NOTLVL1 * For SHOWALL-option
+&BXA_MAPS_LST SETC 'YES'               *    force value of LIST=YES
+.NOTLVL1 ANOP
+.*
+.* Set _GEN variable according to LIST parameter
+&_GEN    SETC  'NOGEN'                 * LIST=NO is default
+         AIF   ('&BXA_MAPS_LST' NE 'YES').NOGEN
+&_GEN    SETC  'GEN'
+.NOGEN   ANOP
+.*
+.* Set listing options
+         AIF   (&SP_SHOWALL).PRINTOK   * SHOWALL: show PUSH/POP/PRINT
+&_PRINT  SETC  ',NOPRINT'              * Not ALL: omit PRINT lines
+&_PROPT  SETC  ',NOPRINT'              * Not ALL: omit PUSH/POP lines
+.PRINTOK ANOP
+.*
+.* If maps not specified as a sublist, do so
+         AIF   (K'&MAPS EQ 0).GOON     * First parm missing
+         AIF   ('&MAPS'(1,1) EQ '(').GOON * &MAPS already a sublist
+&SLIST   SETC  '&SYSLIST(1)'           * Set SLIST to first entry
+&S       SETA  1                       * S indexes SYSLIST
+.LOOPS   ANOP  ,                       * Loop thru SYSLIST entries
+&S       SETA  &S+1                    * Point next entry
+         AIF   (&S GT N'&SYSLIST).LOOPSOK * SYSLIST done?
+&SLIST   SETC  '&SLIST'.',&SYSLIST(&S)' * Append SYSLIST entry
+         AGO   .LOOPS                  * And go copy nesxt entry
+.LOOPSOK ANOP
+         GENMAPS (&SLIST),             * Recurse using sublist         *
+               LIST=&BXA_MAPS_LST      *    notation
+         MEXIT
+.GOON    ANOP
+.*
+.* Set up loop control logic
+&I       SETA  0
+.LOOP    ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&MAPS).LOOPOK
+.*
+&MACRO   SETC  '&MAPS(&I)'             * Take value from list
+         AIF   (K'&MACRO LT 3).PREFIX  * Too short to contain 'MAP'
+         AIF   ('&MACRO'(1,3) EQ 'MAP').PREFOK * Prefix is OK
+.PREFIX  ANOP  ,                       * Add prefix 'MAP' to macro-name
+&MACRO   SETC  'MAP&MACRO'             * Prefix with MAP
+.PREFOK  ANOP
+         AIF   (K'&MACRO LE 8).MACROK  * If macro is too long ...
+&MACRO   SETC  '&MACRO'(1,8)           *  truncate to 8 positions
+.MACROK  ANOP
+.*
+.* Expand macro-operand and issue message for listing
+         PUSH  PRINT&_PROPT            * Save print options
+         PRINT ON,&_GEN,NODATA&_PRINT  * Set print options
+         &MACRO ,                      * Expand macro from list
+         POP   PRINT&_PROPT            * Restore print options
+.*
+.* If list=yes: eject page
+         AIF   ('&_GEN' EQ 'NOGEN').LOOP
+         EJECT
+         AGO   .LOOP                   * And do next dsect
+.*
+.* We're done: restore printing options and exit
+.LOOPOK  ANOP
+         AIF  (NOT &LVL1).MEND
+&BXA_MAPS_LST SETC ''                  * Reset global for list-option
+.*
+.MEND    MEND

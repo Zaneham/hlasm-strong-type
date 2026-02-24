@@ -1,0 +1,134 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Set Control Block formats 4
+.* The DSCB-formats are documented in DFSMSdfp Advanced Services
+.*                                    Topic 1.1.1 ff
+.*
+&LABEL   MAPDSCB4 &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDSCB4               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDSCB4       * DSCB4 already expanded?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DSCB4').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDSCB4).MEND
+&BXA_MAC_MAPDSCB4 SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DSCB4
+&BXA_CB_DSCB4 SETC 'DSCB4'
+.*
+.* DS4VTOCI - VTOC INDICATORS
+DS4DOSBT EQUOVR ,,b,DS4VTOCI
+DS4DVTOC EQUOVR ,,b,DS4VTOCI
+DS4EFVLD EQUOVR ,,b,DS4VTOCI
+DS4DSTKP EQUOVR ,,b,DS4VTOCI
+DS4DOCVT EQUOVR ,,b,DS4VTOCI
+DS4DIRF  EQUOVR ,,b,DS4VTOCI
+DS4DICVT EQUOVR ,,b,DS4VTOCI
+DS4IVTOC EQUOVR ,,b,DS4VTOCI
+.*
+.* DS4SMSFG - SYSTEM MANAGED STORAGE INDICATORS
+DS4SMS   EQUOVR ,,v,DS4SMSFG
+DS4SMSCV EQUOVR ,,v,DS4SMSFG
+DS4NTSMS EQUOVR ,,v,DS4SMSFG
+.*
+.* DS4DEVFG - FLAG BYTE
+DS4AMBJ  EQUOVR ,,b,DS4DEVFG
+DS4DSF   EQUOVR ,,b,DS4DEVFG
+DS4DEVAV EQUOVR ,,b,DS4DEVFG
+.*
+.* DS4EFLVL - EXTENDED FREE-SPACE MANAGEMENT
+DS4EFL00 EQUOVR ,,v,DS4EFLVL
+DS4EFL07 EQUOVR ,,v,DS4EFLVL
+.*
+.* IECSDSL does not generate a DSECT-statement
+         MNOTE *,'Including IECSDSL1 mapping macro'
+DSCB4    DSECT ,                       * Start of Format-4 DSECT
+         IECSDSL1 4                    *
+         EQUOVR *END
+.*
+         ORG   ,                       *
+DSCB4_LEN EQU  *-DSCB4                 * Length of Format-4
+*
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

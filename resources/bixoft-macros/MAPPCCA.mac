@@ -1,0 +1,215 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Physical Configuration Communication Area
+.*
+&LABEL   MAPPCCA &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPPCCA                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPPCCA        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'PCCA').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPPCCA).MEND
+&BXA_MAC_MAPPCCA SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_PCCA
+&BXA_CB_PCCA SETC 'PCCA'
+.*
+.* PCCAMCHF - MACHINE CHECK FLAGS
+PCCASMCH EQUOVR ,,b,PCCAMCHF
+.*
+.* PCCATMFL - FIRST BYTE OF PCCATMST
+PCCAINIT EQUOVR ,,b,PCCATMFL
+PCCASYNC EQUOVR ,,b,PCCATMFL
+PCCAVKIL EQUOVR ,,b,PCCATMFL
+PCCAMCC  EQUOVR ,,b,PCCATMFL
+PCCAMINT EQUOVR ,,b,PCCATMFL
+PCCARV02 EQUOVR ,,b,PCCATMFL
+PCCARV03 EQUOVR ,,b,PCCATMFL
+PCCARV04 EQUOVR ,,b,PCCATMFL
+.*
+.* PCCATODE - TOD CLOCK ERROR FLAGS
+PCCANUTD EQUOVR ,,b,PCCATODE
+PCCANFTD EQUOVR ,,b,PCCATODE
+PCCACTTD EQUOVR ,,b,PCCATODE
+.*
+.* PCCACCE - FLAGS FOR CLOCK COMPARATOR
+PCCANUCC EQUOVR ,,b,PCCACCE
+PCCANFCC EQUOVR ,,b,PCCACCE
+PCCACTCC EQUOVR ,,b,PCCACCE
+.*
+.* PCCAINTE - FLAGS FOR CPU TIMER
+PCCANUIN EQUOVR ,,b,PCCAINTE
+PCCANFIN EQUOVR ,,b,PCCAINTE
+PCCACTIN EQUOVR ,,b,PCCAINTE
+.*
+.* PCCARPB - EXTERNAL CALL SIGP BUFFER
+PCCASWTH EQUOVR ,,b,PCCARPB
+PCCARV4A EQUOVR ,,b,PCCARPB
+PCCARQCK EQUOVR ,,b,PCCARPB
+PCCAGTFR EQUOVR ,,b,PCCARPB
+PCCARV4B EQUOVR ,,b,PCCARPB
+PCCAMODE EQUOVR ,,b,PCCARPB
+PCCASTCP EQUOVR ,,b,PCCARPB
+PCCAMEMS EQUOVR ,,b,PCCARPB
+.*
+.* PCCARISP - CONTAINS PARALLEL/SERIAL REQUEST INDICATOR
+PCCAPARL EQUOVR ,,b,PCCARISP
+PCCASERL EQUOVR ,,b,PCCARISP
+PCCARV06 EQUOVR ,,b,PCCARISP
+PCCARV07 EQUOVR ,,b,PCCARISP
+PCCARV08 EQUOVR ,,b,PCCARISP
+PCCARV09 EQUOVR ,,b,PCCARISP
+PCCARV10 EQUOVR ,,b,PCCARISP
+PCCARV11 EQUOVR ,,b,PCCARISP
+.*
+.* PCCAEMS2 - SECOND BYTE OF PCCAEMSI
+PCCASERP EQUOVR ,,b,PCCAEMS2
+PCCARV13 EQUOVR ,,b,PCCAEMS2
+PCCARV14 EQUOVR ,,b,PCCAEMS2
+PCCARV15 EQUOVR ,,b,PCCAEMS2
+PCCARV16 EQUOVR ,,b,PCCAEMS2
+PCCARV17 EQUOVR ,,b,PCCAEMS2
+PCCARV18 EQUOVR ,,b,PCCAEMS2
+PCCARV19 EQUOVR ,,b,PCCAEMS2
+.*
+.* PCCAEMS3 - THIRD BYTE OF PCCAEMSI
+PCCASERF EQUOVR ,,b,PCCAEMS3
+PCCARV21 EQUOVR ,,b,PCCAEMS3
+PCCARV22 EQUOVR ,,b,PCCAEMS3
+PCCARV23 EQUOVR ,,b,PCCAEMS3
+PCCARV24 EQUOVR ,,b,PCCAEMS3
+PCCARV25 EQUOVR ,,b,PCCAEMS3
+PCCARV26 EQUOVR ,,b,PCCAEMS3
+PCCARV27 EQUOVR ,,b,PCCAEMS3
+.*
+.* PCCARMSB - CONTAINS RMS INDICATOR
+PCCARV28 EQUOVR ,,b,PCCARMSB
+PCCARV29 EQUOVR ,,b,PCCARMSB
+PCCARV30 EQUOVR ,,b,PCCARMSB
+PCCARV31 EQUOVR ,,b,PCCARMSB
+PCCARV32 EQUOVR ,,b,PCCARMSB
+PCCARV33 EQUOVR ,,b,PCCARMSB
+PCCARV34 EQUOVR ,,b,PCCARMSB
+PCCARMS  EQUOVR ,,b,PCCARMSB
+.*
+.* PCCAATTR - PROCESSOR ATTRIBUTES
+PCCACPUM EQUOVR ,,b,PCCAATTR
+PCCAIO   EQUOVR ,,b,PCCAATTR
+PCCANPFA EQUOVR ,,b,PCCAATTR
+PCCAR101 EQUOVR ,,b,PCCAATTR
+PCCAR102 EQUOVR ,,b,PCCAATTR
+PCCAR103 EQUOVR ,,b,PCCAATTR
+PCCAR104 EQUOVR ,,b,PCCAATTR
+PCCAR105 EQUOVR ,,b,PCCAATTR
+.*
+.* PCCAMFA - MALFUNCTION ALERT FLAGS
+PCCASMFA EQUOVR ,,b,PCCAMFA
+.*
+.* PCCAACRN - CAUSE OF ACR
+PCCAKUKN EQUOVR ,,v,PCCAACRN
+PCCAKMFA EQUOVR ,,v,PCCAACRN
+PCCAKIPT EQUOVR ,,v,PCCAACRN
+PCCAKSDT EQUOVR ,,v,PCCAACRN
+PCCAKIVT EQUOVR ,,v,PCCAACRN
+PCCAKTCT EQUOVR ,,v,PCCAACRN
+PCCAKPTT EQUOVR ,,v,PCCAACRN
+PCCAKCCT EQUOVR ,,v,PCCAACRN
+PCCAKPST EQUOVR ,,v,PCCAACRN
+PCCAKADT EQUOVR ,,v,PCCAACRN
+PCCAKSLT EQUOVR ,,v,PCCAACRN
+PCCAKESL EQUOVR ,,v,PCCAACRN
+PCCAKTCF EQUOVR ,,v,PCCAACRN
+PCCAKDAT EQUOVR ,,v,PCCAACRN
+PCCAKSCF EQUOVR ,,v,PCCAACRN
+PCCAKUME EQUOVR ,,v,PCCAACRN
+.*
+         MNOTE *,'Including IHAPCCA mapping macro'
+         IHAPCCA ,
+         EQUOVR *END
+*
+PCCA     DSECT ,                       * Resume PCCA DSECT
+         ORG
+PCCA_LEN EQU   *-PCCA                  * Length of PCCA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

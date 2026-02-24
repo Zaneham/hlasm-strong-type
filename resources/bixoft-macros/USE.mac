@@ -1,0 +1,456 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro sets up USING statements with labeled dependent USINGs
+.* for all of its DCL-declared subfields.
+.*
+.* May either specify a 'normal' USE statement, which has either the
+.*     lay-out of a labeled or unlabeled USING, or the lay-out of a
+.*     labeled or unlabeled dependent USING.
+.* May also specify a 'register' USE statement, which has no label and
+.*     specifies only a register.
+.* May also specify an 'automatic' USE statement, in which case
+.*     only the label and the field to be set addressable are
+.*     supplied. A labeled dependent USING will be generated. The
+.*     field to be set addressable is identified by supplying the
+.*     DSECT-name and the field-name within that DSECT, separated by a
+.*     period.
+.* Note: Automatically generated USE-statements for sub-structures are
+.*     always normal USE-statements. Automatic USE-statements therefore
+.*     are never generated automatically. An automatic USE-statement
+.*     generates its own normal USE-statement automatically.
+.*
+&LABEL   USE   &DSECT,                 * Control block name            *
+               &BASE,                  * Register (or field) for using *
+               &START=,                * 1st addressable field         *
+               &OVR=,                  * Overriding labels             *
+               &SCOPE=LOCAL            * LOCAL/CALLED
+.*
+.* &LABEL specifies a USING label, to be used on the main USING
+.*        generated to establish addressability to &DSECT
+.* &DSECT specifies the control block to be set addressable.
+.*        If specified as DSECTname.fieldname then a dependent using
+.*        for that field in the specified DSECT will be generated. The
+.*        label for the dependent using will be taken from the label
+.*        parm in the USE-statement. For this type of USE-statement
+.*        the parameters BASE, PRFX, START, and OVR are ignored.
+.* &BASE  specifies either a register that points to &DSECT or a field
+.*        that contains a control block of type &DSECT.
+.* &START specifies the name of a field in the dsect, where
+.*        addressability starts. If omitted, defaults to the control
+.*        block name.
+.* &OVR   specifies overriding labels as follows:
+.*        OVR=((field,label),(field,label)...)
+.*        If the specified field is a DCL-declared structure, then the
+.*        specified label will override the USING-label specified on
+.*        the DCL-statement. If the label field is omitted, an
+.*        unlabeled dependent USING will be generated. If a *NOUSE
+.*        is specified for the overriding label, the no USING will
+.*        be generated for the specified field.
+.* &SCOPE specifies the scope of the USE-statement:
+.*        LOCAL  - valid until DROPped
+.*        CALLED - valid for all subroutines called from the remainder
+.*                 of this subroutine.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC USE                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &SP_SHOWALL             * Showall option activated?
+         LCLC  &_START                 * Start of addressable area
+         LCLA  &REG                    * Register number
+         LCLB  &BASREG                 * Base is a register Y/N
+         LCLB  &EQUREG                 * Base is an equated reg
+         LCLC  &FLD                    * 1 entry from BXA_USE_FLD
+         LCLC  &LBL                    * 1 entry from BXA_USE_LBL
+         LCLC  &SDS                    * 1 entry from BXA_USE_SDS
+         LCLC  &_OVR                   * 1 entry from OVR-parm
+         LCLC  &OVR1(5)                * Field names from OVR-parm
+         LCLC  &OVR2(5)                * Overriding labels from OVR
+         LCLA  &I                      * index for &BXA_USE_...
+         LCLA  &J                      * extra numeric var
+         LCLA  &R                      * Index value for BXA_USED_REGS
+         GBLC  &BXA_USE_DS(50)         * Enclosing DSECT names
+         GBLC  &BXA_USE_FLD(50)        * Defined complex fields
+         GBLC  &BXA_USE_LBL(50)        * Labels to be used
+         GBLC  &BXA_USE_SDS(50)        * Enclosed DSECT names
+         GBLC  &BXA_USEC_ROUT(50)      * Routines for SCOPE=CALLED
+         GBLC  &BXA_USEC_ARGL(50)      * Labels for SCOPE=CALLED
+         GBLC  &BXA_USEC_ARG1(50)      * CB-names for SCOPE=CALLED
+         GBLC  &BXA_USEC_ARG2(50)      * Bases for SCOPE=CALLED
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLC  &BXA_USELBL(50)         * Labels of active USINGs
+         GBLA  &BXA_USEREG(50)         * Associated registers
+         GBLC  &BXA_USEFLD(50)         * And associated base fields
+         GBLA  &BXA_USENDX0(5)         * Low valid pointer
+         GBLA  &BXA_USENDX1(5)         * High valid pointer
+         GBLA  &BXA_USENDX             * Current entry pointer
+         GBLC  &BXA_SUBR               * Current subroutine or *MAIN
+         GBLA  &BXA_NUMVAL             * Output from CHKREG
+         LCLA  &DOTLOC                 * Location of dot in &DSECT
+         LCLC  &_DSECT1                * Control block name before dot
+         LCLC  &_DSECT2                * Field name following dot
+.*
+.* Check the SCOPE parameter
+         AIF   ('&SCOPE' EQ 'LOCAL').NOERR8
+         AIF   ('&SCOPE' EQ 'CALLED').NOERR8
+.ERR8    MNOTE 8,'SCOPE-parameter must specify either LOCAL or CALLED'
+.NOERR8  ANOP
+.*
+.* Check the DSECT parameter
+         AIF   (K'&DSECT EQ 0).ERR1A   * Must not be empty
+&DOTLOC  SETA  ('&DSECT' INDEX '.')    * Is there a dot in &DSECT?
+         AIF   (&DOTLOC GT 0).NOERR1   * Ok: automatic use statement
+         CHKREG &DSECT                 * Was a register specified?
+         AIF   (&BXA_RC GT 4).NOERR1   * No: normal use statement
+.* Should be a register use statement
+         AIF   (K'&BASE GT 0).ERR1B    * Base? Coding error
+         AIF   (K'&LABEL GT 0).ERR1C   * Label not allowed
+         AIF   (K'&START GT 0).ERR1D   * START not allowed
+         AIF   (K'&OVR GT 0).ERR1D     * OVR not allowed
+         AGO   .REGUSE                 * Ok: register-USE
+.ERR1A   MNOTE 8,'First operand missing (control block name)'
+         MEXIT
+.ERR1B   MNOTE 8,'You specified a register for a DSECT name'
+         MEXIT
+.ERR1C   MNOTE 4,'Label not allowed on a register-USE: ignored'
+         AGO   .NOERR1
+.ERR1D   MNOTE 8,'On a register-USE no parms but SCOPE are allowed'
+.NOERR1  ANOP
+.*
+.* Check the BASE parameter
+         AIF   (K'&BASE EQ 0).ERR2A    * Must not be empty
+         AIF   (&DOTLOC GT 0).ERR2B    * Will be ignored
+.* Should be a normal use statement
+         CHKREG &BASE                  * A register was specified?
+         AIF   (&BXA_RC EQ 8).NOERR2   * Not a reg: dependent USING
+         AIF   (&BXA_RC EQ 0).EQUREG   * Ok: USE an undefined reg
+.* NUMVAL = 4: a literal number 0-15 was specified
+&REG     SETA  &BASE                   * Extract register number
+         AGO   .USEREG
+.*
+.* &BASE is a known register: check its type
+.EQUREG  ANOP  ,                       * Check EQUated register
+&EQUREG  SETB  1                       * Indicate EQUated reg
+         GBLC  &(BXA_REGT_&BASE)       * Declare type field for reg
+         GBLA  &(BXA_REGN_&BASE)       * Declare number field for reg
+&REG     SETA  &(BXA_REGN_&BASE)       * Extract register number
+         AIF   ('&(BXA_REGT_&BASE)' NE 'g').ERR2C * Invalid reg type
+.USEREG  ANOP  ,                       * Second operand valid register
+&BASREG  SETB  1                       * Indicate basing on a reg
+.*
+.* The register is available?
+         CHKREG &BASE,g                * Valid GPR?
+         AIF   (&BXA_RC GT 4).ERR2D    * No: error
+&R       SETA  &BXA_NUMVAL+1           * Increment reg to obtain index
+         AIF   (&BXA_USED_REGS(&R)).ERR2E * In use!
+.*
+         AIF   (&REG NE 0).NOERR2      * Using Register 0?
+         AIF   ('&DSECT' EQ 'PSA').NOERR2 * R0 can be used only for PSA
+         AGO   .ERR2F
+.*
+.ERR2A   ANOP
+         AIF   (&DOTLOC GT 0).NOERR2
+         MNOTE 8,'Second operand missing (register or complex field nam*
+               e)'
+         MEXIT
+.ERR2B   MNOTE 4,'BASE parameter ignored for automatic USE statement'
+         AGO   .NOERR2
+.ERR2C   MNOTE 8,'Register &BASE is not a general purpose register'
+         MEXIT
+.ERR2D   MNOTE 8,'&BASE is not a valid general purpose regiter'
+         MEXIT
+.ERR2E   MNOTE 8,'Register &BASE is currently not available'
+         MEXIT
+.ERR2F   MNOTE 8,'With register 0 you cannot address &DSECT'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST GT 2).ERR3A
+         AIF   (&DOTLOC EQ 0).NOERR3
+         AIF   (N'&SYSLIST GT 1).ERR3B
+         AGO   .NOERR3
+.ERR3A   MNOTE 4,'More than 2 parameters specified: ignored'
+         AGO   .NOERR3
+.ERR3B   MNOTE 4,'More than 1 parameter specified: ignored'
+.NOERR3  ANOP
+.*
+.* Check the LABEL parameter
+         AIF   (K'&LABEL EQ 0).NOERR4  *
+&I       SETA  &BXA_USENDX0(&BXA_USENDX) * Start loop counter
+.LOOP5   ANOP  ,                       * Search for active label
+&I       SETA  &I+1                    * Point next active label
+         AIF   (&I GT &BXA_USENDX1(&BXA_USENDX)).NOERR4 * Not found: ok
+         AIF   ('&LABEL' NE '&BXA_USELBL(&I)').LOOP5 * Skip mismatch
+.ERR4A   MNOTE 8,'Label &LABEL is currently active: use OVR parameter'
+         MEXIT ,                       *
+.NOERR4  ANOP  ,                       *
+.*
+.* Check the START parameter
+         AIF   (&DOTLOC NE 0 AND K'&START NE 0).ERR5A
+         AIF   (K'&START EQ 0).NOERR5
+         AIF   ('&SCOPE' EQ 'CALLED').ERR5C
+         AIF   (NOT &BASREG).ERR5B
+         AGO   .NOERR5
+.ERR5A   MNOTE 4,'START parameter ignored for automatic USE statement'
+         AGO   .NOERR5
+.ERR5B   MNOTE 8,'START specified, but second argument is not a registe*
+               r'
+         AGO   .NOERR5
+.ERR5C   MNOTE 8,'START specified, not valid with SCOPE=CALLED'
+.NOERR5  ANOP
+.*
+.* Check the OVR-parameter
+         AIF   (K'&OVR EQ 0).NOERR7
+         AIF   (&DOTLOC NE 0).ERR7H
+         AIF   ('&SCOPE' EQ 'CALLED').ERR7I
+         AIF   ('&OVR'(1,1) NE '(').ERR7A
+         AIF   (N'&OVR EQ 0).ERR7B
+.* Check all sub-parameters and copy to &OVR1 and &OVR2
+&I       SETA  0
+.LOOP0   ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&OVR).LOOP0OK
+&_OVR    SETC  '&OVR(&I)'              * Copy i-th parameter
+         AIF   (K'&_OVR EQ 0).ERR7C
+         AIF   ('&_OVR'(1,1) NE '(').ERR7D
+         AIF   (N'&OVR(&I) EQ 0).ERR7E
+         AIF   (K'&OVR(&I,1) EQ 0).ERR7F
+&OVR1(&I) SETC '&OVR(&I,1)'            * Copy field name
+&OVR2(&I) SETC '&OVR(&I,2)'            * Copy label for using
+         AIF   (N'&OVR(&I) GT 2).ERR7G
+         AGO   .LOOP0                  * And process next entry
+.LOOP0OK ANOP
+         AGO   .NOERR7
+.ERR7A   MNOTE 8,'OVR-parameter must be specified as a sublist'
+         AGO   .NOERR7
+.ERR7B   MNOTE 4,'OVR-parameter is specified with an empty sublist'
+         AGO   .NOERR7
+.ERR7C   MNOTE 4,'OVR-parameter contains empty sub-parameter'
+         AGO   .LOOP0
+.ERR7D   MNOTE 8,'OVR-parameter ''&_OVR'' is not enclosed in parenthese*
+               s'
+         AGO   .LOOP0
+.ERR7E   MNOTE 4,'OVR-parameter ''&_OVR'' is an empty sub-parameter'
+         AGO   .LOOP0
+.ERR7F   MNOTE 8,'OVR-parameter ''&_OVR'' does not specify a field name*
+                (first sub-parm)'
+         AGO   .LOOP0
+.ERR7G   MNOTE 4,'OVR-parameter ''&_OVR'' contains more than 2 sub-parm*
+               s: remainder ignored'
+         AGO   .LOOP0
+.ERR7H   MNOTE 4,'OVR parameter ignored for automatic USE statement, us*
+               e the label field instead'
+         AGO   .NOERR7
+.ERR7I   MNOTE 8,'OVR specified, not valid with SCOPE=CALLED'
+.NOERR7  ANOP
+.*
+.* For automatic USE-statements the LABEL parameter must be supplied
+         AIF   (&DOTLOC EQ 0).NOERR9
+         AIF   (K'&LABEL GT 0).NOERR9
+.ERR9    MNOTE 4,'LABEL-field must not be blank on an automatic USE'
+.NOERR9  ANOP
+.*
+.* For SCOPE=CALLED insert parameters into tables
+         AIF   ('&SCOPE' NE 'CALLED').LOCAL
+&I       SETA  N'&BXA_USEC_ROUT+1      * Point to empty entry
+&BXA_USEC_ROUT(&I) SETC '&BXA_SUBR'    * Set up new
+&BXA_USEC_ARGL(&I) SETC '&LABEL'       *  entries in tables
+&BXA_USEC_ARG1(&I) SETC '&DSECT'       *   for use by ENDUSE
+&BXA_USEC_ARG2(&I) SETC '&BASE'        *    and BEGSR
+.LOCAL   ANOP
+.*
+.* For automatic USE statements the field-name must be separated from
+.* the DSECT name, and the field's DSECT must be located.
+.*
+         AIF   (&DOTLOC EQ 0).NORMAL   * No dot: normal USE
+&_DSECT1 SETC  '&DSECT'(1,&DOTLOC-1)   * Extract control block name
+&_DSECT2 SETC  '&DSECT'(&DOTLOC+1,*)   * Extract complex field name
+&I       SETA  0                       * I indexes &BXA_USE_... arrays
+.LOOP4   ANOP  ,                       * Search
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&BXA_USE_DS).LOOP4NF * At end: not found
+         AIF   ('&BXA_USE_DS(&I)' NE '&_DSECT1').LOOP4 * Skip mismatch
+         AIF   ('&BXA_USE_FLD(&I)' NE '&_DSECT2').LOOP4 * Skip mismatch
+.* We found the entry we're looking for.
+         AIF   ('&BXA_USE_LBL(&I)' NE '*NOUSE').LOOP4R1
+&LABEL   USE   &BXA_USE_SDS(&I),&_DSECT2 * Set area addressable
+         MEXIT
+.LOOP4NF ANOP
+         MNOTE 8,'Field &_DSECT2 in &_DSECT1 not defined with a DCL-sta*
+               tement'
+         MEXIT
+.LOOP4R1 MNOTE 4,'Statement ignored: &_DSECT2 is always generated with *
+               &_DSECT1'
+         MEXIT
+.*
+.* Generate first USING
+.NORMAL  ANOP  ,                       * Start for normal USE statement
+&_START  SETC  '&START'
+         AIF   (K'&_START NE 0).USING  * Use START if specified
+&_START  SETC  '&DSECT'                * Otherwise use dsect name
+.USING   ANOP
+&LABEL   USING &_START,&BASE
+.*
+.* Now look up the dsect name used, to see if there are any dependent
+.* USINGs to be generated.
+&I       SETA  0                       * &I indexes &BXA_USE_... tables
+.LOOP1   ANOP  ,                       * Search &BXA_USE_DS for &DSECT
+&I       SETA  &I+1                    * Point next element
+         AIF   (&I GT N'&BXA_USE_DS).LOOP1OK * At end-of-table quit
+         AIF   ('&BXA_USE_DS(&I)' NE '&DSECT').LOOP1 * Skip mismatch
+&FLD     SETC  '&BXA_USE_FLD(&I)'
+&LBL     SETC  '&BXA_USE_LBL(&I)'
+&SDS     SETC  '&BXA_USE_SDS(&I)'
+.*
+.* If the field-name in &FLD occurs in the OVR-parameter (OVR1-array)
+.* then the USING label in &LBL must be overridden with the value in
+.* the OVR2-array. Used-up entries in OVR1 must be removed, so
+.* we can issue error messages for any overrides 'not used'
+         AIF   (K'&OVR EQ 0).LOOP2OK
+&J       SETA  0                       * Index for OVR1/OVR2
+.LOOP2   ANOP  ,                       * Scan OVR1 until FLD found
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT N'&OVR1).LOOP2OK * On end: quit loop
+         AIF   ('&FLD' NE '&OVR1(&J)').LOOP2 * Skip mismatch
+&LBL     SETC  '&OVR2(&J)'             * Override default label
+&OVR1(&J) SETC ''                      * Remove entry from table
+.LOOP2OK ANOP  ,                       * Drop-thru on located entry
+.*
+.* If R13 is used as a base register and it has &DSECT specified with
+.* an offset (presumably 16), and the sub-dsect to generate is BXASAVE,
+.* then BXASAVE is to be replaced by SAVEAREA.
+         AIF   (NOT &BASREG).LOOP1DO   * Not a register
+         AIF   (&REG NE 13).LOOP1DO    * Not register 13
+         AIF   ('&SDS' NE 'BXASAVE').LOOP1DO * Some other DSECT
+&J       SETA  ('&START' INDEX '+')    * Position of '+' in START parm
+         AIF   (&J EQ 0).LOOP1DO       * + not occurring
+&SDS     SETC  'SAVEAREA'              * Replace BXASAVE with SAVEAREA
+&FLD     SETC  '&START'                * Replace basing field as well
+.*
+.LOOP1DO ANOP  ,                       *
+         AIF   ('&LBL' EQ '*NOUSE').LOOP1 * Skip non-automatic entries
+         AIF   (K'&LABEL EQ 0).LOOP1US * Skip non-automatic entries
+&FLD     SETC  '&LABEL'.'.'.'&FLD'     *
+.LOOP1US ANOP  ,                       *
+&LBL     USE   &SDS,&FLD               * Recursive invocation
+         AGO   .LOOP1                  * And go check remaining entries
+.LOOP1OK ANOP
+.*
+.* Any entries remaining in the OVR1-array are field names not found
+.* in &DSECT. I.e. they are not defined thru the DCL macro.
+         AIF   (K'&OVR EQ 0).LOOP3OK
+&J       SETA  0                       * Index for OVR1/OVR2
+.LOOP3   ANOP  ,                       * Scan OVR1
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT N'&OVR1).LOOP3OK * On end: quit loop
+         AIF   (K'&OVR1(&J) EQ 0).LOOP3 * Skip used entries
+         MNOTE 8,'Field &OVR1(&J) not DCL-defined in &DSECT'
+         AGO   .LOOP3
+.LOOP3OK ANOP
+         MEXIT
+.*
+.* Handling of register-USE
+.REGUSE  ANOP
+.*
+.* Label not allowed on register USE
+         AIF   (K'&LABEL EQ 0).NOERR6A
+.ERR6A   MNOTE 4,'Label parameter is not allowed on register USE: ignor*
+               ed'
+.NOERR6A ANOP
+.*
+.* The register is available?
+         CHKREG &DSECT,g               * Valid GPR?
+         AIF   (&BXA_RC GT 4).ERR6C    * No: error
+&R       SETA  &BXA_NUMVAL+1           * Increment reg to obtain index
+         AIF   (&BXA_USED_REGS(&R)).ERR6B
+.*
+.* For SCOPE=CALLED insert parameters into tables
+         AIF   ('&SCOPE' NE 'CALLED').LOCAL2
+&I       SETA  N'&BXA_USEC_ROUT+1      * Point to empty entry
+&BXA_USEC_ROUT(&I) SETC '&BXA_SUBR'    * Set up new
+&BXA_USEC_ARGL(&I) SETC ''             *  entries in tables
+&BXA_USEC_ARG1(&I) SETC '&DSECT'       *   for use by ENDUSE
+&BXA_USEC_ARG2(&I) SETC '&BASE'        *    and BEGSR
+.LOCAL2  ANOP
+.*
+.* Set the designated register in use (&R still contains reg-index)
+&BXA_USED_REGS(&R) SETB 1              * Indicate register is in use
+&N       SETA  &BXA_USENDX1(&BXA_USENDX)+1 * Get pointer to free entry
+&BXA_USELBL(&N) SETC ''                * Save label in table
+&BXA_USEREG(&N) SETA &R                * and register index value
+&BXA_USEFLD(&N) SETC ''                * Set no field name
+&BXA_USENDX1(&BXA_USENDX) SETA &N      * And update high valid ptr
+.*
+.* Report current USING status
+         AIF   (NOT &SP_SHOWALL).MEND * Only if SHOWALL requested
+         USEDREGS
+         MEXIT
+.*
+.ERR6B   ANOP
+&ARG     SETC  (DOUBLE '&DSECT')
+         MNOTE 8,'Register &ARG currently not available'
+         MEXIT
+.ERR6C   ANOP
+&ARG     SETC  (DOUBLE '&DSECT')
+         MNOTE 8,'Register &ARG is not a valid general purpose register*
+               '
+.*
+.MEND    MEND

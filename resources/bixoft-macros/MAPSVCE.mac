@@ -1,0 +1,143 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the entries of the SVC table and the entries of
+.*      the SVC Udate Recording Table
+.*
+&LABEL   MAPSVCE &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSVCE                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSVCE        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SVCENTRY').EMBED
+         AIF   ('&CB' EQ 'SVCURT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSVCE).MEND
+&BXA_MAC_MAPSVCE SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SVCENTRY
+         GBLC  &BXA_CB_SVCURT
+&BXA_CB_SVCENTRY SETC 'SVCE'
+&BXA_CB_SVCURT SETC 'SVCE'
+.*
+.* SVCEP - SVC ENTRY POINT ADDRESS
+SVCAMODE EQUOVR ,,b,SVCEP
+.*
+.* SVCTP - TYPE FIELD
+SVCTP1   EQUOVR ,,v,SVCTP
+SVCTP2   EQUOVR ,,b,SVCTP
+SVCTP34  EQUOVR ,,b,SVCTP
+SVCTP6   EQUOVR ,,b,SVCTP
+SVCAPF   EQUOVR ,,b,SVCTP
+SVCESR   EQUOVR ,,b,SVCTP
+SVCNP    EQUOVR ,,b,SVCTP
+SVCASF   EQUOVR ,,b,SVCTP
+.*
+.* SVCATTR3 - ATTRIBUTES
+SVCAR    EQUOVR ,,b,SVCATTR3
+.*
+.* SVCLOCKS - LOCK ATTRIBUTES
+SVCLL    EQUOVR ,,b,SVCLOCKS
+SVCCMS   EQUOVR ,,b,SVCLOCKS
+SVCOPT   EQUOVR ,,b,SVCLOCKS
+SVCALLOC EQUOVR ,,b,SVCLOCKS
+SVCDISP  EQUOVR ,,b,SVCLOCKS
+.*
+         MNOTE *,'Including IHASVC mapping macro'
+         IHASVC LIST=YES,              * Use unchanged PRINT option    *
+               UPDATE=YES              * and include update recording
+         EQUOVR *END
+*
+SVCENTRY DSECT ,                       * Resume SVCENTRY DSECT
+SVC      EQU   SVCENTRY                * Label for USINGs
+         ORG
+SVC_LEN  EQU   *-SVC                   * Length of SVC entry
+*
+SVCURT   DSECT ,                       * Resume SVCURT DSECT
+         ORG
+SVCURT_LEN EQU *-SVCURT                * Length of URT entry
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.* Qname and Rname for ENQ on SVC table
+SVC_QNAME RDATA DC,CL8'SYSZSVC'        *
+SVC_RNAME RDATA DC,C'TABLE'            *
+.*
+.MEND    MEND

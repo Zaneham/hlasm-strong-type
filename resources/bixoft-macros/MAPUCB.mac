@@ -1,0 +1,505 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Unit Control Block
+.*
+&LABEL   MAPUCB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPUCB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPUCB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'UCB').EMBED
+         AIF   ('&CB' EQ 'UCBOCR').EMBED
+         AIF   ('&CB' EQ 'UCBPDCTA').EMBED
+         AIF   ('&CB' EQ 'UCBUCS').EMBED
+         AIF   ('&CB' EQ 'UCB3540X').EMBED
+         AIF   ('&CB' EQ 'UCB3800X').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPUCB).MEND
+&BXA_MAC_MAPUCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_UCB
+         GBLC  &BXA_CB_UCBOCR
+         GBLC  &BXA_CB_UCBPDCTA
+         GBLC  &BXA_CB_UCBUCS
+         GBLC  &BXA_CB_UCB3540X
+         GBLC  &BXA_CB_UCB3800X
+&BXA_CB_UCB SETC 'UCB'
+&BXA_CB_UCBOCR SETC 'UCB'
+&BXA_CB_UCBPDCTA SETC 'UCB'
+&BXA_CB_UCBUCS SETC 'UCB'
+&BXA_CB_UCB3540X SETC 'UCB'
+&BXA_CB_UCB3800X SETC 'UCB'
+.*
+.* UCBFL6 - Device features byte
+UCBASUN  EQUOVR ,,b,UCBFL6
+UCBMDISP EQUOVR ,,b,UCBFL6
+UCBDBUF  EQUOVR ,,b,UCBFL6
+UCBIDS   EQUOVR ,,b,UCBFL6
+UCBSELFD EQUOVR ,,b,UCBFL6
+UCBSMSMM EQUOVR ,,b,UCBFL6
+UCBLERP  EQUOVR ,,b,UCBFL6
+UCBIOT   EQUOVR ,,b,UCBFL6
+.*
+.* UCBATI - Index to the attention table (ANTAB)
+UCBRSV04 EQUOVR ,,b,UCBATI
+UCBRSV05 EQUOVR ,,b,UCBATI
+UCBRSV06 EQUOVR ,,b,UCBATI
+UCBRSV07 EQUOVR ,,b,UCBATI
+UCBRSV08 EQUOVR ,,b,UCBATI
+UCBRSV09 EQUOVR ,,b,UCBATI
+UCBHALI  EQUOVR ,,b,UCBATI
+UCBHPDV  EQUOVR ,,b,UCBATI
+.*
+.* UCBFLP1 - Flag byte
+UCBNSRCH EQUOVR ,,b,UCBFLP1
+UCBSHRUP EQUOVR ,,b,UCBFLP1
+UCBRERP  EQUOVR ,,b,UCBFLP1
+UCBINHIO EQUOVR ,,b,UCBFLP1
+UCBSWAPF EQUOVR ,,b,UCBFLP1
+UCBERLOG EQUOVR ,,b,UCBFLP1
+UCBDYNPH EQUOVR ,,b,UCBFLP1
+UCBRALOC EQUOVR ,,b,UCBFLP1
+.*
+.* UCBFL7 - Miscellaneous usage flags
+UCBMASGN EQUOVR ,,b,UCBFL7
+UCBSSPND EQUOVR ,,b,UCBFL7
+UCBAUTOS EQUOVR ,,b,UCBFL7
+UCBNOSEL EQUOVR ,,b,UCBFL7
+.*
+.* UCBCSFLG - Miscellaneous flags
+UCBNCC3  EQUOVR ,,b,UCBCSFLG
+.*
+.* UCBJBNR  - Flag byte
+UCBVRDEV EQUOVR ,,b,UCBJBNR
+UCBJES3  EQUOVR ,,b,UCBJBNR
+UCBDUC   EQUOVR ,,b,UCBJBNR
+UCBJ3DV  EQUOVR ,,b,UCBJBNR
+UCBOLDSM EQUOVR ,,b,UCBJBNR
+UCBMMSGP EQUOVR ,,b,UCBJBNR
+UCBDCONS EQUOVR ,,b,UCBJBNR
+UCBMONT  EQUOVR ,,b,UCBJBNR
+.*
+.* UCBFL5 - Flags
+UCBDCC   EQUOVR ,,b,UCBFL5
+UCBAF    EQUOVR ,,b,UCBFL5
+UCBAMV   EQUOVR ,,b,UCBFL5
+UCBSMS   EQUOVR ,,b,UCBFL5
+UCBVSDR  EQUOVR ,,b,UCBFL5
+UCBENVRD EQUOVR ,,b,UCBFL5
+UCBNALOC EQUOVR ,,b,UCBFL5
+UCBALTCU EQUOVR ,,b,UCBFL5
+UCBCUIR  EQUOVR ,,b,UCBFL5
+.*
+.* UCBID - UCB identification (FF)
+UCBSTND  EQUOVR ,,v,UCBID
+UCBIDCPY EQUOVR ,,v,UCBID
+UCBGUCB  EQUOVR ,,v,UCBID
+UCBST1   EQUOVR ,,v,UCBID
+UCBST3   EQUOVR ,,v,UCBID
+.*
+.* UCBSTAT - Device status
+UCBONLI  EQUOVR ,,b,UCBSTAT
+UCBCHGS  EQUOVR ,,b,UCBSTAT
+UCBRESV  EQUOVR ,,b,UCBSTAT
+UCBUNLD  EQUOVR ,,b,UCBSTAT
+UCBALOC  EQUOVR ,,b,UCBSTAT
+UCBPRES  EQUOVR ,,b,UCBSTAT
+UCBSYSR  EQUOVR ,,b,UCBSTAT
+UCBDADI  EQUOVR ,,b,UCBSTAT
+.*
+.* UCBFLA - I/O supervisor flag byte A
+UCBDEFER EQUOVR ,,b,UCBFLA
+UCBNRY   EQUOVR ,,b,UCBFLA
+UCBNOTRD EQUOVR ,,b,UCBFLA
+UCBPERM  EQUOVR ,,b,UCBFLA
+UCBPSNS  EQUOVR ,,b,UCBFLA
+UCBSTRT  EQUOVR ,,b,UCBFLA
+UCBHALT  EQUOVR ,,b,UCBFLA
+UCBCLEAR EQUOVR ,,b,UCBFLA
+UCBBOX   EQUOVR ,,b,UCBFLA
+.*
+.* UCBFLB - I/O supervisor flag byte B
+UCBINCPT EQUOVR ,,b,UCBFLB
+UCBNOPTH EQUOVR ,,b,UCBFLB
+UCBNOCON EQUOVR ,,b,UCBFLB
+UCBHILVL EQUOVR ,,b,UCBFLB
+UCBHDET  EQUOVR ,,b,UCBFLB
+UCBIOSN  EQUOVR ,,b,UCBFLB
+.*
+.* UCBWGT - Flags
+UCBIN    EQUOVR ,,b,UCBWGT
+UCBOUT   EQUOVR ,,b,UCBWGT
+UCBPUB   EQUOVR ,,b,UCBWGT
+UCBREW   EQUOVR ,,b,UCBWGT
+UCBMTPXP EQUOVR ,,b,UCBWGT
+UCBVORSN EQUOVR ,,b,UCBWGT
+UCBVHRSN EQUOVR ,,b,UCBWGT
+UCBVLRSN EQUOVR ,,b,UCBWGT
+.*
+.* UCBTBYT1 - Model bits
+UCB1FEA0 EQUOVR ,,b,UCBTBYT1
+UCB1FEA1 EQUOVR ,,b,UCBTBYT1
+UCB1FEA2 EQUOVR ,,b,UCBTBYT1
+UCB1FEA3 EQUOVR ,,b,UCBTBYT1
+UCB1FEA4 EQUOVR ,,b,UCBTBYT1
+UCB1FEA5 EQUOVR ,,b,UCBTBYT1
+UCB1FEA6 EQUOVR ,,b,UCBTBYT1
+UCB1FEA7 EQUOVR ,,b,UCBTBYT1
+.*
+.* UCBTBYT2 - Option flags
+UCB2OPT0 EQUOVR ,,b,UCBTBYT2
+UCB2OPT1 EQUOVR ,,b,UCBTBYT2
+UCB2OPT2 EQUOVR ,,b,UCBTBYT2
+UCB2OPT3 EQUOVR ,,b,UCBTBYT2
+UCB2OPT4 EQUOVR ,,b,UCBTBYT2
+UCB2OPT5 EQUOVR ,,b,UCBTBYT2
+UCB2OPT6 EQUOVR ,,b,UCBTBYT2
+UCBVLPWR EQUOVR ,,b,UCBTBYT2
+UCB2OPT7 EQUOVR ,,b,UCBTBYT2
+UCBDVPWR EQUOVR ,,b,UCBTBYT2
+.*
+.* UCBTBYT3 - Class bits
+UCB3TAPE EQUOVR ,,b,UCBTBYT3
+UCB3COMM EQUOVR ,,b,UCBTBYT3
+UCB3CTC  EQUOVR ,,b,UCBTBYT3
+UCB3DACC EQUOVR ,,b,UCBTBYT3
+UCB3DISP EQUOVR ,,b,UCBTBYT3
+UCB3UREC EQUOVR ,,b,UCBTBYT3
+UCB3CHAR EQUOVR ,,b,UCBTBYT3
+UCBRSV10 EQUOVR ,,b,UCBTBYT3
+UCBRSV11 EQUOVR ,,b,UCBTBYT3
+.*
+.* UCBFLC - I/O supervisor flag byte C
+UCBATTP  EQUOVR ,,b,UCBFLC
+UCBITFP  EQUOVR ,,b,UCBFLC
+UCBUDE   EQUOVR ,,b,UCBFLC
+UCBIVRS  EQUOVR ,,b,UCBFLC
+UCBIVRR  EQUOVR ,,b,UCBFLC
+UCBDDRSW EQUOVR ,,b,UCBFLC
+.*
+.* UCBSTAB - Volume status
+UCBBSVL  EQUOVR ,,b,UCBSTAB
+UCBDVSHR EQUOVR ,,b,UCBSTAB
+UCBPGFL  EQUOVR ,,b,UCBSTAB
+UCBPRSRS EQUOVR ,,b,UCBSTAB
+UCBBALB  EQUOVR ,,b,UCBSTAB
+UCBBPRV  EQUOVR ,,b,UCBSTAB
+UCBBPUB  EQUOVR ,,b,UCBSTAB
+UCBBSTR  EQUOVR ,,b,UCBSTAB
+UCBSHAR  EQUOVR ,,b,UCBSTAB
+UCBBNUL  EQUOVR ,,b,UCBSTAB
+.*
+.* UCBDMCT - Volume use byte
+UCBMOUNT EQUOVR ,,b,UCBDMCT
+UCBDMC   EQUOVR ,,b,UCBDMCT
+.*
+.* UCBFL4 - Direct access flag byte
+UCBMDSE1 EQUOVR ,,b,UCBFL4             * First seen in z/OS V1R4
+UCBWDAV  EQUOVR ,,b,UCBFL4
+.* UCBATTN  EQUOVR ,,b,UCBFL4          * Last seen in OS/390 V2R6
+.* UCBHOLD  EQUOVR ,,b,UCBFL4          * Last seen in OS/390 V2R6
+.* UCBMAT   EQUOVR ,,b,UCBFL4          * Last seen in OS/390 V2R6
+UCBDPAVB EQUOVR ,,b,UCBFL4             * First seen in z/OS V1R4
+UCBDPAVA EQUOVR ,,b,UCBFL4             * First seen in z/OS V1R4
+UCBSDSE1 EQUOVR ,,b,UCBFL4             * First seen in z/OS V1R4
+UCBDCMBU EQUOVR ,,b,UCBFL4             * First seen in z/OS V1R4
+.*
+.* UCBTBYT2 flags
+UCBRR    EQUOVR ,,b,UCBTBYT2
+UCBRPS   EQUOVR ,,b,UCBTBYT2
+UCBRVDEV EQUOVR ,,b,UCBTBYT2
+.*
+.* UCBTFL2 - Flag byte
+UCBTXMS  EQUOVR ,,b,UCBTFL2
+UCBTPSF  EQUOVR ,,b,UCBTFL2
+UCBTVCMP EQUOVR ,,b,UCBTFL2
+UCBTLPOS EQUOVR ,,b,UCBTFL2
+.*
+.* UCBTFL1 - Flag byte
+UCBNLTP  EQUOVR ,,b,UCBTFL1
+UCBNSLTP EQUOVR ,,b,UCBTFL1
+UCBDQDSP EQUOVR ,,b,UCBTFL1
+UCBTFL1S EQUOVR ,,b,UCBTFL1
+UCBRV005 EQUOVR ,,b,UCBTFL1
+UCBCSL   EQUOVR ,,b,UCBTFL1
+UCBCSLAC EQUOVR ,,b,UCBTFL1
+UCBLKAHP EQUOVR ,,b,UCBTFL1
+UCBBLP   EQUOVR ,,b,UCBTFL1
+.*
+.* UCBVOPT - VOLUME STATISTICS OPTION BITS
+UCBESV   EQUOVR ,,b,UCBVOPT
+UCBEVA   EQUOVR ,,b,UCBVOPT
+UCBESVC  EQUOVR ,,b,UCBVOPT
+UCBERPC  EQUOVR ,,b,UCBVOPT
+UCBESVE  EQUOVR ,,b,UCBVOPT
+UCBPERR  EQUOVR ,,b,UCBVOPT
+UCBRSV21 EQUOVR ,,b,UCBVOPT
+UCBRSV22 EQUOVR ,,b,UCBVOPT
+.*
+.* UCBMTFL1 - MSGDISP dismount request
+UCBMTDSM EQUOVR ,,b,UCBMTFL1
+UCBMTKEP EQUOVR ,,b,UCBMTFL1
+UCBMTRET EQUOVR ,,b,UCBMTFL1
+.*
+.* UCBTBYT1 flags
+UCBD1600 EQUOVR ,,b,UCBTBYT1
+UCBD6250 EQUOVR ,,b,UCBTBYT1
+.*
+.* UCBTBYT2 flags
+UCBDUDN1 EQUOVR ,,b,UCBTBYT2
+UCBDUDN2 EQUOVR ,,b,UCBTBYT2
+UCBRWTAU EQUOVR ,,b,UCBTBYT2
+UCBCOMPA EQUOVR ,,b,UCBTBYT2
+.*
+.* UCBTBYT4 (UCBUNTYP) values
+UCB3400  EQUOVR ,,v,UCBTBYT4
+UCB3423  EQUOVR ,,v,UCBTBYT4
+UCB3480  EQUOVR ,,v,UCBTBYT4
+UCB3490  EQUOVR ,,v,UCBTBYT4
+UCB3591  EQUOVR ,,v,UCBTBYT4
+.*
+.* UCBDKBYT - Flag byte
+UCBDKAMX EQUOVR ,,b,UCBDKBYT
+UCBVLVER EQUOVR ,,b,UCBDKBYT
+UCBRV067 EQUOVR ,,b,UCBDKBYT
+UCBRV068 EQUOVR ,,b,UCBDKBYT
+UCBRV069 EQUOVR ,,b,UCBDKBYT
+UCBRV070 EQUOVR ,,b,UCBDKBYT
+UCBRV071 EQUOVR ,,b,UCBDKBYT
+UCBRV072 EQUOVR ,,b,UCBDKBYT
+.*
+.* UCBOPTNS - Optional features installed on
+UCBMDLBT EQUOVR ,,b,UCBOPTNS
+UCBRV055 EQUOVR ,,b,UCBOPTNS
+UCBRV056 EQUOVR ,,b,UCBOPTNS
+UCBBRSTR EQUOVR ,,b,UCBOPTNS
+UCBRV083 EQUOVR ,,b,UCBOPTNS
+.*
+.* UCBGRAFS - Graphic character flag byte
+UCBRV046 EQUOVR ,,b,UCBGRAFS
+UCBRV047 EQUOVR ,,b,UCBGRAFS
+UCBRV048 EQUOVR ,,b,UCBGRAFS
+UCBRV049 EQUOVR ,,b,UCBGRAFS
+UCBGRAF0 EQUOVR ,,b,UCBGRAFS
+UCBGRAF1 EQUOVR ,,b,UCBGRAFS
+UCBGRAF2 EQUOVR ,,b,UCBGRAFS
+UCBGRAF3 EQUOVR ,,b,UCBGRAFS
+.*
+.* UCBACTIV - Active features
+UCBRV057 EQUOVR ,,b,UCBACTIV
+UCBRV058 EQUOVR ,,b,UCBACTIV
+UCBRV059 EQUOVR ,,b,UCBACTIV
+UCBRV060 EQUOVR ,,b,UCBACTIV
+UCBRV061 EQUOVR ,,b,UCBACTIV
+UCBRV062 EQUOVR ,,b,UCBACTIV
+UCBRV063 EQUOVR ,,b,UCBACTIV
+UCBBRSTA EQUOVR ,,b,UCBACTIV
+.*
+.* UCBUCSOP - Format of UCS image in buffer
+UCBUCSO1 EQUOVR ,,b,UCBUCSOP
+UCBUCSO2 EQUOVR ,,b,UCBUCSOP
+UCBRSV39 EQUOVR ,,b,UCBUCSOP
+UCBRSV40 EQUOVR ,,b,UCBUCSOP
+UCBRSV41 EQUOVR ,,b,UCBUCSOP
+UCBRSV42 EQUOVR ,,b,UCBUCSOP
+UCBRSV43 EQUOVR ,,b,UCBUCSOP
+UCBUCSPE EQUOVR ,,b,UCBUCSOP
+.*
+.* UCBFCBOP - Reserved (1403) or FCB options
+UCBFCBO1 EQUOVR ,,b,UCBFCBOP
+UCBRSV44 EQUOVR ,,b,UCBFCBOP
+UCBRSV45 EQUOVR ,,b,UCBFCBOP
+UCBRSV46 EQUOVR ,,b,UCBFCBOP
+UCBFCBPS EQUOVR ,,b,UCBFCBOP
+UCBRSV49 EQUOVR ,,b,UCBFCBOP
+UCBFCBPE EQUOVR ,,b,UCBFCBOP
+.*
+.* UCBUNTYP (UCBTBYT4) Flag Byte
+UCBAFP1  EQUOVR ,,v,UCBUNTYP
+UCBDSM   EQUOVR ,,v,UCBUNTYP
+UCB3211  EQUOVR ,,v,UCBUNTYP
+UCB3263  EQUOVR ,,v,UCBUNTYP
+UCB3800  EQUOVR ,,v,UCBUNTYP
+UCB3838  EQUOVR ,,v,UCBUNTYP
+UCB3895  EQUOVR ,,v,UCBUNTYP
+UCB4245  EQUOVR ,,v,UCBUNTYP
+UCB4248  EQUOVR ,,v,UCBUNTYP
+.*
+.* UCBAOF1 - First byte of UCBAOF
+UCBOFMCR EQUOVR ,,b,UCBAOF1
+UCBOFSP  EQUOVR ,,b,UCBAOF1
+UCBOFNL  EQUOVR ,,b,UCBAOF1
+UCBOFPTR EQUOVR ,,b,UCBAOF1
+UCBRSV65 EQUOVR ,,b,UCBAOF1
+UCBRSV66 EQUOVR ,,b,UCBAOF1
+UCBRSV67 EQUOVR ,,b,UCBAOF1
+UCBRSV68 EQUOVR ,,b,UCBAOF1
+.*
+.* UCBAOF2 - Second byte of UCBAOF
+UCBRSV69 EQUOVR ,,b,UCBAOF2
+UCBRSV70 EQUOVR ,,b,UCBAOF2
+UCBRSV71 EQUOVR ,,b,UCBAOF2
+UCBRSV72 EQUOVR ,,b,UCBAOF2
+UCBRSV73 EQUOVR ,,b,UCBAOF2
+UCBRSV74 EQUOVR ,,b,UCBAOF2
+UCBRSV75 EQUOVR ,,b,UCBAOF2
+UCBRSV76 EQUOVR ,,b,UCBAOF2
+.*
+.* UCBGCB - control byte.
+UCBOLTEP EQUOVR ,,b,UCBGCB
+UCBRSV77 EQUOVR ,,b,UCBGCB
+UCBRSV78 EQUOVR ,,b,UCBGCB
+UCBRSV79 EQUOVR ,,b,UCBGCB
+UCBRTIAC EQUOVR ,,b,UCBGCB
+UCBRIPND EQUOVR ,,b,UCBGCB
+UCBSKPFG EQUOVR ,,b,UCBGCB
+UCBATRCD EQUOVR ,,b,UCBGCB
+.*
+.* UCBGRAF - Graphics status flags (BTAM)
+UCBOIP   EQUOVR ,,b,UCBGRAF
+UCBDRO   EQUOVR ,,b,UCBGRAF
+UCBDRNO  EQUOVR ,,b,UCBGRAF
+UCBBTAM  EQUOVR ,,b,UCBGRAF
+UCBUPM   EQUOVR ,,b,UCBGRAF
+UCBRPND  EQUOVR ,,b,UCBGRAF
+UCBDWNR  EQUOVR ,,b,UCBGRAF
+UCBRV039 EQUOVR ,,b,UCBGRAF
+.*
+.* UCBTBYT4 Flag Byte
+UCB3791L  EQUOVR ,,v,UCBTBYT4
+UCB42AD1  EQUOVR ,,v,UCBTBYT4
+.*
+.* UCBCTCF1 - Channel-to-channel (CTC) device flag
+UCBCTC80 EQUOVR ,,b,UCBCTCF1
+UCBRV076 EQUOVR ,,b,UCBCTCF1
+UCBRV077 EQUOVR ,,b,UCBCTCF1
+UCBRV078 EQUOVR ,,b,UCBCTCF1
+UCBRV079 EQUOVR ,,b,UCBCTCF1
+UCBRV080 EQUOVR ,,b,UCBCTCF1
+UCBRV081 EQUOVR ,,b,UCBCTCF1
+UCBRV082 EQUOVR ,,b,UCBCTCF1
+.*
+.* UCBCTCF2 - IOS CTC Flags, serialized via
+UCBCCLAW EQUOVR ,,b,UCBCTCF2
+UCBCABYP EQUOVR ,,b,UCBCTCF2
+.*
+.* UCBTBYT4 mapping
+UCBPCTC  EQUOVR ,,v,UCBTBYT4
+UCBSCTC  EQUOVR ,,v,UCBTBYT4
+UCBBCTC  EQUOVR ,,v,UCBTBYT4
+UCBRS6K  EQUOVR ,,v,UCBTBYT4
+UCB3172  EQUOVR ,,v,UCBTBYT4
+UCBOSA   EQUOVR ,,v,UCBTBYT4
+UCBOSAD  EQUOVR ,,v,UCBTBYT4
+UCBOSAF  EQUOVR ,,v,UCBTBYT4
+.*
+         MNOTE *,'Including IEFUCBOB mapping macro'
+         IEFUCBOB SSMD=YES,            * Include prefix area mapping   *
+               LIST=YES                * With unchanged list-options
+         EQUOVR *END
+*
+UCB      DSECT ,                       * Reset to UCB
+         ORG   ,                       *
+UCB_LEN  EQU   *-UCB                   * Length of UCB
+*
+UCBOCR   DSECT ,                       * Reset to UCB OCR extension
+         ORG   ,                       *
+UCBOCR_LEN EQU *-UCBOCR                * Length of UCBOCR
+*
+UCB3540X DSECT ,                       * Reset to UCB 3540 extension
+         ORG   ,                       *
+UCB3540X_LEN EQU *-UCB3540X            * Length of UCB3540X
+*
+UCB3800X DSECT ,                       * Reset to UCB 3800 extension
+         ORG   ,                       *
+UCB3800_LEN EQU *-UCB3800X             * Length of UCB3800X
+*
+UCBUCS   DSECT ,                       * Reset to UCB UCS
+         ORG   ,                       *
+UCBUCS_LEN EQU *-UCBUCS                * Length of UCBUCS
+*
+UCBPDCTA DSECT ,                       * Reset to UCB PDCTA
+         ORG   ,                       *
+UCBPDCTA_LEN EQU *-UCBPDCTA            * Length of UCBPDCTA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

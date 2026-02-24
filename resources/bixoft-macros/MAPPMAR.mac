@@ -1,0 +1,204 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Program Management Attribute Record
+.*      (associated with SMDE)
+.* Warning: field PMARA_LEN is renamed to PMARA_SIZE
+.*
+&LABEL   MAPPMAR &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPPMAR                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPPMAR        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'PMAR').EMBED
+         AIF   ('&CB' EQ 'PMARA').EMBED
+         AIF   ('&CB' EQ 'PMARL').EMBED
+         AIF   ('&CB' EQ 'PMARR').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPPMAR).MEND
+&BXA_MAC_MAPPMAR SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_PMAR
+         GBLC  &BXA_CB_PMARA
+         GBLC  &BXA_CB_PMARL
+         GBLC  &BXA_CB_PMARR
+&BXA_CB_PMAR  SETC 'PMAR'
+&BXA_CB_PMARA SETC 'PMAR'
+&BXA_CB_PMARL SETC 'PMAR'
+&BXA_CB_PMARR SETC 'PMAR'
+.*
+.* PMAR_LVL - PMAR format level
+PMAR_LVL_VAL       EQUOVR ,,v,PMAR_LVL
+PMAR_PM1_VAL       EQUOVR ,,v,PMAR_LVL
+PMAR_PM2_VAL       EQUOVR ,,v,PMAR_LVL
+PMAR_PM3_VAL       EQUOVR ,,v,PMAR_LVL
+.*
+.* PMAR_PLVL - Bind processor creating object
+PMAR_PLVL_E_VAL    EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_F_VAL    EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_AOS_VAL  EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_XA_VAL   EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_B1_VAL   EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_B2_VAL   EQUOVR ,,v,PMAR_PLVL
+PMAR_PLVL_B3_VAL   EQUOVR ,,v,PMAR_PLVL
+.*
+.* PMAR_ATR1 - First attribute byte.
+PMAR_RENT          EQUOVR ,,b,PMAR_ATR1
+PMAR_REUS          EQUOVR ,,b,PMAR_ATR1
+PMAR_OVLY          EQUOVR ,,b,PMAR_ATR1
+PMAR_TEST          EQUOVR ,,b,PMAR_ATR1
+PMAR_LOAD          EQUOVR ,,b,PMAR_ATR1
+PMAR_SCTR          EQUOVR ,,b,PMAR_ATR1
+PMAR_EXEC          EQUOVR ,,b,PMAR_ATR1
+PMAR_1BLK          EQUOVR ,,b,PMAR_ATR1
+.*
+.* PMAR_ATR2 - Second attribute byte.
+PMAR_FLVL          EQUOVR ,,b,PMAR_ATR2
+PMAR_ORG0          EQUOVR ,,b,PMAR_ATR2
+PMAR_NRLD          EQUOVR ,,b,PMAR_ATR2
+PMAR_NREP          EQUOVR ,,b,PMAR_ATR2
+PMAR_TSTN          EQUOVR ,,b,PMAR_ATR2
+PMAR_REFR          EQUOVR ,,b,PMAR_ATR2
+.*
+.* PMAR_FTB1 - Alternative name for flags byte
+PMAR_BIG           EQUOVR ,,b,PMAR_FTB1
+PMAR_PAGA          EQUOVR ,,b,PMAR_FTB1
+PMAR_XSSI          EQUOVR ,,b,PMAR_FTB1
+PMAR_XAPF          EQUOVR ,,b,PMAR_FTB1
+PMAR_LFMT          EQUOVR ,,b,PMAR_FTB1
+.*
+.* PMAR_FTB2 - Alternative name for flags byte
+PMAR_ALTP          EQUOVR ,,b,PMAR_FTB2
+PMAR_RMOD          EQUOVR ,,b,PMAR_FTB2
+PMAR_MAMD          EQUOVR ,,b,PMAR_FTB2
+.*
+.* PMARL_ATR1 - Fifth attribute byte
+PMARL_NMIG         EQUOVR ,,b,PMARL_ATR1
+PMARL_PRIM         EQUOVR ,,b,PMARL_ATR1
+PMARL_PACK         EQUOVR ,,b,PMARL_ATR1
+.*
+.* PMARL_ATR2 - Sixth attribute byte
+PMARL_CMPR         EQUOVR ,,b,PMARL_ATR2
+PMARL_1RMOD        EQUOVR ,,b,PMARL_ATR2
+PMARL_2RMOD        EQUOVR ,,b,PMARL_ATR2
+PMARL_1ALIN        EQUOVR ,,b,PMARL_ATR2
+PMARL_2ALIN        EQUOVR ,,b,PMARL_ATR2
+PMARL_FILL         EQUOVR ,,b,PMARL_ATR2
+.*
+.* PMARL_PM3FL1 - Flag byte
+PMARL_HIDE         EQUOVR ,,b,PMARL_PM3FL1
+PMARL_DLLENA       EQUOVR ,,b,PMARL_PM3FL1
+PMARL_MUSTDELET    EQUOVR ,,b,PMARL_PM3FL1
+PMARL_IEWBLITP     EQUOVR ,,b,PMARL_PM3FL1
+PMARL_MANGLED      EQUOVR ,,b,PMARL_PM3FL1
+.*
+.* PMARA_LEN - Section length
+PMARA_LEN          DSOVR  *NEWNAME,PMARA_SIZE
+.*
+.* PMARA_FTB2 - Alternative name for flags byte
+PMARA_ALTP         EQUOVR ,,b,PMARA_FTB2
+PMARA_HIDE         EQUOVR ,,b,PMARA_FTB2
+PMARA_NEXEC        EQUOVR ,,b,PMARA_FTB2
+PMARA_MANGLED      EQUOVR ,,b,PMARA_FTB2
+.*
+         MNOTE *,'Including IEWPMAR mapping macro'
+         IEWPMAR ,                     * Generate IEWPMAR
+         DSOVR  *END
+         EQUOVR *END
+*
+PMAR     DSECT ,                       * Resume PMAR DSECT
+         ORG   ,                       *
+PMAR_LEN EQU   *-PMAR                  * Length of PMAR
+*
+PMARL    DSECT ,                       * Resume PMARL DSECT
+         ORG   ,                       *
+PMARL_LEN EQU  *-PMARL                 * Length of PMARL
+*
+PMARR    DSECT ,                       * Resume PMARR DSECT
+         ORG   ,                       *
+PMARR_LEN EQU  *-PMARR                 * Length of PMARR
+*
+PMARA    DSECT ,                       * Resume PMARA DSECT
+         ORG   ,                       *
+PMARA_LEN EQU  *-PMARA                 * Length of PMARA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

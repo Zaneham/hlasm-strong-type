@@ -1,0 +1,242 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates entries in the STORAGE and STRHDR lists and is
+.*  intended for use with BXADBG00 only.
+.* It is required that the calling program include the MAPSNAP macro.
+.* There must be an active USING SNAPLIST,R2
+.*           and an active USING SNAPHLIST,R3
+.*
+&LABEL   SNAPNTRY &ADR,                * Starting address or (reg)     *
+               &LEN=,                  * Length or (reg)               *
+               &END=,                  * (reg)                         *
+               &HDR=                   * Address of header or (reg)
+.*
+.* &ADR   Specifies the starting address of a storage area to be dumped
+.* &LEN   Specifies the length of the storage area to be dumped
+.* &END   Specifies a register contining the end-address
+.* &HDR   Specifies the address of the header for the storage area dump
+.*        or specifies a the header, enclosed in single quotes
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC SNAPNTRY               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_USELBL(50)         * Using labels ...
+         GBLA  &BXA_USEREG(50)         *   and their register indexes
+         GBLC  &BXA_USEFLD(50)         *   and associated base fields
+         GBLA  &BXA_USENDX0(5)         * Index into &BXA_USELBL/USEREG
+         GBLA  &BXA_USENDX1(5)         * Index into &BXA_USELBL/USEREG
+         GBLA  &BXA_USENDX             * Index into &BXA_USENDX1
+         LCLA  &N                      * Index for BXA_USE...
+         LCLC  &REG                    * Register name
+         GBLC  &BXA_RD_RETVAL          * label of dup.data
+         LCLC  &LAB                    * Label to use for RDATA tables
+.*
+.* Check the ADR parameter
+         AIF   (K'&ADR EQ 0).ERR1A
+         AIF   ('&ADR'(1,1) NE '(').NOERR1
+         AIF   (N'&ADR EQ 0).ERR1B
+         AIF   (N'&ADR GT 1).ERR1C
+         AGO   .NOERR1
+.ERR1A   MNOTE 8,'ADR parameter not specified'
+         AGO   .NOERR1
+.ERR1B   MNOTE 8,'ADR parameter contains no registers in sublist'
+         AGO   .NOERR1
+.ERR1C   MNOTE 8,'ADR parameter contains more than 1 register in sublis*
+               t'
+.NOERR1  ANOP
+.*
+.* Check the LEN parameter
+         AIF   (K'&LEN EQ 0).NOERR2
+         AIF   ('&LEN'(1,1) NE '(').NOERR2
+         AIF   (N'&LEN EQ 0).ERR2B
+         AIF   (N'&LEN GT 1).ERR2C
+         AGO   .NOERR2
+.ERR2B   MNOTE 8,'LEN parameter contains no registers in sublist'
+         AGO   .NOERR2
+.ERR2C   MNOTE 8,'LEN parameter contains more than 1 register in sublis*
+               t'
+.NOERR2  ANOP
+.*
+.* Check the HDR parameter
+         AIF   (K'&HDR EQ 0).ERR3A
+         AIF   ('&HDR'(1,1) EQ '(' AND N'&HDR EQ 0).ERR3B
+         AIF   ('&HDR'(1,1) EQ '(' AND N'&HDR GT 1).ERR3C
+         AIF   ('&HDR'(1,1) EQ '''' AND '&HDR'(K'&HDR,1) NE '''').ERR3D
+         AIF   ('&HDR'(1,1) NE '''' AND '&HDR'(K'&HDR,1) EQ '''').ERR3D
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'HDR parameter not specified'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'HDR parameter contains no registers in sublist'
+         AGO   .NOERR3
+.ERR3C   MNOTE 8,'HDR parameter contains more than 1 register in sublis*
+               t'
+         AGO   .NOERR3
+.ERR3D   MNOTE 8,'HDR parameter not properly enclosed in parmaeters'
+.NOERR3  ANOP
+.*
+.* Check the END parameter
+         AIF   (K'&END EQ 0).NOERR4
+         AIF   ('&END'(1,1) NE '(').ERR4A
+         AIF   (N'&END EQ 0).ERR4B
+         AIF   (N'&END GT 1).ERR4C
+         AGO   .NOERR4
+.ERR4A   MNOTE 8,'END parameter must specify a (reg)'
+         AGO   .NOERR4
+.ERR4B   MNOTE 8,'END parameter contains no registers in sublist'
+         AGO   .NOERR4
+.ERR4C   MNOTE 8,'END parameter contains more than 1 register in sublis*
+               t'
+.NOERR4  ANOP
+.*
+.* LEN and END are mutually exclusive, 1 must be specified
+         AIF   (K'&LEN EQ 0 AND K'&END EQ 0).ERR5A
+         AIF   (K'&LEN NE 0 AND K'&END NE 0).ERR5B
+         AGO   .NOERR5
+.ERR5A   MNOTE 8,'Either LEN or END parameter must be specified'
+         AGO   .NOERR5
+.ERR5B   MNOTE 8,'Cannot specify both LEN and END parameters'
+.NOERR5  ANOP
+.*
+.* Generate start address or use (reg)
+         AIF   ('&ADR'(1,1) EQ '(').ADR_REG
+&LABEL   LA    R1,&ADR                 * Get start-address
+         ST    R1,SNAPFROM             *  and put into list
+         AGO   .ADR_OK
+.ADR_REG ANOP
+&LABEL   ST    &ADR(1),SNAPFROM        * Put pointer into list
+         LR    R1,&ADR(1)              * Copy ptr to calculate end addr
+.ADR_OK  ANOP
+.*
+.* Generate end address or use (reg)
+         AIF   (K'&LEN NE 0).USELEN
+         ST    &END(1),SNAPTO          * Put end-address into snaplist
+         AGO   .ENDOK
+.*
+.USELEN  ANOP
+         AIF   ('&LEN'(1,1) EQ '(').ENDR
+         INC   R1,&LEN-1
+         AGO   .ENDST
+.ENDR    ANOP
+         INC   R1,&LEN                 * Address area + 1
+         DEC   R1                      * Decrement to point to end-byte
+.ENDST   ANOP
+         ST    R1,SNAPTO               *  and put into list
+.ENDOK   ANOP
+.*
+.* Find pointer to SNAPLIST entry
+&N       SETA  &BXA_USENDX0(&BXA_USENDX) * Get pointer to first entry
+.LOOP1   ANOP  ,                       * Search current part of tables
+&N       SETA  &N+1                    * Point next entry
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP1NF
+         AIF   ('&BXA_USEFLD(&N)' NE 'SNAPLIST').LOOP1
+&N       SETA  &BXA_USEREG(&N)-1       * Create reg.nr from index
+&REG     SETC  'R&N'                   * Set up register name
+         AGO   .LOOP1OK                * Quit loop
+.LOOP1NF ANOP  ,
+         MNOTE 8,'No USING established for SNAPLIST'
+         MEXIT ,
+.LOOP1OK ANOP  ,
+.*
+.* Increment pointer for list
+         INC   &REG,SNAPLIST_LEN       * Point to next free entry
+.*
+.* Generate header address or use (reg)
+         AIF   ('&HDR'(1,1) EQ '(').HDR_REG
+         AIF   ('&HDR'(1,1) EQ '''').HDR_TXT
+         L     R1,=AL4(&HDR)           * Get start-address
+         ST    R1,SNAPHPTR             *  and put into list
+         AGO   .HDR_OK
+.HDR_REG ANOP
+         ST    &HDR(1),SNAPHPTR        * Put pointer into list
+         AGO   .HDR_OK
+.HDR_TXT ANOP
+.* The header-text will be defined using RDATA. If RDATA finds a
+.* duplicate entry, it will replace that entry with an EQU. If this
+.* is the case, we will use the original label. Since all remote data
+.* is accessed thru an AL4(..)-literal this saves on literal pool size.
+&LAB     SETC  '_HDR&SYSNDX'           * Label for the remote header
+&LAB     RDATA SNAPHDR,&HDR,           * Define the header text        *
+               RD_MODE=COND            *   unless pre-allocated
+         AIF   (K'&BXA_RD_RETVAL EQ 0).LABOK * No duplicate: keep &LAB
+&LAB     SETC  '&BXA_RD_RETVAL'        * Duplicate: use actual label
+.LABOK   ANOP
+         L     R1,=AL4(&LAB)           * Get start-address
+         ST    R1,SNAPHPTR             *  and put into list
+.HDR_OK  ANOP
+.*
+.* Find pointer to SNAPHLIST entry
+&N       SETA  &BXA_USENDX0(&BXA_USENDX) * Get pointer to first entry
+.LOOP2   ANOP  ,                       * Search current part of tables
+&N       SETA  &N+1                    * Point next entry
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP2NF
+         AIF   ('&BXA_USEFLD(&N)' NE 'SNAPHLIST').LOOP2
+&N       SETA  &BXA_USEREG(&N)-1       * Create reg.nr from index
+&REG     SETC  'R&N'                   * Set up register name
+         AGO   .LOOP2OK                * Quit loop
+.LOOP2NF ANOP  ,
+         MNOTE 8,'No USING established for SNAPHLIST'
+         MEXIT ,
+.LOOP2OK ANOP  ,
+.*
+.* Increment pointer for header-list
+         INC   &REG,SNAPHLIST_LEN      * Point to next free entry
+.*
+.MEND    MEND

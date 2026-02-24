@@ -1,0 +1,313 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro forces an abend by branching to the predetermined
+.* entry point of an Abend-routine.
+.*
+&LABEL   ABND  &COND,                  * Condition for abending        *
+               &ABEND,                 * Label of BXABEND routine      *
+               &FAIL=R14,              * Reg for failed address        *
+               &TSTREG=,               * Registers for LTR-instruction *
+               &RCD=                   * 1 or 2 registers or IGNORE
+.*
+.* &COND can be one of the following:
+.*       - SETDFT: spedifies abend entry point, generates no code
+.*       - TSTRC : abend-routine will be taken if R15<>0
+.*       - E     : abend-routine will be taken on cond.code = E
+.*       - H     : abend-routine will be taken on cond.code = H
+.*       - L     : abend-routine will be taken on cond.code = L
+.*       - M     : abend-routine will be taken on cond.code = M
+.*       - O     : abend-routine will be taken on cond.code = O
+.*       - P     : abend-routine will be taken on cond.code = P
+.*       - Z     : abend-routine will be taken on cond.code = Z
+.*       - NE    : abend-routine will be taken on cond.code = NE
+.*       - NH    : abend-routine will be taken on cond.code = NH
+.*       - NL    : abend-routine will be taken on cond.code = NL
+.*       - NM    : abend-routine will be taken on cond.code = NM
+.*       - NO    : abend-routine will be taken on cond.code = NO
+.*       - NP    : abend-routine will be taken on cond.code = NP
+.*       - NZ    : abend-routine will be taken on cond.code = NZ
+.* &LABEL specifies label of abend routine. If not specified the
+.*        default supplied with TYPE=SETDFT will be used.
+.* &FAIL  specifies the register that passes the reasoncode for
+.*        the abend, usually the failing address. If not specified
+.*        defaults to R14.
+.* &TSTREG specifies a a register or a set of two registers,
+.*        to be used in an LTR instruction. The resulting condition
+.*        code will be tested as specified in the COND parameter.
+.* &RCD   valid only with TSTRC. Specifies 1 or 2 registers or IGNORE.
+.*        If IGNORE is specified, the return- and reasoncodes will be
+.*        lost before the abend is issued. If 1 register is specified
+.*        it will be used to save the returncode, the reasoncode will
+.*        be lost before the abend is issued. If two registers are
+.*        specified, the first will contain the returncode, the
+.*        reasoncode will be put into the second one before the abend
+.*        is issued. Only registers 2-11 can be specified.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Retcode from CHKLIC
+         CHKLIC ABND                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_ABND_DFT           * Default user-abend label
+         GBLC  &BXA_ABND(50)           * Used targets
+         GBLA  &BXA_NUMVAL             * Result from CHKREG
+         LCLC  &_ABEND                 *
+         LCLC  &_RCD1,&_RCD2           * RCD subparameters
+         LCLA  &_RCD1N,&_RCD2N         * RCD subparameter reg.nrs
+         LCLC  &_TSTREG1,&_TSTREG2     *
+         LCLA  &I                      * Index into BXA_ABND
+         LCLA  &_FAIL                  * Register number for FAIL=
+         LCLC  &OPCD                   * Generated opcode mnemonic
+.*
+.* Check validity of first parameter: extended condition code
+         AIF   ('&COND' EQ 'TSTRC').NOERR1
+         AIF   ('&COND' EQ 'SETDFT').NOERR1
+         AIF   (K'&COND EQ 0).NOERR1
+         AIF   ('&COND' EQ 'E').NOERR1
+         AIF   ('&COND' EQ 'H').NOERR1
+         AIF   ('&COND' EQ 'L').NOERR1
+         AIF   ('&COND' EQ 'M').NOERR1
+         AIF   ('&COND' EQ 'O').NOERR1
+         AIF   ('&COND' EQ 'P').NOERR1
+         AIF   ('&COND' EQ 'Z').NOERR1
+         AIF   ('&COND' EQ 'NE').NOERR1
+         AIF   ('&COND' EQ 'NH').NOERR1
+         AIF   ('&COND' EQ 'NL').NOERR1
+         AIF   ('&COND' EQ 'NM').NOERR1
+         AIF   ('&COND' EQ 'NO').NOERR1
+         AIF   ('&COND' EQ 'NP').NOERR1
+         AIF   ('&COND' EQ 'NZ').NOERR1
+.ERR1    MNOTE 8,'Incorrect condition mnemonic in first parameter'
+.NOERR1  ANOP
+.*
+.* Check validity of second parameter: label of BXABEND macro
+         AIF   (K'&ABEND NE 0).NOERR2
+.* ABEND-parm is empty: check if &LABEL can be defaulted
+         AIF   ('&COND' EQ 'SETDFT').ERR2
+         AIF   (K'&BXA_ABND_DFT NE 0).NOERR2
+.ERR2    MNOTE 8,'Label of BXABEND-macro not specified on second parame*
+               ter'
+.NOERR2  ANOP  ,
+.*
+.* Check validity of FAIL= parameter: register for failing address
+         AIF   (K'&FAIL EQ 0).NOERR3
+         AIF   ('&FAIL'(1,1) EQ '(').ERR3A
+         CHKREG &FAIL,g                * Valid general purpose reg?
+         AIF   (&BXA_RC GT 4).ERR3B    * Invalid register
+&_FAIL   SETA  &BXA_NUMVAL             * Set register number
+         AIF   (&_FAIL EQ 15).ERR3C    * R15 is invalid
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'FAIL= must not specify a sublist'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'FAIL= must specify a valid general purpose register'
+         AGO   .NOERR3
+.ERR3C   MNOTE 8,'FAIL= must not specify register 15'
+.NOERR3  ANOP
+.*
+.* Check validity of TSTREG parameter: registers for testing
+         AIF   (K'&TSTREG EQ 0).NOERR4
+         AIF   ('&TSTREG'(1,1) EQ '(').ERR4TST
+&_TSTREG1 SETC '&TSTREG'               * Use the register specified
+&_TSTREG2 SETC '&TSTREG'               * as source and destination
+         AGO   .NOERR4A
+.ERR4TST ANOP
+         AIF   (N'&TSTREG EQ 0).ERR4A
+&_TSTREG1 SETC '&TSTREG(1)'            * At least 1 reg in the list
+&_TSTREG2 SETC '&TSTREG(1)'            * Use it for src and dest.
+         AIF   (N'&TSTREG EQ 1).NOERR4A * 1 register: all done
+&_TSTREG2 SETC '&TSTREG(2)'            * More than 1 reg: pick up 2nd
+         AIF   (N'&TSTREG EQ 2).NOERR4A * 2 registers: all is well
+.ERR4A   MNOTE 8,'TSTREG parameter must specify one or two registers'
+         AGO   .NOERR4
+.NOERR4A ANOP  ,
+         CHKREG &_TSTREG1,g            * Valid register?
+         AIF   (&BXA_RC GT 4).ERR4B
+         AIF   ('&_TSTREG1' EQ '&_TSTREG2').NOERR4
+         CHKREG &_TSTREG2,g            * Valid register?
+         AIF   (&BXA_RC GT 4).ERR4C
+         AGO   .NOERR4
+.ERR4B   MNOTE 8,'&_TSTREG1 is not a valid general purpose register'
+         AGO   .NOERR4
+.ERR4C   MNOTE 8,'&_TSTREG2 is not a valid general purpose register'
+.NOERR4  ANOP
+.*
+.* Check validity of COND=TSTRC parameter
+         AIF   ('&COND' NE 'TSTRC').NOERR5
+         AIF   (K'&TSTREG EQ 0).ERROR5B
+.ERR5A   MNOTE 8,'TSTRC and TSTREG= both specified: invalid'
+.ERROR5B ANOP
+         AIF   ('&_FAIL' EQ '12').ERR5B
+         AGO   .NOERR5
+.ERR5B   MNOTE 8,'TSTRC cannot be combined with R12 for FAILed address'
+.NOERR5  ANOP
+.*
+.* Check validity of COND=SETDFT parameter
+         AIF   ('&COND' NE 'SETDFT').NOERR6
+         AIF   (K'&TSTREG EQ 0).NOERR6
+.ERR6    MNOTE 8,'SETDFT and TSTREG= both specified: invalid'
+.NOERR6  ANOP
+.*
+.* Check validity of the RCD parameter
+         AIF   (K'&RCD EQ 0 AND '&COND' NE 'TSTRC').NOERR7
+         AIF   (K'&RCD EQ 0 AND '&COND' EQ 'TSTRC').ERR7A
+         AIF   (K'&RCD NE 0 AND '&COND' NE 'TSTRC').ERR7B
+         AIF   ('&RCD' EQ 'IGNORE').NOERR7
+         AIF   ('&RCD'(1,1) EQ '(').ERR7LST
+&_RCD1   SETC  '&RCD'
+         AGO   .NOERR7E
+.ERR7LST ANOP
+         AIF   (N'&RCD EQ 0).ERR7C
+&_RCD1   SETC  '&RCD(1)'
+         AIF   (N'&RCD EQ 1).ERR7D
+&_RCD2   SETC  '&RCD(2)'
+         AIF   (N'&RCD GT 2).ERR7E
+.NOERR7E ANOP
+         CHKREG &_RCD1,g               * Valid register?
+         AIF   (&BXA_RC GT 4).ERR7F    *
+&_RCD1N  SETA  &BXA_NUMVAL             * Save register number
+         AIF   (&_RCD1N LT 2).ERR7F    *
+         AIF   (&_RCD1N GT 11).ERR7F   *
+         AIF   ('&_RCD2' EQ '').NOERR7G *
+         CHKREG &_RCD2,g               * Valid register?
+         AIF   (&BXA_RC GT 4).ERR7G    *
+&_RCD2N  SETA  &BXA_NUMVAL             * Save register number
+         AIF   (&_RCD2N LT 2).ERR7G    *
+         AIF   (&_RCD2N GT 11).ERR7G   *
+.NOERR7G ANOP
+         AIF   (&_RCD1N EQ &_RCD2N).ERR7H
+         AGO   .NOERR7
+.ERR7A   MNOTE 4,'RCD parameter defaults to IGNORE'
+         AGO   .NOERR7
+.ERR7B   MNOTE 4,'RCD parameter ignored, valid only for ABND TSTRC'
+         AGO   .NOERR7
+.ERR7C   MNOTE 4,'RCD parameter defaults to IGNORE: sublist is empty'
+         AGO   .NOERR7
+.ERR7D   MNOTE 8,'RCD sublist contains only 1 parameter'
+         AGO   .NOERR7
+.ERR7E   MNOTE 4,'RCD sublist contains more than 2 parameters; remainde*
+               r ignored'
+         AGO   .NOERR7
+.ERR7F   MNOTE 8,'First RCD subparm specifies invalid reg. Use R2-R11'
+         AGO   .NOERR7
+.ERR7G   MNOTE 8,'Second RCD subparm specifies invalid reg. Use R2-R11'
+         AGO   .NOERR7
+.ERR7H   MNOTE 8,'First and second RCD subparms specify same register'
+.NOERR7  ANOP
+.*
+.* Generate label
+&LABEL   LABEL ,                       * User abend routine
+.*
+.* Handling of COND=SETDFT
+         AIF   ('&COND' NE 'SETDFT').NODFT
+&BXA_ABND_DFT SETC '&ABEND'
+         MEXIT
+.NODFT   ANOP
+.*
+.* Apply default if abend-label omitted
+&_ABEND  SETC  '&BXA_ABND_DFT'
+         AIF   (K'&ABEND EQ 0).USEDFT
+&_ABEND  SETC  '&ABEND'
+.USEDFT  ANOP
+.*
+.* Add &_ABEND to BXA_ABND table
+&I       SETA  0
+.LOOP1   ANOP
+&I       SETA  &I+1                    * Point to next element
+         AIF   (&I GT N'&BXA_ABND).LOOP1AD * Not in table: Add element
+         AIF   ('&_ABEND' EQ '&BXA_ABND(&I)').LOOP1OK * Found: done
+         AGO   .LOOP1                  * Go search remainder of table
+.LOOP1AD ANOP  ,                       * &I points beyond last used elm
+&BXA_ABND(&I) SETC '&_ABEND'           * Put label into next element
+.LOOP1OK ANOP
+.*
+.* Generate code for COND=TSTRC
+         AIF   ('&COND' NE 'TSTRC').NORC
+         AIF   ('&_RCD1' EQ '').RCDIGNR
+         LTR   &_RCD1,R15              * Test returncode & Save in reg
+         AGO   .RCDTSTD
+.RCDIGNR ANOP  ,                       * Returncode can be ignored
+         LTR   R15,R15                 * Test returncode
+.RCDTSTD ANOP  ,                       * Returncode has been tested
+         BZ    _ABND&SYSNDX            * Retcd=0: skip abend
+         AIF   ('&_RCD2' EQ '').RSNIGNR
+         LR    &_RCD2,R0               * Copy reasoncode
+.RSNIGNR ANOP
+         L     R15,=AL4(&_ABEND)       * Retrieve ABEND-routine address
+         BASR  &FAIL,R15               * And branch to it
+_ABND&SYSNDX LABEL
+         MEXIT
+.NORC    ANOP
+.*
+.* Generate test for TSTREG=(reg1,reg2)
+         AIF   (K'&TSTREG EQ 0).NOTEST
+         LTR   &_TSTREG1,&_TSTREG2     * Test value (return value?)
+.NOTEST  ANOP
+.*
+.* In-line code for generating a user abend
+         AIF   (K'&COND EQ 0).BAS
+&OPCD    SETC  'BAS&COND'              * Generate conditional BAS
+         &OPCD &FAIL,&_ABEND,          * Conditional branch to abend   *
+               TYPE=REMOTE             * which is a remote routine
+         AGO   .MEND
+.*
+.BAS     ANOP
+         L     R15,=AL4(&_ABEND)       * Retrieve ABEND-routine address
+         BASR  &FAIL,R15               * And branch to it
+.*
+.MEND    MEND

@@ -1,0 +1,198 @@
+{
+  "IF Block": {
+    "prefix": ["if", "IF"],
+    "body": [
+      "         IF    (${1:R1},${2|EQ,NE,GT,LT,GE,LE|},${3:0})",
+      "         $0",
+      "         ENDIF"
+    ],
+    "description": "IF/ENDIF conditional block"
+  },
+  "IF ELSE Block": {
+    "prefix": ["ifelse", "IFELSE"],
+    "body": [
+      "         IF    (${1:R1},${2|EQ,NE,GT,LT,GE,LE|},${3:0})",
+      "         $4",
+      "         ELSE",
+      "         $0",
+      "         ENDIF"
+    ],
+    "description": "IF/ELSE/ENDIF conditional block"
+  },
+  "DO WHILE Loop": {
+    "prefix": ["dowhile", "DOWHILE", "do"],
+    "body": [
+      "         DO    WHILE=(${1:R1},${2|GT,GE,LT,LE,NE,EQ|},${3:0})",
+      "         $0",
+      "         ENDDO"
+    ],
+    "description": "DO WHILE loop block"
+  },
+  "DO UNTIL Loop": {
+    "prefix": ["dountil", "DOUNTIL"],
+    "body": [
+      "         DO    UNTIL=(${1:R1},${2|EQ,NE,GT,LT,GE,LE|},${3:0})",
+      "         $0",
+      "         ENDDO"
+    ],
+    "description": "DO UNTIL loop block"
+  },
+  "DO FROM TO": {
+    "prefix": ["dofrom", "DOFROM"],
+    "body": [
+      "         DO    FROM=(${1:R1},${2:1}),TO=(${1:R1},${3:10}),BY=(${1:R1},${4:1})",
+      "         $0",
+      "         ENDDO"
+    ],
+    "description": "DO FROM/TO counted loop"
+  },
+  "CASE Block": {
+    "prefix": ["case", "CASE"],
+    "body": [
+      "         CASE  ${1:R1}",
+      "         WHEN  (${2:0})",
+      "         $3",
+      "         WHEN  (${4:1})",
+      "         $5",
+      "         WHEN  (OTHER)",
+      "         $0",
+      "         ENDCASE"
+    ],
+    "description": "CASE/WHEN/ENDCASE multi-way branch"
+  },
+  "EQUREG": {
+    "prefix": ["equreg", "EQUREG", "reg"],
+    "body": [
+      "${1:NAME}    EQUREG ${2|R2,R3,R4,R5,R6,R7,R8,R9,R10,R11,R12|},${3|G,A,F,C|}    ${4:comment}"
+    ],
+    "description": "Declare typed register (G=general, A=address, F=float, C=control)"
+  },
+  "Program Skeleton": {
+    "prefix": ["pgm", "PGM", "program"],
+    "body": [
+      "${1:PROGNAME} CSECT",
+      "         STM   R14,R12,12(R13)       Save registers",
+      "         LR    R12,R15               Set base register",
+      "         USING ${1:PROGNAME},R12",
+      "         LA    R11,SAVEAREA          Point to save area",
+      "         ST    R13,4(R11)            Chain save areas",
+      "         ST    R11,8(R13)",
+      "         LR    R13,R11",
+      "*",
+      "         $0",
+      "*",
+      "EXIT     L     R13,4(R13)            Restore save area ptr",
+      "         LM    R14,R12,12(R13)       Restore registers",
+      "         SR    R15,R15               Set RC=0",
+      "         BR    R14                   Return",
+      "*",
+      "SAVEAREA DS    18F                   Register save area",
+      "         END   ${1:PROGNAME}"
+    ],
+    "description": "Complete program skeleton with linkage"
+  },
+  "Subroutine": {
+    "prefix": ["sub", "subroutine", "BEGSR"],
+    "body": [
+      "${1:SUBNAME}  DS    0H",
+      "         $0",
+      "         BR    R14                   Return"
+    ],
+    "description": "Simple subroutine"
+  },
+  "DCB Definition": {
+    "prefix": ["dcb", "DCB"],
+    "body": [
+      "${1:INDCB}   DCB   DSORG=${2|PS,PO,DA|},MACRF=${3|(GM),(PM),(GL),(PL)|},",
+      "               DDNAME=${4:INFILE},",
+      "               RECFM=${5|FB,VB,F,V,U|},",
+      "               LRECL=${6:80},",
+      "               BLKSIZE=${7:8000}"
+    ],
+    "description": "Data Control Block definition"
+  },
+  "OPEN": {
+    "prefix": ["open", "OPEN"],
+    "body": [
+      "         OPEN  (${1:DCBNAME},${2|INPUT,OUTPUT,UPDAT,EXTEND|})"
+    ],
+    "description": "Open a DCB"
+  },
+  "CLOSE": {
+    "prefix": ["close", "CLOSE"],
+    "body": [
+      "         CLOSE ${1:DCBNAME}"
+    ],
+    "description": "Close a DCB"
+  },
+  "GET Record": {
+    "prefix": ["get", "GET"],
+    "body": [
+      "         GET   ${1:DCBNAME},${2:RECAREA}"
+    ],
+    "description": "Get a record (QSAM)"
+  },
+  "PUT Record": {
+    "prefix": ["put", "PUT"],
+    "body": [
+      "         PUT   ${1:DCBNAME},${2:RECAREA}"
+    ],
+    "description": "Put a record (QSAM)"
+  },
+  "WTO Message": {
+    "prefix": ["wto", "WTO"],
+    "body": [
+      "         WTO   '${1:Message text}'"
+    ],
+    "description": "Write to operator"
+  },
+  "ABEND": {
+    "prefix": ["abend", "ABEND"],
+    "body": [
+      "         ABEND ${1:100},DUMP"
+    ],
+    "description": "Abnormal end with dump"
+  },
+  "Load Address": {
+    "prefix": ["la", "LA"],
+    "body": [
+      "         LA    ${1:R1},${2:address}"
+    ],
+    "description": "Load address into register"
+  },
+  "Load Register": {
+    "prefix": ["lr", "LR"],
+    "body": [
+      "         LR    ${1:R1},${2:R2}"
+    ],
+    "description": "Load register from register"
+  },
+  "Compare": {
+    "prefix": ["cmp", "compare"],
+    "body": [
+      "         ${1|C,CH,CL,CLI,CLC|}    ${2:op1},${3:op2}"
+    ],
+    "description": "Compare instruction"
+  },
+  "Branch": {
+    "prefix": ["br", "branch"],
+    "body": [
+      "         B${1|E,NE,H,L,NH,NL,Z,NZ,P,M,O|}    ${2:label}"
+    ],
+    "description": "Conditional branch"
+  },
+  "Storage Definition": {
+    "prefix": ["ds", "DS"],
+    "body": [
+      "${1:FIELD}   DS    ${2|CL,XL,F,H,D,A,P|}${3:length}"
+    ],
+    "description": "Define storage"
+  },
+  "Constant Definition": {
+    "prefix": ["dc", "DC"],
+    "body": [
+      "${1:CONST}   DC    ${2|C,X,F,H,A,P|}'${3:value}'"
+    ],
+    "description": "Define constant"
+  }
+}

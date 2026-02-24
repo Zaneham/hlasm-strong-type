@@ -1,0 +1,152 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro handles the stack of EJECT modifications for use by the
+.* EJECT macro, which replaces the assembler's EJECT instruction
+.*
+&LABEL   EJECTOVR &OPT,                * *NOERR or *END                *
+               &TIMES                  * Repeat count for &OPT
+.*
+.* &LABEL should not be specified
+.* &OPT   specifies the one of the following:
+.*        *END cancels all outstanding EJECTOVR requests
+.*        *KEEP allows an EJECT statement to remain unchanged
+.*        *SUPPRESS suppresses the EJECT statement
+.*        *NOERR suppresses any error messages
+.* &TIMES Specifies the number of times the specified options is to be
+.*        performed. Cannot be used with *END
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EJECTOVR               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_EJECTOVR(2)        * Ptr to first and last valid
+         GBLC  &BXA_EJECTOVR_OPT(50)   * Options
+         GBLA  &BXA_NUMVAL             * Result from CHKLIT
+         LCLA  &_TIMES                 *
+         LCLA  &I                      * Index
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL EQ 0).NOERR1
+.ERR1    MNOTE 4,'Label parameter ignored'
+.NOERR1  ANOP
+.*
+.* Check the OPT parameter
+         AIF   (K'&OPT EQ 0).ERR2A
+         AIF   ('&OPT' EQ '*END').NOERR2
+         AIF   ('&OPT' EQ '*NOERR').NOERR2
+         AIF   ('&OPT' EQ '*SUPPRESS').NOERR2
+         AIF   ('&OPT' EQ '*KEEP').NOERR2
+         AGO   .ERR2B
+.ERR2A   MNOTE 8,'Missing parameter(s)'
+         MEXIT
+.ERR2B   MNOTE 8,'Unsupported option: &OPT'
+         MEXIT
+.NOERR2  ANOP  ,
+.*
+.* Check the TIMES parameter (may be present if &OPT <> *END)
+         AIF   (K'&TIMES EQ 0).NOERR3
+         AIF   ('&OPT' EQ '*END').ERR3A
+         CHKLIT &TIMES                 * Determine numerical value
+         AIF   (&BXA_RC NE 0).ERR3B
+&_TIMES  SETA  &BXA_NUMVAL             * Copy count to index
+         AGO   .NOERR3
+.ERR3A   MNOTE 4,'Count specified with option *END: count ignored'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'Specified count is not a valid number'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check number of parameters
+         AIF   ('&OPT' EQ '*END' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*END').NOERR4
+         AIF   (N'&SYSLIST GT 2).ERR4B
+         AGO   .NOERR4
+.ERR4A   MNOTE 4,'More than 1 argument: remainder ignored'
+         AGO   .NOERR4
+.ERR4B   MNOTE 4,'More than 2 arguments: remainder ignored'
+.NOERR4  ANOP
+.*
+.* Which option requested?
+         AIF   ('&OPT' EQ '*END').END
+.*
+.* Add entries to tables
+.NOERR   ANOP  ,
+&I       SETA  &BXA_EJECTOVR(2)+1      * Point next free entry
+&BXA_EJECTOVR_OPT(&I) SETC '&OPT'      * Insert option into table
+&BXA_EJECTOVR(2) SETA &I               * Update ptr to last-valid entry
+&_TIMES  SETA  &_TIMES-1               * Reduce nr of entries to create
+         AIF   (&_TIMES GE 1).NOERR    * Repeat until all created
+         MEXIT
+.*
+.* Ending current EJECTOVR requests. Issue a message for any unused
+.* entries in BXA_EJECTOVR tables.
+.END     ANOP
+         AIF   (&BXA_EJECTOVR(2) EQ 0).MEND * No entries exist
+&I       SETA  &BXA_EJECTOVR(1)        * I indexes BXA_EJECTOVR_OPT
+.LOOP1   ANOP  ,                       * For all current entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_EJECTOVR(2)).LOOP1OK * At end: quit loop
+         MNOTE 4,'EJECTOVR &BXA_EJECTOVR_OPT(&I) discarded'
+         AGO   .LOOP1
+.LOOP1OK ANOP
+&BXA_EJECTOVR(1) SETA 0                * Reset used-up counter to 0
+&BXA_EJECTOVR(2) SETA 0                * Reset valid counter to 0
+.*
+.MEND    MEND

@@ -1,0 +1,353 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the I/O Supervisor Block
+.*
+&LABEL   MAPIOSB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPIOSB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPIOSB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'IOSB').EMBED
+         AIF   ('&CB' EQ 'IOSX').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPIOSB).MEND
+&BXA_MAC_MAPIOSB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_IOSB
+         GBLC  &BXA_CB_IOSX
+&BXA_CB_IOSB SETC 'IOSB'
+&BXA_CB_IOSX SETC 'IOSB'
+.*
+.* IOSFLA - Flag byte A
+IOSDCHN  EQUOVR ,,b,IOSFLA
+IOSCCHN  EQUOVR ,,b,IOSFLA
+IOSACHN  EQUOVR ,,b,IOSFLA
+IOSERR   EQUOVR ,,b,IOSFLA
+IOSSMDA  EQUOVR ,,b,IOSFLA
+IOSSMDB  EQUOVR ,,b,IOSFLA
+IOSEX    EQUOVR ,,b,IOSFLA
+IOSDOM   EQUOVR ,,b,IOSFLA
+IOSIOSB  EQUOVR ,,b,IOSFLA
+.*
+.* IOSFLB - Flag byte B
+IOSDIESE EQUOVR ,,b,IOSFLB
+IOSSDR   EQUOVR ,,b,IOSFLB
+IOSNOTRS EQUOVR ,,b,IOSFLB
+IOSRESRC EQUOVR ,,b,IOSFLB
+IOSIONRD EQUOVR ,,b,IOSFLB
+IOSMSG   EQUOVR ,,b,IOSFLB
+IOSBDCST EQUOVR ,,b,IOSFLB
+IOSLOG   EQUOVR ,,b,IOSFLB
+.*
+.* IOSFLC - Flag byte C
+IOSGDPLP EQUOVR ,,b,IOSFLC
+IOSVERIF EQUOVR ,,b,IOSFLC
+IOSCC3WE EQUOVR ,,b,IOSFLC
+IOSEXP   EQUOVR ,,b,IOSFLC
+IOSNORTY EQUOVR ,,b,IOSFLC
+IOSCTCNR EQUOVR ,,b,IOSFLC
+IOSGDP   EQUOVR ,,b,IOSFLC
+.*
+.* IOSPROC - IOS special processing procedures
+IOSAPCI  EQUOVR ,,v,IOSPROC
+IOSATTN  EQUOVR ,,v,IOSPROC
+IOSAPURG EQUOVR ,,v,IOSPROC
+IOSAWTO  EQUOVR ,,v,IOSPROC
+IOSADDR  EQUOVR ,,v,IOSPROC
+IOSADIER EQUOVR ,,v,IOSPROC
+IOSAUR   EQUOVR ,,v,IOSPROC
+IOSAST1  EQUOVR ,,v,IOSPROC
+IOSASNRQ EQUOVR ,,v,IOSPROC
+IOSACLR  EQUOVR ,,v,IOSPROC
+IOSAHALT EQUOVR ,,v,IOSPROC
+IOSAMOD  EQUOVR ,,v,IOSPROC
+IOSASTOR EQUOVR ,,v,IOSPROC
+.*
+.* IOSDVRID - Driver identification value
+IOSIOSID EQUOVR ,,v,IOSDVRID
+IOSMISID EQUOVR ,,v,IOSDVRID
+IOSXCPID EQUOVR ,,v,IOSDVRID
+IOSVSAID EQUOVR ,,v,IOSDVRID
+IOSATMID EQUOVR ,,v,IOSDVRID
+IOSTCMID EQUOVR ,,v,IOSDVRID
+IOSOLTID EQUOVR ,,v,IOSDVRID
+IOSFCHID EQUOVR ,,v,IOSDVRID
+IOSJESID EQUOVR ,,v,IOSDVRID
+IOSSS1ID EQUOVR ,,v,IOSDVRID
+IOSPRGID EQUOVR ,,v,IOSDVRID
+IOSVPSID EQUOVR ,,v,IOSDVRID
+IOSASMID EQUOVR ,,v,IOSDVRID
+IOSMDSID EQUOVR ,,v,IOSDVRID
+IOSAUSID EQUOVR ,,v,IOSDVRID
+IOSDYPID EQUOVR ,,v,IOSDVRID
+IOSDAVV  EQUOVR ,,v,IOSDVRID
+IOSDCSID EQUOVR ,,v,IOSDVRID
+IOSAOMID EQUOVR ,,v,IOSDVRID
+IOSSMSID EQUOVR ,,v,IOSDVRID
+IOSXCFID EQUOVR ,,v,IOSDVRID
+IOSCDRID EQUOVR ,,v,IOSDVRID
+IOSSLFID EQUOVR ,,v,IOSDVRID
+IOSV33ID EQUOVR ,,v,IOSDVRID
+IOSCLRID EQUOVR ,,v,IOSDVRID
+IOSSCRID EQUOVR ,,v,IOSDVRID
+IOSV16ID EQUOVR ,,v,IOSDVRID
+IOSAPRID EQUOVR ,,v,IOSDVRID
+IOSMIHID EQUOVR ,,v,IOSDVRID
+IOSPRVID EQUOVR ,,v,IOSDVRID
+IOSRSVID EQUOVR ,,v,IOSDVRID
+.*
+.* IOSFLD - Flag byte D
+IOSNOINT EQUOVR ,,b,IOSFLD
+IOSMNORQ EQUOVR ,,b,IOSFLD
+IOSEPCIF EQUOVR ,,b,IOSFLD
+IOSCCWDS EQUOVR ,,b,IOSFLD
+IOSEPCIS EQUOVR ,,b,IOSFLD
+IOSLIOPF EQUOVR ,,b,IOSFLD
+IOSNOLL  EQUOVR ,,b,IOSFLD
+IOSBEXTF EQUOVR ,,b,IOSFLD
+.*
+.* IOSPKEY - Protect key of IOSPGAD
+IOSLCL   EQUOVR ,,b,IOSPKEY
+IOSIDR   EQUOVR ,,b,IOSPKEY
+IOSPGDPX EQUOVR ,,b,IOSPKEY
+IOSCHCMP EQUOVR ,,b,IOSPKEY
+.*
+.* IOSCOD - I/O completion code field
+IOSERRC  EQUOVR ,,v,IOSCOD
+IOSEXTC  EQUOVR ,,v,IOSCOD
+IOSDPXC  EQUOVR ,,v,IOSCOD
+IOSINTC  EQUOVR ,,v,IOSCOD
+IOSABNC  EQUOVR ,,v,IOSCOD
+IOSCD46  EQUOVR ,,v,IOSCOD
+IOSEXTRM EQUOVR ,,v,IOSCOD
+IOSPRGC  EQUOVR ,,v,IOSCOD
+IOSCNCLD EQUOVR ,,v,IOSCOD
+IOSPVTIO EQUOVR ,,v,IOSCOD
+IOSTAPEC EQUOVR ,,v,IOSCOD
+IOSIVEXP EQUOVR ,,v,IOSCOD
+IOSGDPCC EQUOVR ,,v,IOSCOD
+IOSGDPRD EQUOVR ,,v,IOSCOD
+IOSCD50  EQUOVR ,,v,IOSCOD
+IOSMIHCA EQUOVR ,,v,IOSCOD
+IOSMIHSP EQUOVR ,,v,IOSCOD
+IOSIOTCR EQUOVR ,,v,IOSCOD
+IOSCAPAS EQUOVR ,,v,IOSCOD
+IOSGDPWE EQUOVR ,,v,IOSCOD
+IOSFTCHC EQUOVR ,,v,IOSCOD
+IOSMIHC  EQUOVR ,,v,IOSCOD
+IOSXERPL EQUOVR ,,v,IOSCOD
+IOSFINTC EQUOVR ,,v,IOSCOD
+IOSNRMC  EQUOVR ,,v,IOSCOD
+.*
+.* IOSOPT - Options byte
+IOSBYP   EQUOVR ,,b,IOSOPT
+IOSDEP   EQUOVR ,,b,IOSOPT
+IOSQISCE EQUOVR ,,b,IOSOPT
+IOSPSLL  EQUOVR ,,b,IOSOPT
+IOSNERP  EQUOVR ,,b,IOSOPT
+IOSTSLL  EQUOVR ,,b,IOSOPT
+IOSAPR   EQUOVR ,,b,IOSOPT
+IOSRELSE EQUOVR ,,b,IOSOPT
+.*
+.* IOSOPT2 - Second option byte
+IOSF     EQUOVR ,,b,IOSOPT2
+IOSP     EQUOVR ,,b,IOSOPT2
+IOSI     EQUOVR ,,b,IOSOPT2
+IOSA     EQUOVR ,,b,IOSOPT2
+IOSSI    EQUOVR ,,b,IOSOPT2
+IOSZ     EQUOVR ,,b,IOSOPT2
+IOSE     EQUOVR ,,b,IOSOPT2
+IOSN     EQUOVR ,,b,IOSOPT2
+.*
+.* IOSCC - Start Subchannel deferred CC
+IOSCC3   EQUOVR ,,v,IOSCC
+IOSCC1   EQUOVR ,,v,IOSCC
+IOSCC0   EQUOVR ,,v,IOSCC
+.*
+.* IOSDSTAT - Device status
+IOSDSATN EQUOVR ,,b,IOSDSTAT
+IOSDSSM  EQUOVR ,,b,IOSDSTAT
+IOSDSCUE EQUOVR ,,b,IOSDSTAT
+IOSDSBSY EQUOVR ,,b,IOSDSTAT
+IOSDSCE  EQUOVR ,,b,IOSDSTAT
+IOSDSDE  EQUOVR ,,b,IOSDSTAT
+IOSDSUC  EQUOVR ,,b,IOSDSTAT
+IOSDSUEX EQUOVR ,,b,IOSDSTAT
+.*
+.* IOSSSTAT - Subchannel status
+IOSSSPCI EQUOVR ,,b,IOSSSTAT
+IOSSSIL  EQUOVR ,,b,IOSSSTAT
+IOSSSPGC EQUOVR ,,b,IOSSSTAT
+IOSSSPTC EQUOVR ,,b,IOSSSTAT
+IOSSSCDC EQUOVR ,,b,IOSSSTAT
+IOSSSCCC EQUOVR ,,b,IOSSSTAT
+IOSSSICC EQUOVR ,,b,IOSSSTAT
+IOSSSCC  EQUOVR ,,b,IOSSSTAT
+.*
+.* IOSSCHC0 - Subchannel Control - Byte 0
+IOSFC    EQUOVR ,,b,IOSSCHC0
+IOSFSSCH EQUOVR ,,b,IOSSCHC0
+IOSFHSCH EQUOVR ,,b,IOSSCHC0
+IOSFCSCH EQUOVR ,,b,IOSSCHC0
+IOSAC    EQUOVR ,,b,IOSSCHC0
+IOSARSCH EQUOVR ,,b,IOSSCHC0
+IOSASSCH EQUOVR ,,b,IOSSCHC0
+IOSAHSCH EQUOVR ,,b,IOSSCHC0
+IOSACSCH EQUOVR ,,b,IOSSCHC0
+.*
+.* IOSSCHC1 - Subchannel Control - byte 1
+IOSAC2   EQUOVR ,,b,IOSSCHC1
+IOSASUBA EQUOVR ,,b,IOSSCHC1
+IOSADEVA EQUOVR ,,b,IOSSCHC1
+IOSSSPND EQUOVR ,,b,IOSSCHC1
+IOSSC    EQUOVR ,,b,IOSSCHC1
+IOSSALRT EQUOVR ,,b,IOSSCHC1
+IOSSINTR EQUOVR ,,b,IOSSCHC1
+IOSSPRIM EQUOVR ,,b,IOSSCHC1
+IOSSSEC  EQUOVR ,,b,IOSSCHC1
+IOSSPNDG EQUOVR ,,b,IOSSCHC1
+.*
+.* IOSSNS - Sense data - 1st 2 bytes
+IOSSNSBD EQUOVR ,,v,IOSSNS
+.*
+.* IOSCKEY - On STARTIO- Channel program
+IOSIRBKY EQUOVR ,,b,IOSCKEY
+IOSS     EQUOVR ,,b,IOSCKEY
+IOSIRBL  EQUOVR ,,b,IOSCKEY
+IOSIRBCC EQUOVR ,,b,IOSCKEY
+IOSIRBC3 EQUOVR ,,b,IOSCKEY
+IOSIRBC1 EQUOVR ,,b,IOSCKEY
+IOSIRBC0 EQUOVR ,,v,IOSCKEY
+.*
+.* IOSAFLGS - Attention Flags
+IOSAINTR EQUOVR ,,b,IOSAFLGS
+IOSAINTE EQUOVR ,,b,IOSAFLGS
+.*
+.* IOSFLB field bit definitions -- Modify Subchannel requests only
+IOSMLPMO EQUOVR ,,b,IOSFLB
+IOSMPOMO EQUOVR ,,b,IOSFLB
+IOSMMMO  EQUOVR ,,b,IOSFLB
+IOSASIS  EQUOVR ,,b,IOSFLB
+.*
+.* IOSOPT
+IOSSYN   EQUOVR ,,b,IOSOPT
+IOSNOPTH EQUOVR ,,b,IOSOPT
+.*
+.* IOSOPT2
+IOSMISC  EQUOVR ,,b,IOSOPT2
+IOSME    EQUOVR ,,b,IOSOPT2
+IOSMLM   EQUOVR ,,b,IOSOPT2
+IOSMMM   EQUOVR ,,b,IOSOPT2
+IOSMLPM  EQUOVR ,,b,IOSOPT2
+IOSMMBI  EQUOVR ,,b,IOSOPT2
+IOSMPOM  EQUOVR ,,b,IOSOPT2
+IOSMD    EQUOVR ,,b,IOSOPT2
+.*
+.* IOSXFLG1 - Flag byte 1
+IOSXNORQ EQUOVR ,,b,IOSXFLG1
+IOSXGDPR EQUOVR ,,b,IOSXFLG1
+IOSXDDRT EQUOVR ,,b,IOSXFLG1
+IOSXMIHI EQUOVR ,,b,IOSXFLG1
+IOSXIOSI EQUOVR ,,b,IOSXFLG1
+IOSXDPSV EQUOVR ,,b,IOSXFLG1
+IOSXIOSN EQUOVR ,,b,IOSXFLG1
+IOSXATPS EQUOVR ,,b,IOSXFLG1
+.*
+.* IOSXFLG2 - Flag byte 2
+IOSXIOT  EQUOVR ,,b,IOSXFLG2
+IOSXNMIH EQUOVR ,,b,IOSXFLG2
+.*
+.* IOSXRCOD - Reason code detailing the IOSCOD value
+IOSXRC9  EQUOVR ,,v,IOSXRCOD
+IOSXRC10 EQUOVR ,,v,IOSXRCOD
+.*
+         MNOTE *,'Including IECDIOSB mapping macro'
+         IECDIOSB IOSIOSBE=YES         * Include IOSB extension
+         EQUOVR *END
+*
+IOSB     DSECT ,                       * Resume IOSB DSECT
+         ORG   ,                       *
+IOSB_LEN EQU   L'IOSBSTD               * Length of IOSB
+IOSX_LEN EQU   *-IOSB-IOSB_LEN         * Length of IOSb eXtension
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

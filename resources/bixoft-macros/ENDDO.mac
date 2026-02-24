@@ -1,0 +1,170 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: ENDDO
+.* Combines with DO WHILE/UNTIL to repeatedly execute a block of code
+.*
+&LABEL   ENDDO ,                       * No arguments allowed
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC ENDDO                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_DO(5)          * DO labels
+         GBLC  &BXA_STK_LBL(5)         * Forward Labels
+         GBLC  &BXA_STK_CND(5)         * Conditions
+         GBLC  &BXA_STK_CLB(5)         * Condition labels
+         GBLC  &BXA_STK_USE(5)         * USEd count registers
+         LCLC  &OP                     * Last opcode on stack
+         LCLC  &LBL                    * Last label on stack
+         LCLC  &CND                    * Last Condition on stack
+         LCLC  &CLB                    * Last Condition label on stack
+         LCLC  &USE                    * Last USEd register on stack
+         LCLC  &DO                     * Loopback-label
+         LCLA  &I                      * Stack pointer
+.*
+.* Check label parameter
+         AIF   (K'&LABEL EQ 0).NOERR1
+.ERR1    MNOTE 4,'Label ignored'
+.NOERR1  ANOP
+.*
+.* Check nr of parameters
+         AIF   (N'&SYSLIST EQ 0).NOERR2
+         AIF   (K'&SYSLIST(1) GT 1).ERR2
+         AIF   (N'&SYSLIST EQ 1).NOERR2
+         AIF   (K'&SYSLIST(2) GT 1).ERR2
+         AIF   (N'&SYSLIST EQ 2).NOERR2
+.ERR2    MNOTE 4,'No arguments expected: ignored'
+.NOERR2  ANOP
+.*
+.* Check that current stack-entry designates a valid DO-type operation
+&I       SETA  &BXA_STK                * Copy stack pointer
+         AIF   (&I LT 1).ERR3A         * Stack underflow
+&OP      SETC  '&BXA_STK_OP(&I)'       * Extract opcode from stack
+&LBL     SETC  '&BXA_STK_LBL(&I)'      * and end-of-block label
+&DO      SETC  '&BXA_STK_DO(&I)'       * Loopback label
+&CND     SETC  '&BXA_STK_CND(&I)'      * Condition
+&CLB     SETC  '&BXA_STK_CLB(&I)'      * Condition label
+&USE     SETC  '&BXA_STK_USE(&I)'      * USEd label
+         AIF   ('&OP' EQ 'DO').DO
+         AIF   ('&OP' EQ 'DOWHILE').DOWHILE
+         AIF   ('&OP' EQ 'DOUNTIL').DOUNTIL
+         AIF   ('&OP' EQ 'DOCOUNT').DOCOUNT
+         AGO   .ERR3B
+.ERR3A   MNOTE 8,'No preceding DO statement: ignored'
+         MEXIT
+.ERR3B   MNOTE 8,'Cannot use ENDDO to terminate a &OP.-block: ignored'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Generate code for ENDDO after DO WHILE
+.* Loopback-label to WHILE condition is in BXA_STK_DO
+.* End-of-loop-label (used when WHILE cond. is false) in BXA_STK_LBL
+.*
+.DOWHILE ANOP  ,
+         B     &DO                     * Back to end-of-loop test
+&LBL     LABEL ,                       * End of DO WHILE loop
+         AGO   .UNSTACK
+.*
+.* Generate code for ENDDO after DO COUNT
+.* Loopback-label to DO UNTIL is in BXA_STK_DO
+.* Loop counter register is in BXA_STK_CND
+.* END-of-loop label is in BXA_STK_LBL
+.*
+.DOCOUNT ANOP  ,                       *
+&CLB     BCT   &CND,&DO                * Loop until count reaches zero
+         AIF   (K'&LBL EQ 0).NOLBL     *
+&LBL     LABEL ,                       * End of do-loop
+.NOLBL   ANOP  ,                       *
+         AIF   (K'&USE EQ 0).UNSTACK   *
+         DROP  &USE                    * Count reg no longer needed
+         AGO   .UNSTACK                *
+.*
+.* Generate code for ENDDO after DO UNTIL
+.* Loopback-label to DO UNTIL is in BXA_STK_DO
+.* End-of-loop-condition is in BXA_STK_CND
+.* END-of-loop label is in BXA_STK_LBL
+.*
+.DOUNTIL ANOP  ,
+&CLB     GOTO  &DO,UNLESS,&CND         * Loop until condition met
+         AIF   (K'&LBL EQ 0).UNSTACK   *
+&LBL     LABEL ,                       * End of do-loop
+         AGO   .UNSTACK                *
+.*
+.* Generate code for ENDDO after DO
+.* Loopback-label to DO UNTIL is in BXA_STK_DO
+.* End-of-loop-condition is non-existent
+.* END-of-loop label is in BXA_STK_LBL
+.*
+.DO      ANOP  ,
+         B     &DO                     * Repeat loop
+.*
+.* If &LBL is empty, no LEAVE macro exits from this loop: Error!
+         AIF   (K'&LBL NE 0).NOERR4
+.ERR4A   MNOTE 8,'No LEAVE macro found to terminate this loop'
+.NOERR4  ANOP  ,
+.*
+&LBL     LABEL ,                       * End of do-loop
+.*
+.* Remove DO-entry from stack
+.UNSTACK ANOP  ,
+&BXA_STK SETA  &BXA_STK-1
+.*
+.MEND    MEND

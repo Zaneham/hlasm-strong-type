@@ -1,0 +1,155 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Auxiliary Storage Manager Vector Table
+.*
+&LABEL   MAPASMVT &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPASMVT               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPASMVT       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ASMPOOLS').EMBED
+         AIF   ('&CB' EQ 'ASMVT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPASMVT).MEND
+&BXA_MAC_MAPASMVT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ASMPOOLS
+         GBLC  &BXA_CB_ASMVT
+&BXA_CB_ASMPOOLS SETC 'ASMVT'
+&BXA_CB_ASMVT SETC 'ASMVT'
+.*
+.* ASMFLAG1 - ASM global flag field 1
+.* ASMDUPLX    EQUOVR ,,b,ASMFLAG1     * Last seen in OS/390 V2R6
+ASMNPRIM    EQUOVR ,,b,ASMFLAG1
+ASMNOLCL    EQUOVR ,,b,ASMFLAG1
+ASMPGDEL    EQUOVR ,,b,ASMFLAG1
+.* ASMNODPX    EQUOVR ,,b,ASMFLAG1     * Last seen in OS/390 V2R6
+ASMPLPAF    EQUOVR ,,b,ASMFLAG1
+ASMCOMMF    EQUOVR ,,b,ASMFLAG1
+ASMPLPAS    EQUOVR ,,b,ASMFLAG1
+.*
+.* ASMFLAG2 - ASM global flag field 2
+ASMDSRO     EQUOVR ,,b,ASMFLAG2
+ASMNOSAV    EQUOVR ,,b,ASMFLAG2
+ASMNOTMR    EQUOVR ,,b,ASMFLAG2
+ASMNOTPT    EQUOVR ,,b,ASMFLAG2
+ASMQUICK    EQUOVR ,,b,ASMFLAG2
+ASMWARM     EQUOVR ,,b,ASMFLAG2
+ASMSPILL    EQUOVR ,,b,ASMFLAG2
+ASMNOWM     EQUOVR ,,b,ASMFLAG2
+.*
+.* ASMFLAG3 - ASM global flag field 3
+ASMWTO5E    EQUOVR ,,b,ASMFLAG3
+.*
+.* Externals - not necessarily needed
+ILRGOS      EXTRNOVR *WXTRN
+ILRTRPAG    EXTRNOVR *WXTRN
+ILRPTERM    EXTRNOVR *WXTRN
+.*
+.* ASMVIO - ASM global VIO flag.
+ASMDVIO     EQUOVR ,,b,ASMVIO
+ASMNFVIO    EQUOVR ,,b,ASMVIO
+ASMTRPLF    EQUOVR ,,b,ASMVIO
+ASMVIOJ     EQUOVR ,,b,ASMVIO
+.*
+.* Externals - not necessarily needed
+ILRCMP      EXTRNOVR *WXTRN
+ILRCMPCI    EXTRNOVR *WXTRN
+ILRCMPDI    EXTRNOVR *WXTRN
+ILRCMPAE    EXTRNOVR *WXTRN
+ILRCMPNE    EXTRNOVR *WXTRN
+.*
+         MNOTE *,'Including ILRASMVT mapping macro'
+         ILRASMVT ,                    *
+         EQUOVR *END                   *
+         EXTRNOVR *END                 *
+*
+ASMVT    DSECT ,                       * Return to ASMVT
+         ORG
+ASMVT_LEN EQU  *-ASMVT                 * Length of ASMVT
+*
+ASMPOOLS DSECT ,                       * Return to ASMPOOLS DSECT
+         ORG
+ASMPOOLS_LEN EQU *-ASMPOOLS            * Length of ASMPOOLS
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

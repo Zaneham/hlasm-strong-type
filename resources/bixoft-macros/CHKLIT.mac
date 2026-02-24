@@ -1,0 +1,290 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Macro for testing whether an argument contains a valid numeric
+.*       literal value.
+.*
+.* Returns the value of the specified literal in &BXA_NUMVAL
+.* And a returncode in &BXA_RC as follows:
+.* 0 - valid literal, value is in &BXA_NUMVAL
+.* 4 - empty literal, value 0 in &BXA_NUMVAL
+.*   - or valid alternate form literal, value is in &BXA_NUMVAL
+.* 8 - invalid literal, value 0 in &BXA_NUMVAL
+.*
+         CHKLIT &VAL,                  * Value to be tested            *
+               &HEX=OK,                * Any other value disallows HEX *
+               &BIN=OK,                * Any other value disallows Bin *
+               &ALT=NOK,               * Alternate form not allowed    *
+               &MSG=NO                 * Suppress message for oversized
+.*
+.* &VAL   Specifies the value to be tested.
+.* &HEX   Specifies whether or not the supplied value may be specified
+.*        as a hexadecimal literal. Defaults to OK.
+.* &BIN   Specifies whether or not the supplied value may be specified
+.*        as a binary literal. Defaults to OK.
+.* &ALT   Specifies whether of not alternate form literals
+.*        may be specified. Defaults to NOK.
+.*        Allows the following literals:
+.*        =X'....' if HEX=OK
+.*        =B'....' if BIN=OK
+.*        =F'...' or F'...'
+.*        =H'...' or H'...'
+.* &MSG   YES/NO display message if literal is valid, but too large
+.*        to be used.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CHKLIT                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Define variables
+         GBLA  &BXA_NUMVAL             * Value of literal
+         LCLA  &I                      * Char index in VAL
+         LCLA  &J                      * temp var
+         LCLC  &C                      * A single character
+         LCLC  &_VAL                   * Text value from &VAL
+         LCLA  &VAL1,&VAL2             * Numeric value from &VAL
+         LCLA  &MAX1,MAX2              * Maximum value allowed
+         LCLA  &MIN1,MIN2              * Minimum value allowed
+         LCLA  &BASE                   * Base nr for VAL1 and VAL2
+         LCLB  &NEG                    * On if number is negative
+.*
+.* Set BASE to 1 million
+&BASE    SETA  1000000                 * VAL2/MAX2/MIN2 count millions
+&MAX1    SETA  2147                    * Max in millions
+&MAX2    SETA  483647                  * Max in units if VAL1=MAX1
+&MIN1    SETA  2147                    * Min in millions
+&MIN2    SETA  483648                  * Min in units if VAL1=MIN1
+.*
+.* Check number of parameters
+          AIF   (N'&SYSLIST LE 1).NOERR1
+.ERR1A    MNOTE 4,'More than 1 argument found: remainder ignored'
+.NOERR1   ANOP  ,                      *
+.*
+.* Empty string specified?
+         AIF   (K'&VAL NE 0).NOERR2    *
+         AGO   .RET4                   * Return with RC=4
+.NOERR2  ANOP  ,                       *
+.*
+.* Remove leading = sign if ALT=OK
+&_VAL    SETC  '&VAL'                  *
+         AIF   ('&_VAL'(1,1) NE '=').VALOK
+         AIF   ('&ALT' EQ 'NOK').RET8  * ALT=NOK: invalid
+         AIF   (K'&_VAL LT 2).RET8     * Just an =sign: invalid
+&_VAL    SETC  '&_VAL'(2,*)            * Remove leading =sign
+.VALOK   ANOP  ,                       *
+.*
+.* Check for leading minus-sign
+         AIF   ('&_VAL'(1,1) NE '-').NODASH
+&NEG     SETB  1                       * Indicate negative number
+         AIF   (K'&_VAL LT 2).RET8     * Just a -sign: invalid
+&_VAL    SETC  '&_VAL'(2,*)            * Remove leading dash
+.NODASH  ANOP  ,                       *
+.*
+.* Check whether the value is in decimal, HEX, or BIN notation
+         AIF   (K'&_VAL LT 2).DIG
+         AIF   ('&_VAL'(1,2) EQ 'X''').HEX
+         AIF   ('&_VAL'(1,2) EQ 'x''').HEX
+         AIF   ('&_VAL'(1,2) EQ 'B''').BIN
+         AIF   ('&_VAL'(1,2) EQ 'b''').BIN
+         AIF   ('&_VAL'(1,2) EQ 'F''').ALTDIG
+         AIF   ('&_VAL'(1,2) EQ 'f''').ALTDIG
+         AIF   ('&_VAL'(1,2) EQ 'H''').ALTDIG
+         AIF   ('&_VAL'(1,2) EQ 'h''').ALTDIG
+.*
+.* Digital number: Check whether each position is in the range 0-9
+.DIG     ANOP  ,                       *
+&I       SETA  0                       * Scan &_VAL for characters
+.LOOPD   ANOP  ,                       *
+&I       SETA  &I+1                    * Point previous char in VAL
+         AIF   (&I GT K'&_VAL).CHKVAL  * At end: return ok
+&C       SETC  '&_VAL'(&I,1)           * Extract next character
+&J       SETA  ('0123456789' FIND '&C') * Valid digit?
+         AIF   (&J EQ 0).RET8          * Invalid character found
+&C       SETC  '.00010203040506070809'(2*&J,2)
+&J       SETA  &C                      * Turn into numeric value
+&VAL1    SETA  10*&VAL1                * 'Shift' to make room
+&VAL2    SETA  10*&VAL2+&J             *   and add new digit at end
+         AIF   (&VAL2 LT &BASE).LOOPD  * No need to normalize
+&J       SETA  &VAL2/&BASE             * Carry over to VAL1
+&VAL1    SETA  &VAL1+&J                * Add carry over
+&VAL2    SETA  &VAL2-(&BASE*&J)        * And remove carry over
+         AIF   (&VAL1 GT &MAX1).RET8MSG * Nr is too big
+         AGO   .LOOPD                  * Invalid character found
+.*
+.* Digital number in alternate form: H'...' or F'...'
+.* Check whether properly enclosed in quotes and validity of all digits
+.ALTDIG  ANOP  ,                       *
+         AIF   ('&ALT' EQ 'NOK').RET8  * Not valid now
+&I       SETA  K'&_VAL                 *
+         AIF   (&I LT 4).RET8          * Too short to be valid!
+         AIF   ('&_VAL'(2,1) NE '''').RET8 * Opening quote is ok?
+         AIF   ('&_VAL'(&I,1) NE '''').RET8 * Closing quote is ok?
+&_VAL    SETC  '&_VAL'(3,&I-3)         * Extract value string, which
+         AIF   ('&_VAL'(1,1) NE '-').DIG * Not negative: go process
+         AIF   (K'&_VAL LT 2).RET8     * Just a -sign: invalid
+&_VAL    SETC  '&_VAL'(2,*)            * Remove leading dash
+         AIF   (&NEG).RET8             * Double minus not allowed
+&NEG     SETB  1                       * Indicate negative number
+         AGO   .DIG                    * Go check remainder of nr
+.*
+.* Hexadecimal number: Check whether properly enclosed in quotes
+.*                     and validity of all digits
+.HEX     ANOP  ,                       *
+         AIF   ('&HEX' NE 'OK').RET8   * Not valid now
+         AIF   (&NEG).RET8             * Negative unsigned: impossible!
+&I       SETA  K'&_VAL                 *
+         AIF   (&I LT 4).RET8          * Too short to be valid!
+         AIF   ('&_VAL'(2,1) NE '''').RET8 * Opening quote is ok?
+         AIF   ('&_VAL'(&I,1) NE '''').RET8 * Closing quote is ok?
+&_VAL    SETC  '&_VAL'(3,&I-3)         * Extract string of digits
+.*
+.* Scan left to right and create result value
+&I       SETA  0                       * I indexes &_VAL
+.LOOPH   ANOP  ,                       *
+&I       SETA  &I+1                    * Point previous char in VAL
+         AIF   (&I GT K'&_VAL).CHKVAL  * At end: check value
+&C       SETC  '&_VAL'(&I,1)           * Extract next character
+&J       SETA  ('0123456789ABCDEFabcdef' FIND '&C')
+         AIF   (&J EQ 0).RET8          * Invalid digit found
+&C       SETC  '.00010203040506070809101112131415101112131415'(2*&J,2)
+&J       SETA  &C                      * Turn into numeric value
+&VAL1    SETA  16*&VAL1                * 'Shift' to make room
+&VAL2    SETA  16*&VAL2+&J             *   and add new digit at end
+         AIF   (&VAL2 LT &BASE).LOOPH  * No need to normalize
+&J       SETA  &VAL2/&BASE             * Carry over to VAL1
+&VAL1    SETA  &VAL1+&J                * Add carry over
+&VAL2    SETA  &VAL2-(&BASE*&J)        * And remove carry over
+         AIF   (&VAL1 GT &MAX1).RET8MSG * Nr is too big
+         AGO   .LOOPH                  * Invalid character found
+.*
+.* Binary number: Check whether properly enclosed in quotes
+.*                and validity of all digits
+.BIN     ANOP  ,                       *
+         AIF   ('&BIN' NE 'OK').RET8   * Not valid now
+         AIF   (&NEG).RET8             * Negative unsigned: impossible!
+&I       SETA  K'&_VAL                 *
+         AIF   (&I LT 4).RET8          * Too short to be valid!
+         AIF   ('&_VAL'(2,1) NE '''').RET8 * Opening quote is ok?
+         AIF   ('&_VAL'(&I,1) NE '''').RET8 * Closing quote is ok?
+&_VAL    SETC  '&_VAL'(3,&I-3)         * Extract string of digits
+.*
+.* Scan left to right and create result value
+&I       SETA  0                       * I indexes &_VAL
+.LOOPB   ANOP  ,                       *
+&I       SETA  &I+1                    * Point previous char in VAL
+         AIF   (&I GT K'&_VAL).CHKVAL  * At end: check value
+&C       SETC  '&_VAL'(&I,1)           * Extract next character
+&J       SETA  ('01' FIND '&C')        *
+         AIF   (&J EQ 0).RET8          * Invalid digit found
+&C       SETC  '.0001'(2*&J,2)
+&J       SETA  &C                      * Turn into numeric value
+&VAL1    SETA  2*&VAL1                 * 'Shift' to make room
+&VAL2    SETA  2*&VAL2+&J              *   and add new digit at end
+         AIF   (&VAL2 LT &BASE).LOOPB  * No need to normalize
+&J       SETA  &VAL2/&BASE             * Carry over to VAL1
+&VAL1    SETA  &VAL1+&J                * Add carry over
+&VAL2    SETA  &VAL2-(&BASE*&J)        * And remove carry over
+         AIF   (&VAL1 GT &MAX1).RET8MSG * Nr is too big
+         AGO   .LOOPB                  * Invalid character found
+.*
+.* Number seems to be ok: Value within range?
+.CHKVAL  ANOP  ,                       *
+         AIF   (&NEG).CHKVALN          *
+         AIF   (&VAL1 LT &MAX1).RET0   * Small enough
+         AIF   (&VAL1 GT &MAX1).RET8MSG * Too large
+         AIF   (&VAL2 LE &MAX2).RET0   * Will fit snugly
+         AGO   .RET8MSG                * Too large after all
+.CHKVALN ANOP  ,                       * Check negative literal size
+         AIF   (&VAL1 LT &MIN1).RET0   * Small enough
+         AIF   (&VAL1 GT &MIN1).RET8MSG * Too large
+         AIF   (&VAL2 LE &MIN2).RET0   * Will fit snugly
+         AGO   .RET8MSG                * Too large after all
+.*
+.* Literal was ok: return RC=0 and value of literal
+.RET0    ANOP  ,                       *
+         AIF   (&NEG).RET0N            *
+&BXA_NUMVAL SETA (&VAL1*&BASE)+&VAL2   *
+&BXA_RC  SETA  0                       *
+         MEXIT ,                       *
+.RET0N   ANOP  ,                       * Return negative number
+&BXA_NUMVAL SETA 0-(&VAL1*&BASE)       *
+&BXA_NUMVAL SETA &BXA_NUMVAL-&VAL2     *
+&BXA_RC  SETA  0                       *
+         MEXIT ,                       *
+.*
+.* Literal was empty: return RC=4 and value of 0
+.RET4    ANOP  ,                       *
+&BXA_NUMVAL SETA 0                     *
+&BXA_RC  SETA  4                       *
+         MEXIT ,                       *
+.*
+.* Literal was invalid: return RC=8 and value of 0
+.RET8    ANOP  ,                       *
+&BXA_NUMVAL SETA 0                     *
+&BXA_RC  SETA  8                       *
+         MEXIT ,                       *
+.*
+.* Literal was valid but too large: return RC=8 and value of 0
+.RET8MSG ANOP  ,                       *
+         AIF   ('&MSG' EQ 'NO').RET8   * Suppress message
+&_VAL    SETC  (DOUBLE '&VAL')         *
+         MNOTE 4,'&_VAL is a valid literal, but it exceeds &MAX1.&MAX2'
+&BXA_NUMVAL SETA 0                     *
+&BXA_RC  SETA  8                       *
+.*
+.MEND    MEND

@@ -1,0 +1,172 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Task I/O Table
+.*
+&LABEL   MAPTIOT &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPTIOT                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPTIOT        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'TIOENTRY').EMBED
+         AIF   ('&CB' EQ 'TIOTHDR').EMBED
+         AIF   ('&CB' EQ 'TIOTPOOL').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPTIOT).MEND
+&BXA_MAC_MAPTIOT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_TIOENTRY
+         GBLC  &BXA_CB_TIOTHDR
+         GBLC  &BXA_CB_TIOTPOOL
+&BXA_CB_TIOENTRY SETC 'TIOT'
+&BXA_CB_TIOTHDR SETC 'TIOT'
+&BXA_CB_TIOTPOOL SETC 'TIOT'
+.*
+.* TIOELNGH - LENGTH, IN BYTES, OF THIS ENTRY
+TIOELNGH DSOVR AL1
+.*
+.* TIOESTTA - STATUS BYTE A
+TIOSLTYP EQUOVR ,,b,TIOESTTA
+TIOSPLTP EQUOVR ,,b,TIOESTTA
+TIOSPLTS EQUOVR ,,b,TIOESTTA
+TIOSJBLB EQUOVR ,,b,TIOESTTA
+TIOSDADS EQUOVR ,,b,TIOESTTA
+TIOSLABL EQUOVR ,,b,TIOESTTA
+TIOSDSP1 EQUOVR ,,b,TIOESTTA
+TIOSDSP2 EQUOVR ,,b,TIOESTTA
+.*
+.* TIOELINK - DURING ALLOCATION
+TIOSYOUT EQUOVR ,,b,TIOELINK
+TIOTRV01 EQUOVR ,,b,TIOELINK
+TIOTTERM EQUOVR ,,b,TIOELINK
+TIOEDYNM EQUOVR ,,b,TIOELINK
+TIOEQNAM EQUOVR ,,b,TIOELINK
+TIOESYIN EQUOVR ,,b,TIOELINK
+TIOESYOT EQUOVR ,,b,TIOELINK
+TIOESSDS EQUOVR ,,b,TIOELINK
+TIOTREM  EQUOVR ,,b,TIOELINK
+.*
+.* TIOESTTC - STATUS BYTE C.
+TIOSDKCR EQUOVR ,,b,TIOESTTC
+TIOSDEFR EQUOVR ,,b,TIOESTTC
+TIOSAFFP EQUOVR ,,b,TIOESTTC
+TIOSAFFS EQUOVR ,,b,TIOESTTC
+TIOSVOLP EQUOVR ,,b,TIOESTTC
+TIOSVOLS EQUOVR ,,b,TIOESTTC
+TIOSBALP EQUOVR ,,b,TIOESTTC
+TIOSBALS EQUOVR ,,b,TIOESTTC
+.*
+.* TIOESTTB - STATUS BYTE B
+TIOSUSED EQUOVR ,,b,TIOESTTB
+TIOSREQD EQUOVR ,,b,TIOESTTB
+TIOSPVIO EQUOVR ,,b,TIOESTTB
+TIOSVLSR EQUOVR ,,b,TIOESTTB
+TIOSSETU EQUOVR ,,b,TIOESTTB
+TIOSMNTD EQUOVR ,,b,TIOESTTB
+TIOSUNLD EQUOVR ,,b,TIOESTTB
+TIOSVERF EQUOVR ,,b,TIOESTTB
+.*
+.* IEFTIOT1 does not generate a DSECT-statement
+         MNOTE *,'Including IEFTIOT1 mapping macro'
+TIOT     DSECT ,                       * Start of TIOT
+         IEFTIOT1 ,                    *
+         DSOVR  *END
+         EQUOVR *END
+*
+* Notes:
+* - TIOT DSECT contains several parts, that should have been coded as
+*   separate DSECTs. Alas IBM has chosen not to.
+* - TIOT header      : USING TIOT              24 bytes
+* - TIOT entry       : USING TIOENTRY          Length in first byte
+* - TIOT pool entry  : USING POOLSTAR          20 bytes
+* - Last TIOT entry is marked by 4 hex zeroes in the first 4 bytes,
+*   including the length byte
+* - Concatenated data sets have a ddname only in the first TIOT entry,
+*   all other entries contain blanks for their ddname
+* - Bit TIOSLTYP in TIOESTTA is on, when a TIOT entry has been freed
+*
+         ORG
+TIOT_LEN EQU   TIOENTRY-TIOT           * Length of TIOT
+TIOE_LEN EQU   POOLSTAR-TIOENTRY       * Length of TIOT entry
+TIOP_LEN EQU   *-POOLSTAR              * Length of TIOT pool entry
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,245 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Command Scheduling Control Block
+.*
+&LABEL   MAPCSCB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPCSCB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPCSCB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'CSCB').EMBED
+         AIF   ('&CB' EQ 'CSCX').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPCSCB).MEND
+&BXA_MAC_MAPCSCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_CSCB
+         GBLC  &BXA_CB_CSCX
+&BXA_CB_CSCB SETC 'CSCB'
+&BXA_CB_CSCX SETC 'CSCB'
+.*
+.* CHVCD - COMMAND VERB CODE
+CHDIRINV EQUOVR ,,v,CHVCD
+.*
+.* CHSTS - STATUS FLAGS
+CHAP     EQUOVR ,,b,CHSTS
+CHINFMT  EQUOVR ,,b,CHSTS
+CHSOUT   EQUOVR ,,b,CHSTS
+CHQSPC   EQUOVR ,,b,CHSTS
+CHAD     EQUOVR ,,b,CHSTS
+CHDL     EQUOVR ,,b,CHSTS
+CHFC     EQUOVR ,,b,CHSTS
+CHABTERM EQUOVR ,,b,CHSTS
+.*
+.* CHACT - FLAGS INDICATING ACTIVITY INVOLVED
+CHSWAP   EQUOVR ,,b,CHACT
+CHTERM   EQUOVR ,,b,CHACT
+CHDISC   EQUOVR ,,b,CHACT
+CHDSI    EQUOVR ,,b,CHACT
+CHCL     EQUOVR ,,b,CHACT
+CHCLD    EQUOVR ,,b,CHACT
+CHAIFX   EQUOVR ,,b,CHACT
+CHPOSTSS EQUOVR ,,b,CHACT
+CHIFY    EQUOVR ,,b,CHACT
+CHAFORCE EQUOVR ,,b,CHACT
+.*
+.* CHPARM - POINTER TO PARAMETER LIST USED FOR SVC 34 COMMANDS
+CHPCOI   EQUOVR ,,b,CHPARM
+.*
+.* CHTRKID - DISPLAY/TRACK IDENTIFIER (OS/VS2)
+CHTSID   EQUOVR ,,v,CHTRKID
+CHJOBID  EQUOVR ,,v,CHTRKID
+CHINITID EQUOVR ,,v,CHTRKID
+CHSASID  EQUOVR ,,v,CHTRKID
+CHATXPID EQUOVR ,,v,CHTRKID
+CHATXID  EQUOVR ,,v,CHTRKID
+.*
+.* CHRES - RESERVED (WAS CHVERSN)
+CHSP13   EQUOVR ,,v,CHRES
+CHSP41   EQUOVR ,,v,CHRES
+CHSP42   EQUOVR ,,v,CHRES
+CHSP44   EQUOVR ,,v,CHRES
+CHROALL  EQUOVR ,,v,CHRES
+CHVERID  EQUOVR ,,v,CHRES
+.*
+.* CHSWT - COMMUNICATIONS SWITCHES (OS/VS1)
+CHARSV20 EQUOVR ,,b,CHSWT
+CHJCT    EQUOVR ,,b,CHSWT
+CHPSD    EQUOVR ,,b,CHSWT
+CHPSF    EQUOVR ,,b,CHSWT
+CHAC     EQUOVR ,,b,CHSWT
+CHARSV21 EQUOVR ,,b,CHSWT
+CHARSV22 EQUOVR ,,b,CHSWT
+CHARSV23 EQUOVR ,,b,CHSWT
+.*
+.* CHJBFLGS - FLAGS FOR STARTED JOBS
+CHJBSTRT EQUOVR ,,b,CHJBFLGS
+CHISJOB  EQUOVR ,,b,CHJBFLGS
+CHJBRSV1 EQUOVR ,,b,CHJBFLGS
+.*
+.* CHTYPE - FLAGS
+CHDSTAT  EQUOVR ,,b,CHTYPE
+CHARSV25 EQUOVR ,,b,CHTYPE
+CHARSV26 EQUOVR ,,b,CHTYPE
+CHARSV27 EQUOVR ,,b,CHTYPE
+CHARSV28 EQUOVR ,,b,CHTYPE
+CHARSV29 EQUOVR ,,b,CHTYPE
+CHHIAR   EQUOVR ,,b,CHTYPE
+CHDEF    EQUOVR ,,b,CHTYPE
+.*
+.* CHCSYSO - EXPRESS CANCEL SYSOUT (OS/VS1)
+CHALL    EQUOVR ,,b,CHCSYSO
+CHINN    EQUOVR ,,b,CHCSYSO
+CHOUT    EQUOVR ,,b,CHCSYSO
+CHHOLD   EQUOVR ,,b,CHCSYSO
+CHQUE    EQUOVR ,,b,CHCSYSO
+CHDUMP   EQUOVR ,,b,CHCSYSO
+CHJB     EQUOVR ,,b,CHCSYSO
+CHUSERID EQUOVR ,,b,CHCSYSO
+.*
+.* CHCMFLG1 - SEE XSA FOR DESCRIPTION
+CHCMFL11 EQUOVR ,,b,CHCMFLG1
+CHCMFL12 EQUOVR ,,b,CHCMFLG1
+CHCMFL13 EQUOVR ,,b,CHCMFLG1
+CHCMFL14 EQUOVR ,,b,CHCMFLG1
+CHCMFL15 EQUOVR ,,b,CHCMFLG1
+CHCMFL16 EQUOVR ,,b,CHCMFLG1
+CHCMFL17 EQUOVR ,,b,CHCMFLG1
+CHCMFL18 EQUOVR ,,b,CHCMFLG1
+.*
+.* CHCMFLG2 - SEE XSA FOR DESCRIPTION
+CHCMFL21 EQUOVR ,,b,CHCMFLG2
+CHCMFL22 EQUOVR ,,b,CHCMFLG2
+CHCMFL23 EQUOVR ,,b,CHCMFLG2
+CHCMFL24 EQUOVR ,,b,CHCMFLG2
+CHCMFL25 EQUOVR ,,b,CHCMFLG2
+CHCMFL26 EQUOVR ,,b,CHCMFLG2
+CHCMFL27 EQUOVR ,,b,CHCMFLG2
+CHCMFL28 EQUOVR ,,b,CHCMFLG2
+.*
+.* CHCMFLG4 - SEE XSA FOR DESCRIPTION
+CHCMFL44 EQUOVR ,,b,CHCMFLG4
+CHRTDM   EQUOVR ,,b,CHCMFLG4
+CHNOBY   EQUOVR ,,b,CHCMFLG4
+.*
+.* CHAUTHA - 1ST BYTE OF COMMAND CODE AUTH FLAGS
+CHAUTH1  EQUOVR ,,b,CHAUTHA
+CHAUTH2  EQUOVR ,,b,CHAUTHA
+CHAUTH3  EQUOVR ,,b,CHAUTHA
+CHARES1  EQUOVR ,,b,CHAUTHA
+.*
+.* CHDISP - COMMAND DISPOSITION
+CHDISPA  EQUOVR ,,b,CHDISP
+CHDISPM  EQUOVR ,,b,CHDISP
+CHDISPC  EQUOVR ,,b,CHDISP
+CHDISPR  EQUOVR ,,b,CHDISP
+CHDISPE  EQUOVR ,,b,CHDISP
+CHARES2  EQUOVR ,,b,CHDISP
+.*
+.* CHFLGS - FLAGS
+CHBIGRP  EQUOVR ,,b,CHFLGS
+CHNOALC  EQUOVR ,,b,CHFLGS
+.*
+.* CHRTOKEN - 31 BIT RIGHT JUSTIFIED TOKEN
+CHRTOKHR EQUOVR ,,b,CHRTOKEN
+.*
+.* IEECHAIN macro contains an EJECT with an 'argument'
+         EJECTOVR *NOERR
+.*
+.* IEECHAIN macro does not provide a DSECT statement
+CSCB     DSECT  ,
+.*
+         MNOTE *,'Including IEECHAIN mapping macro'
+         IEECHAIN ,
+         EQUOVR *END
+         EJECTOVR *END
+*
+CSCB     DSECT ,                       * Resume CSCB DSECT
+         ORG
+CSCB_LEN EQU   *-CSCB                  * Length of CSCB
+.*
+CSCX     DSECT ,                       * Resume CSCX DSECT
+         ORG
+CSCX_LEN EQU   *-CSCX                  * Length of CSCX
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

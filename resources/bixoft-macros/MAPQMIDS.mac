@@ -1,0 +1,113 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro with equates for SWAREQ
+.*
+         MAPQMIDS
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPQMIDS               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* &BXA_QMIDS is used to indicate MAPQMIDS has been expanded
+         GBLB  &BXA_MAC_MAPQMIDS
+         AIF   (&BXA_MAC_MAPQMIDS).MEND
+&BXA_MAC_MAPQMIDS SETB 1
+.*
+         GENMAPS (EPAL)                * EPAL contains related fields
+.*
+         MNOTE *,'Including IEFQMIDS mapping macro'
+.*
+.* Declare Block id's for use with EPAL/EPAX
+SWJCTID  EQUOVR ,,v,SWBLKID
+SWACTID  EQUOVR ,,v,SWBLKID
+SWSCTID  EQUOVR ,,v,SWBLKID
+SWSIOTID EQUOVR ,,v,SWBLKID
+SWDSNTID EQUOVR ,,v,SWBLKID
+SWPOTID  EQUOVR ,,v,SWBLKID
+SWSCTXID EQUOVR ,,v,SWBLKID
+SWDSENID EQUOVR ,,v,SWBLKID
+SWJMRID  EQUOVR ,,v,SWBLKID
+SWJFCBID EQUOVR ,,v,SWBLKID
+SWJFCXID EQUOVR ,,v,SWBLKID
+SWPDIDID EQUOVR ,,v,SWBLKID
+SWPDIBID EQUOVR ,,v,SWBLKID
+SWPDIQID EQUOVR ,,v,SWBLKID
+SWGDGNID EQUOVR ,,v,SWBLKID
+SWIWABID EQUOVR ,,v,SWBLKID
+SWVUTID  EQUOVR ,,v,SWBLKID
+SWDDNTID EQUOVR ,,v,SWBLKID
+SWAMPXID EQUOVR ,,v,SWBLKID
+SWJFCEID EQUOVR ,,v,SWBLKID
+SWJCTXID EQUOVR ,,v,SWBLKID
+SWSSWAID EQUOVR ,,v,SWBLKID
+SWSWBID  EQUOVR ,,v,SWBLKID
+SWSIOTBL EQUOVR ,,v,SWBLKID
+SWJFCBBL EQUOVR ,,v,SWBLKID
+SWJFCEBL EQUOVR ,,v,SWBLKID
+SWIFBID  EQUOVR ,,v,SWBLKID
+.*
+.* Put equates in a DSECT to prevent warning messages in ASM listing
+ZB505    DSECT
+         IEFQMIDS
+         EQUOVR *END
+*
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

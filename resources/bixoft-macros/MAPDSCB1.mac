@@ -1,0 +1,191 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Set Control Block formats 1
+.* The DSCB-formats are documented in DFSMSdfp Advanced Services
+.*                                    Topic 1.1.1 ff
+.*
+&LABEL   MAPDSCB1 &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDSCB1               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDSCB1       * DSCB1 already expanded?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DSCB1').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDSCB1).MEND
+&BXA_MAC_MAPDSCB1 SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DSCB1
+&BXA_CB_DSCB1 SETC 'DSCB1'
+.*
+.* DS1FLAG1 - FLAG 1
+DS1COMPR EQUOVR ,,b,DS1FLAG1
+DS1CPOIT EQUOVR ,,b,DS1FLAG1
+.*
+.* DS1SMSFG - SYSTEM MANAGED STORAGE INDICATORS
+DS1SMSDS EQUOVR ,,b,DS1SMSFG
+DS1SMSUC EQUOVR ,,b,DS1SMSFG
+DS1REBLK EQUOVR ,,b,DS1SMSFG
+DS1CRSDB EQUOVR ,,b,DS1SMSFG
+DS1PDSE  EQUOVR ,,b,DS1SMSFG
+DS1STRP  EQUOVR ,,b,DS1SMSFG
+DS1PDSEX EQUOVR ,,b,DS1SMSFG
+DS1DSAE  EQUOVR ,,b,DS1SMSFG
+.*
+.* DS1SCXTF - SECONDARY SPACE EXTENSION FLAG
+DS1SCAVB EQUOVR ,,b,DS1SCXTF
+DS1SCMB  EQUOVR ,,b,DS1SCXTF
+DS1SCKB  EQUOVR ,,b,DS1SCXTF
+DS1SCUB  EQUOVR ,,b,DS1SCXTF
+DS1SCCP1 EQUOVR ,,b,DS1SCXTF
+DS1SCCP2 EQUOVR ,,b,DS1SCXTF
+.*
+.* DS1DSORG - DATA SET ORGANIZATION
+DS1DSGIS EQUOVR ,,b,DS1DSORG
+DS1DSGPS EQUOVR ,,b,DS1DSORG
+DS1DSGDA EQUOVR ,,b,DS1DSORG
+DS1DSGCX EQUOVR ,,b,DS1DSORG
+DS1DSGPO EQUOVR ,,b,DS1DSORG
+DS1DSGU  EQUOVR ,,b,DS1DSORG
+.*
+DS1DSGGS EQUOVR ,,b,DS1DSORG+1
+DS1DSGTX EQUOVR ,,b,DS1DSORG+1
+DS1DSGTQ EQUOVR ,,b,DS1DSORG+1
+DS1ACBM  EQUOVR ,,b,DS1DSORG+1
+DS1ORGAM EQUOVR ,,b,DS1DSORG+1
+DS1DSGTR EQUOVR ,,b,DS1DSORG+1
+.*
+.* DS1RECFM - RECORD FORMAT
+DS1RECFF EQUOVR ,,b,DS1RECFM
+DS1RECFV EQUOVR ,,b,DS1RECFM
+DS1RECFU EQUOVR ,,b,DS1RECFM
+DS1RECFT EQUOVR ,,b,DS1RECFM
+DS1RECFB EQUOVR ,,b,DS1RECFM
+DS1RECFS EQUOVR ,,b,DS1RECFM
+DS1RECFA EQUOVR ,,b,DS1RECFM
+DS1RECMC EQUOVR ,,b,DS1RECFM
+.*
+.* DS1OPTCD - OPTION CODES
+DS1OPTIC EQUOVR ,,b,DS1OPTCD
+DS1OPTBC EQUOVR ,,b,DS1OPTCD
+.*
+.* DS1DSIND - DATA SET INDICATORS
+DS1IND80 EQUOVR ,,b,DS1DSIND
+DS1IND40 EQUOVR ,,b,DS1DSIND
+DS1RACDF EQUOVR ,,b,DS1DSIND
+DS1IND20 EQUOVR ,,b,DS1DSIND
+DS1IND10 EQUOVR ,,b,DS1DSIND
+DS1SECTY EQUOVR ,,b,DS1DSIND
+DS1IND08 EQUOVR ,,b,DS1DSIND
+DS1IND04 EQUOVR ,,b,DS1DSIND
+DS1WRSEC EQUOVR ,,b,DS1DSIND
+DS1IND02 EQUOVR ,,b,DS1DSIND
+DS1DSCHA EQUOVR ,,b,DS1DSIND
+DS1IND01 EQUOVR ,,b,DS1DSIND
+DS1CHKPT EQUOVR ,,b,DS1DSIND
+.*
+.* DS1SCAL1 - SPACE PARAMETERS
+DS1DSPAC EQUOVR ,,b,DS1SCAL1
+DS1CYL   EQUOVR ,,b,DS1SCAL1
+DS1TRK   EQUOVR ,,b,DS1SCAL1
+DS1AVR   EQUOVR ,,b,DS1SCAL1
+DS1AVRND EQUOVR ,,b,DS1SCAL1
+DS1MSGP  EQUOVR ,,b,DS1SCAL1
+DS1EXT   EQUOVR ,,b,DS1SCAL1
+DS1CONTG EQUOVR ,,b,DS1SCAL1
+DS1MXIG  EQUOVR ,,b,DS1SCAL1
+DS1ALX   EQUOVR ,,b,DS1SCAL1
+DS1DSABS EQUOVR ,,v,DS1SCAL1
+.*
+         MNOTE *,'Including IECSDSL1 mapping macro'
+.*
+.* IECSDSL does not generate a DSECT-statement
+DSCB1    DSECT ,                       * Start of Format-1 DSECT
+         IECSDSL1 1                    *
+         EQUOVR *END
+.*
+DS1DATA  EQU   DS1FMTID                * Start of data portion
+         ORG   ,                       *
+DSCB1_LEN EQU  *-DSCB1                 * Length of Format-1
+*
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

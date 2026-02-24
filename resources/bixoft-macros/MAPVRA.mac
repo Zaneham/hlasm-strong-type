@@ -1,0 +1,235 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Variable Recording Area (part of SDWA)
+.*
+&LABEL   MAPVRA &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPVRA                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPVRA         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'VRA').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPVRA).MEND
+&BXA_MAC_MAPVRA SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_VRA
+&BXA_CB_VRA SETC 'VRA'
+.*
+.* VRAKEY - KEY TO IDENTIFY THE DATA THAT FOLLOWS.
+VRACOM   EQUOVR ,,v,VRAKEY
+VRASC    EQUOVR ,,v,VRAKEY
+VRALVL   EQUOVR ,,v,VRAKEY
+VRADT    EQUOVR ,,v,VRAKEY
+VRAPTF   EQUOVR ,,v,VRAKEY
+VRARC    EQUOVR ,,v,VRAKEY
+VRAQVOD  EQUOVR ,,v,VRAKEY
+VRAQERR  EQUOVR ,,v,VRAKEY
+VRALVLS  EQUOVR ,,v,VRAKEY
+VRARRP   EQUOVR ,,v,VRAKEY
+VRACBM   EQUOVR ,,v,VRAKEY
+VRACB    EQUOVR ,,v,VRAKEY
+VRACBF   EQUOVR ,,v,VRAKEY
+VRACBA   EQUOVR ,,v,VRAKEY
+VRACBO   EQUOVR ,,v,VRAKEY
+VRACBL   EQUOVR ,,v,VRAKEY
+VRACBI   EQUOVR ,,v,VRAKEY
+VRACBIA  EQUOVR ,,v,VRAKEY
+VRACBI2  EQUOVR ,,v,VRAKEY
+VRAPLI   EQUOVR ,,v,VRAKEY
+VRAPL    EQUOVR ,,v,VRAKEY
+VRAFPI   EQUOVR ,,v,VRAKEY
+VRAFP    EQUOVR ,,v,VRAKEY
+VRAPA    EQUOVR ,,v,VRAKEY
+VRAP2    EQUOVR ,,v,VRAKEY
+VRALK    EQUOVR ,,v,VRAKEY
+VRAWAI   EQUOVR ,,v,VRAKEY
+VRAWA    EQUOVR ,,v,VRAKEY
+VRAWAP   EQUOVR ,,v,VRAKEY
+VRALBL   EQUOVR ,,v,VRAKEY
+VRARRL   EQUOVR ,,v,VRAKEY
+VRAMID   EQUOVR ,,v,VRAKEY
+VRAMSG   EQUOVR ,,v,VRAKEY
+VRAERR   EQUOVR ,,v,VRAKEY
+VRAEHX   EQUOVR ,,v,VRAKEY
+VRAHID   EQUOVR ,,v,VRAKEY
+VRAHEX   EQUOVR ,,v,VRAKEY
+VRAEBC   EQUOVR ,,v,VRAKEY
+VRAAID   EQUOVR ,,v,VRAKEY
+VRATCB   EQUOVR ,,v,VRAKEY
+VRACA    EQUOVR ,,v,VRAKEY
+VRACAN   EQUOVR ,,v,VRAKEY
+VRAOA    EQUOVR ,,v,VRAKEY
+VRAPSW   EQUOVR ,,v,VRAKEY
+VRAINS   EQUOVR ,,v,VRAKEY
+VRAREGS  EQUOVR ,,v,VRAKEY
+VRAREGA  EQUOVR ,,v,VRAKEY
+VRAOR15  EQUOVR ,,v,VRAKEY
+VRADSN   EQUOVR ,,v,VRAKEY
+VRADEV   EQUOVR ,,v,VRAKEY
+VRASN    EQUOVR ,,v,VRAKEY
+VRAST    EQUOVR ,,v,VRAKEY
+VRAU     EQUOVR ,,v,VRAKEY
+VRACCW   EQUOVR ,,v,VRAKEY
+VRACSW   EQUOVR ,,v,VRAKEY
+VRADVT   EQUOVR ,,v,VRAKEY
+VRAVOL   EQUOVR ,,v,VRAKEY
+VRAREQ   EQUOVR ,,v,VRAKEY
+VRAOPT   EQUOVR ,,v,VRAKEY
+VRAMINSC EQUOVR ,,v,VRAKEY
+VRADAE   EQUOVR ,,v,VRAKEY
+VRAMINSL EQUOVR ,,v,VRAKEY
+VRAFREG  EQUOVR ,,v,VRAKEY
+VRACSCB  EQUOVR ,,v,VRAKEY
+VRACSCBA EQUOVR ,,v,VRAKEY
+VRAJOB   EQUOVR ,,v,VRAKEY
+VRASTP   EQUOVR ,,v,VRAKEY
+VRACMD   EQUOVR ,,v,VRAKEY
+VRAJCL   EQUOVR ,,v,VRAKEY
+VRANODAE EQUOVR ,,v,VRAKEY
+VRAEPN   EQUOVR ,,v,VRAKEY
+VRAETF   EQUOVR ,,v,VRAKEY
+VRACTF   EQUOVR ,,v,VRAKEY
+VRALTF   EQUOVR ,,v,VRAKEY
+VRAMO    EQUOVR ,,v,VRAKEY
+VRAILO   EQUOVR ,,v,VRAKEY
+VRAIMO   EQUOVR ,,v,VRAKEY
+VRAFID   EQUOVR ,,v,VRAKEY
+VRAPID   EQUOVR ,,v,VRAKEY
+VRAIAP   EQUOVR ,,v,VRAKEY
+VRAIAL   EQUOVR ,,v,VRAKEY
+VRAICL   EQUOVR ,,v,VRAKEY
+VRAIDP   EQUOVR ,,v,VRAKEY
+VRALKWA  EQUOVR ,,v,VRAKEY
+VRARRK   EQUOVR ,,v,VRAKEY
+VRARRK1  EQUOVR ,,v,VRAKEY
+VRARRK2  EQUOVR ,,v,VRAKEY
+VRARRK3  EQUOVR ,,v,VRAKEY
+VRARRK4  EQUOVR ,,v,VRAKEY
+VRARRK5  EQUOVR ,,v,VRAKEY
+VRARRK6  EQUOVR ,,v,VRAKEY
+VRARRK7  EQUOVR ,,v,VRAKEY
+VRARRK8  EQUOVR ,,v,VRAKEY
+VRARRK9  EQUOVR ,,v,VRAKEY
+VRARRK10 EQUOVR ,,v,VRAKEY
+VRARRK11 EQUOVR ,,v,VRAKEY
+VRARRK12 EQUOVR ,,v,VRAKEY
+VRARRK13 EQUOVR ,,v,VRAKEY
+VRARRK14 EQUOVR ,,v,VRAKEY
+VRARRK15 EQUOVR ,,v,VRAKEY
+VRARRK16 EQUOVR ,,v,VRAKEY
+VRARRK17 EQUOVR ,,v,VRAKEY
+VRARRK18 EQUOVR ,,v,VRAKEY
+VRARRK19 EQUOVR ,,v,VRAKEY
+VRARRK20 EQUOVR ,,v,VRAKEY
+VRARRK21 EQUOVR ,,v,VRAKEY
+VRARRK22 EQUOVR ,,v,VRAKEY
+VRARRK23 EQUOVR ,,v,VRAKEY
+VRARRK24 EQUOVR ,,v,VRAKEY
+VRARRK25 EQUOVR ,,v,VRAKEY
+VRARRK26 EQUOVR ,,v,VRAKEY
+VRARRK27 EQUOVR ,,v,VRAKEY
+VRARRK28 EQUOVR ,,v,VRAKEY
+VRARRK29 EQUOVR ,,v,VRAKEY
+VRARRK30 EQUOVR ,,v,VRAKEY
+VRARRK31 EQUOVR ,,v,VRAKEY
+VRARRK32 EQUOVR ,,v,VRAKEY
+VRARRK33 EQUOVR ,,v,VRAKEY
+VRARRK34 EQUOVR ,,v,VRAKEY
+VRARRK35 EQUOVR ,,v,VRAKEY
+VRARRK36 EQUOVR ,,v,VRAKEY
+VRARRK37 EQUOVR ,,v,VRAKEY
+VRARRK38 EQUOVR ,,v,VRAKEY
+VRARRK39 EQUOVR ,,v,VRAKEY
+VRASKP   EQUOVR ,,v,VRAKEY
+VRAEND   EQUOVR ,,v,VRAKEY
+.*
+         MNOTE *,'Including IHAVRA mapping macro'
+         IHAVRA DSECT=YES              * Include DSECT statement
+         EQUOVR *END
+*
+VRAMAP   DSECT ,                       * Restart VRA
+VRA      EQU   VRAMAP                  * Alias of VRAMAP
+         ORG   ,                       *
+VRA_LEN  EQU   *-VRA                   * Length of VRA
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

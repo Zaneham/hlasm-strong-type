@@ -1,0 +1,176 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Set Association Block
+.*
+&LABEL   MAPDSAB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDSAB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDSAB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DSAB').EMBED
+         AIF   ('&CB' EQ 'DSABANMI').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDSAB).MEND
+&BXA_MAC_MAPDSAB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DSAB
+         GBLC  &BXA_CB_DSABANMI
+&BXA_CB_DSAB SETC 'DSAB'
+&BXA_CB_DSABANMI SETC 'DSAB'
+.*
+.* DSABSSVA - SWA VIRTUAL ADDRESS OF SIOT
+DSABSSVA DSOVR XL3                     * Change char to hex field
+.*
+.* DSABORG1 - 1ST BYTE OF DSORG FLAGS
+DSABIS   EQUOVR ,,b,DSABORG1
+DSABPS   EQUOVR ,,b,DSABORG1
+DSABDA   EQUOVR ,,b,DSABORG1
+DSABCX   EQUOVR ,,b,DSABORG1
+DSABCQ   EQUOVR ,,b,DSABORG1
+DSABMQ   EQUOVR ,,b,DSABORG1
+DSABPO   EQUOVR ,,b,DSABORG1
+DSABU    EQUOVR ,,b,DSABORG1
+.*
+.* DSABORG2 - 2ND BYTE OF DSORG FLAGS
+DSABGS   EQUOVR ,,b,DSABORG2
+DSABTX   EQUOVR ,,b,DSABORG2
+DSABTQ   EQUOVR ,,b,DSABORG2
+DSABAM   EQUOVR ,,b,DSABORG2
+DSABTR   EQUOVR ,,b,DSABORG2
+.*
+.* DSABFLG1 - FLAGS-RESTORED BY RESTART
+DSABDALC EQUOVR ,,b,DSABFLG1
+DSABPALC EQUOVR ,,b,DSABFLG1
+DSABDCNV EQUOVR ,,b,DSABFLG1
+DSABCONV EQUOVR ,,b,DSABFLG1
+DSABDCAT EQUOVR ,,b,DSABFLG1
+DSABPCAT EQUOVR ,,b,DSABFLG1
+DSABCATM EQUOVR ,,b,DSABFLG1
+DSABNUSE EQUOVR ,,b,DSABFLG1
+.*
+.* DSABFLG2 - FLAGS-RESTORED BY RESTART
+DSABOPEN EQUOVR ,,b,DSABFLG2
+DSABIRM  EQUOVR ,,b,DSABFLG2
+DSABUNAL EQUOVR ,,b,DSABFLG2
+DSABVLF  EQUOVR ,,b,DSABFLG2
+DSABJCHG EQUOVR ,,b,DSABFLG2
+DSABNODI EQUOVR ,,b,DSABFLG2
+DSABATCT EQUOVR ,,b,DSABFLG2
+.*
+.* DSABFLG3 - FLAGS-NOT RESTORED BY RESTART
+DSABDEFR EQUOVR ,,b,DSABFLG3
+DSABPASS EQUOVR ,,b,DSABFLG3
+DSABVAM  EQUOVR ,,b,DSABFLG3
+DSABVMSC EQUOVR ,,b,DSABFLG3
+DSABCATL EQUOVR ,,b,DSABFLG3
+DSABJSCT EQUOVR ,,b,DSABFLG3
+DSABVVDS EQUOVR ,,b,DSABFLG3
+DSABTIOX EQUOVR ,,b,DSABFLG3
+.*
+.* DSABFLG4 - FLAGS-NOT RESTORED BY RESTART
+DSABCKDS EQUOVR ,,b,DSABFLG4
+DSABCKVL EQUOVR ,,b,DSABFLG4
+DSABCKSI EQUOVR ,,b,DSABFLG4
+DSABHIER EQUOVR ,,b,DSABFLG4
+DSABGANM EQUOVR ,,b,DSABFLG4
+DSABLCAT EQUOVR ,,b,DSABFLG4
+DSABAUCB EQUOVR ,,b,DSABFLG4
+DSABCASL EQUOVR ,,b,DSABFLG4
+.*
+.* DSABANML - LENGTH OF ALTERNATE DSNAME
+DSABANML DSOVR AL1
+.*
+         MNOTE *,'Including IHADSAB mapping macro'
+         IHADSAB ,                     *
+         EQUOVR *END                   *
+         DSOVR *END                    *
+*
+DSAB     DSECT ,                       * Restart DSAB
+         ORG   ,                       *
+DSAB_LEN EQU   *-DSAB                  * Length of DSAB
+*
+DSABANMI DSECT ,                       * Restart DSABANMI
+         ORG   ,                       *
+DSABANMI_LEN EQU *-DSABANMI            * Length of DSABANMI
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

@@ -1,0 +1,171 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Load and Test 24-bit address into a register
+.*
+&LABEL   LTA24 &REG,                   * Register to load              *
+               &LOC,                   * Location of address           *
+               &MASK,                  * Mask for ICM (default=NYYY)   *
+               &RELOAD=                * YES, NO, QUICK
+.*
+.* &REG  specifies the register to load
+.* &LOC  specifies the location of the address to be loaded
+.* &MASK specifies which bytes of the register are to be loaded
+.* &RELOAD if YES, specifies that the register to be loaded is also
+.*       used as a base register to address the field.
+.*       if NO, specifies that the register to be loaded will not be
+.*       used as a base register to address the field.
+.*       if QUICK, specifies that the register to be loaded is also
+.*       used as a 24-bit base register to address the field.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC LTA24                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_REG                   * Register specified
+         LCLA  &_REGNO                 * Register number
+         LCLA  &_REGX                  * Register index
+         LCLC  &_MASK                  * Specified or defaulted mask
+         LCLC  &_RELOAD                * Reload option
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLA  &BXA_NUMVAL             * Output from CHKREG
+         LCLC  &TMP                    * Temp register
+.*
+.* Check the RELOAD parameter
+         AIF   (K'&RELOAD EQ 0).NOERR4
+&_RELOAD SETC  '&RELOAD'
+         AIF   ('&RELOAD' EQ 'YES').NOERR4
+         AIF   ('&RELOAD' EQ 'QUICK').NOERR4
+         AIF   ('&RELOAD' EQ 'NO').NOERR4
+.ERR4    MNOTE 4,'Invalid RELOAD parameter: ignored'
+&_RELOAD SETC  ''                      * Default to no RELOAD parm
+.NOERR4  ANOP  ,
+.*
+.* Check the REG parameter
+&_REG    SETC  '&REG'
+         AIF   (K'&REG NE 0).NOERR1A
+.ERR1A   MNOTE 8,'No register specified'
+         AGO   .NOERR1
+.NOERR1A ANOP
+         AIF   ('&REG'(1,1) NE '(').NOERR1C
+&_REG    SETC  '&REG(1)'
+         AIF   (N'&REG EQ 0).ERR1B
+         AIF   (N'&REG GT 1).ERR1C
+         AGO   .NOERR1C
+.ERR1B   MNOTE 8,'No register specified within sublist'
+         AGO   .NOERR1
+.ERR1C   MNOTE 8,'More than 1 register specified in sublist'
+         AGO   .NOERR1
+.NOERR1C ANOP
+         CHKREG &_REG
+         AIF   (&BXA_RC GT 4).ERR1D
+&_REGX   SETA  &BXA_NUMVAL+1           * Create index value
+         AGO   .NOERR1D
+.ERR1D   ANOP  ,
+&_REG    SETC  (DOUBLE '&_REG')
+         MNOTE 8,'&_REG is not a valid register'
+         AGO   .NOERR1
+.NOERR1D ANOP
+         AIF   (NOT &BXA_USED_REGS(&_REGX)).NOERR1
+.ERR1E   ANOP  ,
+         AIF   (K'&_RELOAD NE 0).NOERR1
+&_REG    SETC  (DOUBLE '&_REG')
+         MNOTE 0,'&_REG is currently in use, code generated may err'
+.NOERR1  ANOP
+.*
+.* Check the LOC parameter
+         AIF   (K'&LOC NE 0).NOERR2
+.ERR2    MNOTE 8,'LOC parameter not specified'
+.NOERR2  ANOP
+.*
+.* Check the MASK parameter
+&_MASK   SETC  '&MASK'
+         AIF   (K'&MASK NE 0).MASKOK
+&_MASK   SETC  'NYYY'
+.MASKOK  ANOP
+.*
+.* Check the number of parameters
+         AIF   (N'&SYSLIST LE 3).NOERR3
+.ERR3    MNOTE 4,'Too many parameters specified: ignored'
+.NOERR3  ANOP
+.*
+.* Generate code
+         AIF   ('&_RELOAD' EQ 'YES').RELOAD
+         AIF   ('&_RELOAD' EQ 'QUICK').RELALT
+&LABEL   CLEAR &_REG                   * Wipe register
+         ICM   &_REG,&_MASK,&LOC       * Load and test 24-bit address
+         MEXIT
+.*
+.RELOAD  ANOP  ,                       * Reload register
+         EQUREG TEMP=YES,R0=YES        * Assign any register
+         AIF   (&BXA_RC GT 0).RELALT   * Use alternate code
+&TMP     SETC  'R'.'&BXA_NUMVAL'       * Create register name
+&LABEL   CLEAR &TMP                    * Wipe register
+         ICM   &TMP,&_MASK,&LOC        * Load 24-bit address
+         LTR   &_REG,&TMP              * Load and test 24-bit value
+         MEXIT
+.*
+.RELALT  ANOP  ,                       * Reload register (Alternate)
+&LABEL   ICM   &_REG,&_MASK,&LOC       * Load and test 24-bit address
+         AIF   ('&_RELOAD' EQ 'QUICK').MEND
+         SLL   &_REG,8                 * Remove hi-order bits
+         SRL   &_REG,8                 * Reposition low-order bits
+         LTR   &_REG,&_REG             * Check register contents
+.*
+.MEND    MEND

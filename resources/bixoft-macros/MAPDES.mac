@@ -1,0 +1,383 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Facilities Area
+.*
+&LABEL   MAPDES &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDES                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDES         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DESB').EMBED
+         AIF   ('&CB' EQ 'DESD').EMBED
+         AIF   ('&CB' EQ 'DESL').EMBED
+         AIF   ('&CB' EQ 'DESN').EMBED
+         AIF   ('&CB' EQ 'DESP').EMBED
+         AIF   ('&CB' EQ 'DESR').EMBED
+         AIF   ('&CB' EQ 'DESRCS').EMBED
+         AIF   ('&CB' EQ 'DESX').EMBED
+         AIF   ('&CB' EQ 'DST').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDES).MEND
+&BXA_MAC_MAPDES SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DESB
+         GBLC  &BXA_CB_DESD
+         GBLC  &BXA_CB_DESL
+         GBLC  &BXA_CB_DESN
+         GBLC  &BXA_CB_DESP
+         GBLC  &BXA_CB_DESR
+         GBLC  &BXA_CB_DESRCS
+         GBLC  &BXA_CB_DESX
+         GBLC  &BXA_CB_DST
+&BXA_CB_DESB   SETC 'DES'
+&BXA_CB_DESD   SETC 'DES'
+&BXA_CB_DESL   SETC 'DES'
+&BXA_CB_DESN   SETC 'DES'
+&BXA_CB_DESP   SETC 'DES'
+&BXA_CB_DESR   SETC 'DES'
+&BXA_CB_DESRCS SETC 'DES'
+&BXA_CB_DESX   SETC 'DES'
+&BXA_CB_DST    SETC 'DES'
+.*
+.* DESP_LEV - control block level
+DESP_LEV_IV            EQUOVR ,,v,DESP_LEV
+.*
+.* DESP_FUNC - function type
+DESP_FUNC_UPDATE       EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_RENAME       EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_DELETE       EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_EXIT         EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_GET_NAMES    EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_PUT          EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_RELEASE      EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_GET_ALL      EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_GET          EQUOVR ,,v,DESP_FUNC
+DESP_FUNC_OMITTED      EQUOVR ,,v,DESP_FUNC
+.*
+.* DESP_FLAGS - DESP FLAG1
+DESP_BYPASS_LLA        EQUOVR ,,b,DESP_FLAGS
+DESP_CONCAT_FLG        EQUOVR ,,b,DESP_FLAGS
+DESP_SUBPOOL_FLG       EQUOVR ,,b,DESP_FLAGS
+DESP_C370LIB           EQUOVR ,,b,DESP_FLAGS
+DESP_CONCAT_ALL        EQUOVR ,,b,DESP_FLAGS
+DESP_HIDE              EQUOVR ,,b,DESP_FLAGS
+DESP_SYSTEM_DCB        EQUOVR ,,b,DESP_FLAGS
+.*
+.* DESP_EXIT_SCOPE - EXIT SCOPE
+DESP_EXIT_SCOPE_TASK   EQUOVR ,,v,DESP_EXIT_SCOPE
+DESP_EXIT_SCOPE_GLOBAL EQUOVR ,,v,DESP_EXIT_SCOPE
+.*
+.* DESP_LIBTYPE - function subtype (DCB, DEB)
+DESP_LIBTYPE_DCB       EQUOVR ,,v,DESP_LIBTYPE
+DESP_LIBTYPE_DEB       EQUOVR ,,v,DESP_LIBTYPE
+DESP_LIBTYPE_OMITTED   EQUOVR ,,v,DESP_LIBTYPE
+.*
+.* DESP_GETTYPE - function subtype
+DESP_GETTYPE_SMDE      EQUOVR ,,v,DESP_GETTYPE
+DESP_GETTYPE_PDSDE     EQUOVR ,,v,DESP_GETTYPE
+DESP_GETTYPE_NAME_LIST EQUOVR ,,v,DESP_GETTYPE
+DESP_GETTYPE_OMITTED   EQUOVR ,,v,DESP_GETTYPE
+.*
+.* DESP_RELTYPE - function subtype
+DESP_RELTYPE_DE_LIST   EQUOVR ,,v,DESP_RELTYPE
+DESP_RELTYPE_CONN_ID   EQUOVR ,,v,DESP_RELTYPE
+DESP_RELTYPE_OMITTED   EQUOVR ,,v,DESP_RELTYPE
+.*
+.* DESP_EXIT_OPTION - EXIT option
+DESP_EXIT_OPTION_QUERY      EQUOVR ,,v,DESP_EXIT_OPTION
+DESP_EXIT_OPTION_DELETE     EQUOVR ,,v,DESP_EXIT_OPTION
+DESP_EXIT_OPTION_REPLACE    EQUOVR ,,v,DESP_EXIT_OPTION
+DESP_EXIT_OPTION_NOREPLACE  EQUOVR ,,v,DESP_EXIT_OPTION
+.*
+.* DESP_OPTION - PUT REPLACE option
+DESP_OPTION_REPLACE    EQUOVR ,,v,DESP_OPTION
+DESP_OPTION_NOREPLACE  EQUOVR ,,v,DESP_OPTION
+.*
+.* DESP_CONN_INTENT - connect intent
+DESP_CONN_INTENT_INPUT EQUOVR ,,v,DESP_CONN_INTENT
+DESP_CONN_INTENT_EXEC  EQUOVR ,,v,DESP_CONN_INTENT
+DESP_CONN_INTENT_HOLD  EQUOVR ,,v,DESP_CONN_INTENT
+DESP_CONN_INTENT_NONE  EQUOVR ,,v,DESP_CONN_INTENT
+.*
+.* DESL_FLAGS - flags
+DESL_MODULE_BUFFERED_LLA EQUOVR ,,b,DESL_FLAGS
+.*
+.* DESL_CODE - result code
+DESL_CODE_NEWNAME_EXISTS EQUOVR ,,v,DESL_CODE
+DESL_CODE_ERROR        EQUOVR ,,v,DESL_CODE
+DESL_CODE_NOTFOUND     EQUOVR ,,v,DESL_CODE
+DESL_CODE_SUCC         EQUOVR ,,v,DESL_CODE
+.*
+.* DESB_LEV - CONTROL BLOCK LEVEL
+DESB_LEV_IV            EQUOVR ,,v,DESB_LEV
+.*
+.* DESD_FLAG - flags
+DESD_FLAG_ALIAS        EQUOVR ,,b,DESD_FLAG
+.*
+.* DESD_CODE - processing code
+DESD_CODE_ERROR        EQUOVR ,,v,DESD_CODE
+DESD_CODE_NOGO         EQUOVR ,,v,DESD_CODE
+DESD_CODE_SUCC         EQUOVR ,,v,DESD_CODE
+.*
+.* DESX_LEV - control block level
+DESX_LEV_IV            EQUOVR ,,v,DESX_LEV
+.*
+.* DESX_FLAGS - Flags
+DESX_BLDL_BIT          EQUOVR ,,b,DESX_FLAGS
+DESX_PRE_BIT           EQUOVR ,,b,DESX_FLAGS
+DESX_POST_BIT          EQUOVR ,,b,DESX_FLAGS
+.*
+.* DST_LEV - control block level
+DST_LEV_IV             EQUOVR ,,v,DST_LEV
+.*
+.* DST_FLAGS - DST flags
+DST_FLAGS_PROP         EQUOVR ,,b,DST_FLAGS
+.*
+.* DESRC - return code
+DESRC_SUCC             EQUOVR ,,v,DESRC
+DESRC_INFO             EQUOVR ,,v,DESRC
+DESRC_WARN             EQUOVR ,,v,DESRC
+DESRC_PARM             EQUOVR ,,v,DESRC
+DESRC_CALR             EQUOVR ,,v,DESRC
+DESRC_ENVR             EQUOVR ,,v,DESRC
+DESRC_IOER             EQUOVR ,,v,DESRC
+DESRC_MEDE             EQUOVR ,,v,DESRC
+DESRC_DSLE             EQUOVR ,,v,DESRC
+DESRC_SEVE             EQUOVR ,,v,DESRC
+.*
+.* DESRS - reason code
+DESRS_MEMBER_PEND_DELETE     EQUOVR ,,v,DESRS
+DESRS_LONG_NAME_NOT_ORIGINAL EQUOVR ,,v,DESRS
+DESRS_NEW_NAME_EXISTS        EQUOVR ,,v,DESRS
+DESRS_BOTH_NAMES_BIG         EQUOVR ,,v,DESRS
+DESRS_BOTH_NAMES_SAME        EQUOVR ,,v,DESRS
+DESRS_INVAL_PREVDST_HEADER   EQUOVR ,,v,DESRS
+DESRS_PREV_DSTPTR_PTR_ZERO   EQUOVR ,,v,DESRS
+DESRS_DST_COMP_SWAP_FAILED   EQUOVR ,,v,DESRS
+DESRS_EXIT_SCOPE_INVALID     EQUOVR ,,v,DESRS
+DESRS_EXIT_OPTION_INVALID    EQUOVR ,,v,DESRS
+DESRS_EXIT_PREV_DSTPTR_ZERO  EQUOVR ,,v,DESRS
+DESRS_INVAL_DST_HEADER       EQUOVR ,,v,DESRS
+DESRS_EXIT_DST_PTR_ZERO      EQUOVR ,,v,DESRS
+DESRS_DST_ALREADY_EXISTS     EQUOVR ,,v,DESRS
+DESRS_EXIT_ERROR             EQUOVR ,,v,DESRS
+DESRS_AUTH_ERROR             EQUOVR ,,v,DESRS
+DESRS_PACBLOC_ERROR          EQUOVR ,,v,DESRS
+DESRS_UNKNOWN                EQUOVR ,,v,DESRS
+DESRS_GETMAIN_ERROR          EQUOVR ,,v,DESRS
+DESRS_CANT_CHANGE_RECOVERY   EQUOVR ,,v,DESRS
+DESRS_IGWCDFNC_ERROR         EQUOVR ,,v,DESRS
+DESRS_NO_PNAR_FOR_NAME       EQUOVR ,,v,DESRS
+DESRS_UNEXPECTED_SAR_CODE    EQUOVR ,,v,DESRS
+DESRS_TWO_MLT_NAMES          EQUOVR ,,v,DESRS
+DESRS_PDSDE_MERGE_ERR        EQUOVR ,,v,DESRS
+DESRS_UNKNOWN_EXIT_ERROR     EQUOVR ,,v,DESRS
+DESRS_ECB_POSTED_ERROR       EQUOVR ,,v,DESRS
+DESRS_CONNID_OVERFLOW        EQUOVR ,,v,DESRS
+DESRS_NAME_IS_PRIMARY_NAME   EQUOVR ,,v,DESRS
+DESRS_CLOCK_ERROR            EQUOVR ,,v,DESRS
+DESRS_DATA_LENGTH_ERROR      EQUOVR ,,v,DESRS
+DESRS_ANCHOR_IN_USE          EQUOVR ,,v,DESRS
+DESRS_ANCHOR_FREE            EQUOVR ,,v,DESRS
+DESRS_ADD_STACK_FAILED       EQUOVR ,,v,DESRS
+DESRS_INVALID_CONN_INTENT    EQUOVR ,,v,DESRS
+DESRS_NAME_LIST_@_INVALID    EQUOVR ,,v,DESRS
+DESRS_NAME_LIST_COUNT_INVALID EQUOVR ,,v,DESRS
+DESRS_CONNID_INVALID         EQUOVR ,,v,DESRS
+DESRS_INVALID_GETTYPE        EQUOVR ,,v,DESRS
+DESRS_INVALID_AREA_PTR       EQUOVR ,,v,DESRS
+DESRS_INVALID_AREAPTR_PTR    EQUOVR ,,v,DESRS
+DESRS_AREA_LENGTH_TOO_SMALL  EQUOVR ,,v,DESRS
+DESRS_INVALID_ENTRY_GAP      EQUOVR ,,v,DESRS
+DESRS_INVALID_DE_LIST_PTR    EQUOVR ,,v,DESRS
+DESRS_INVALID_DE_LIST_CNT    EQUOVR ,,v,DESRS
+DESRS_INVALID_CONN_ID_PTR    EQUOVR ,,v,DESRS
+DESRS_INVALID_RELEASE_TYPE   EQUOVR ,,v,DESRS
+DESRS_INVALID_PUT_OPTION     EQUOVR ,,v,DESRS
+DESRS_INVALID_MEM_DATA_PTR   EQUOVR ,,v,DESRS
+DESRS_INVALID_MEM_DATA_CNT   EQUOVR ,,v,DESRS
+DESRS_INVALID_NAME_PTR       EQUOVR ,,v,DESRS
+DESRS_INVALID_NAME_LENGTH    EQUOVR ,,v,DESRS
+DESRS_UNSUPPORTED_FUNC       EQUOVR ,,v,DESRS
+DESRS_DEB_REQUIRES_AUTH      EQUOVR ,,v,DESRS
+DESRS_INVALID_DCB_PTR        EQUOVR ,,v,DESRS
+DESRS_DCB_NOT_OPEN           EQUOVR ,,v,DESRS
+DESRS_COMP_NAME_BAD          EQUOVR ,,v,DESRS
+DESRS_DCB_NOT_OPEN_OUTPUT    EQUOVR ,,v,DESRS
+DESRS_INVALID_DEB_PTR        EQUOVR ,,v,DESRS
+DESRS_DEBCHK_FAILED          EQUOVR ,,v,DESRS
+DESRS_INVALID_CONCAT         EQUOVR ,,v,DESRS
+DESRS_PDSDE_PTR_INVALID      EQUOVR ,,v,DESRS
+DESRS_INVALID_FT             EQUOVR ,,v,DESRS
+DESRS_LIB_NOT_BUFFERED       EQUOVR ,,v,DESRS
+DESRS_INVALID_DFNC_FUNC      EQUOVR ,,v,DESRS
+DESRS_DISCONNECT_FILE_FAILED EQUOVR ,,v,DESRS
+DESRS_INSUF_BUFFER_SIZE      EQUOVR ,,v,DESRS
+DESRS_PDS_NOT_SUPPORTED      EQUOVR ,,v,DESRS
+DESRS_INVALID_CT             EQUOVR ,,v,DESRS
+DESRS_INVALID_MLT            EQUOVR ,,v,DESRS
+DESRS_MORE_THAN_1_PRIMARY    EQUOVR ,,v,DESRS
+DESRS_INVALID_PARM_LIST_HEADER EQUOVR ,,v,DESRS
+DESRS_INVALID_NAME_PREFIX    EQUOVR ,,v,DESRS
+DESRS_NO_PRIMARY_NAME        EQUOVR ,,v,DESRS
+DESRS_NAME_ALREADY_EXISTS    EQUOVR ,,v,DESRS
+DESRS_LONG_NAME_AND_LLA      EQUOVR ,,v,DESRS
+DESRS_PROGRAM_OBJECT_ONLY    EQUOVR ,,v,DESRS
+DESRS_FREEMAIN_ERROR         EQUOVR ,,v,DESRS
+DESRS_CONVERT_ERROR          EQUOVR ,,v,DESRS
+DESRS_UNEXPECTED_JCDM_ERROR  EQUOVR ,,v,DESRS
+DESRS_PDSDE_CONVRT_ERR       EQUOVR ,,v,DESRS
+DESRS_SETLOCK_ERR            EQUOVR ,,v,DESRS
+DESRS_EXTRACT_ERROR          EQUOVR ,,v,DESRS
+DESRS_SET_ERROR              EQUOVR ,,v,DESRS
+DESRS_ANCHOR_CREATE_FAILED   EQUOVR ,,v,DESRS
+DESRS_ELEMENT_CREATE_FAILED  EQUOVR ,,v,DESRS
+DESRS_PMAR_MERGE_ERR         EQUOVR ,,v,DESRS
+DESRS_IEWLCNVT_ERROR         EQUOVR ,,v,DESRS
+DESRS_NAME_NOT_DEFINED       EQUOVR ,,v,DESRS
+DESRS_CHANGED_PMAR_LENGTH    EQUOVR ,,v,DESRS
+DESRS_SMDE_TOKEN_BAD         EQUOVR ,,v,DESRS
+DESRS_PRI_NM_THIS_FILE       EQUOVR ,,v,DESRS
+DESRS_CANT_GET_FILELOCK      EQUOVR ,,v,DESRS
+DESRS_CONNECTION_NOT_FOUND   EQUOVR ,,v,DESRS
+DESRS_DESL_SMDE_PTR          EQUOVR ,,v,DESRS
+DESRS_RELTYPE_INVALID        EQUOVR ,,v,DESRS
+DESRS_BAD_PMAR_FIELD_UPDATED EQUOVR ,,v,DESRS
+DESRS_IEWBXILO_ERROR         EQUOVR ,,v,DESRS
+DESRS_MULTIPLE_ERRORS        EQUOVR ,,v,DESRS
+DESRS_AUTH_SUBPOOL           EQUOVR ,,v,DESRS
+DESRS_DIRECTORY_EMPTY        EQUOVR ,,v,DESRS
+DESRS_CONNECT_AUTH           EQUOVR ,,v,DESRS
+DESRS_C370LIB_PDSDE_ME       EQUOVR ,,v,DESRS
+DESRS_BAD_BLKSIZE            EQUOVR ,,v,DESRS
+DESRS_BAD_TXT_CARD           EQUOVR ,,v,DESRS
+DESRS_BAD_C370LIB_DIR        EQUOVR ,,v,DESRS
+DESRS_DCB_NOT_OPEN_PO        EQUOVR ,,v,DESRS
+DESRS_AREA_AREAPTR_ME        EQUOVR ,,v,DESRS
+DESRS_SMDE_PTR_INVALID       EQUOVR ,,v,DESRS
+DESRS_C370LIB_SMDE_ME        EQUOVR ,,v,DESRS
+DESRS_NOTFOUND               EQUOVR ,,v,DESRS
+DESRS_MODULE_BUFFERED_LLA    EQUOVR ,,v,DESRS
+DESRS_SUCC                   EQUOVR ,,v,DESRS
+.*
+         MNOTE *,'Including IGWDES mapping macro'
+         IGWDES ,                      *
+         EQUOVR *END                   *
+*
+DESP     DSECT ,                       * Return to DESP
+         ORG   ,                       *
+DESP_SIZE EQU  *-DESP                  * Length of DESP
+*
+DESL     DSECT ,                       * Return to DESL
+         ORG   ,                       *
+DESL_SIZE EQU  *-DESL                  * Length of DESL
+*
+DESB     DSECT ,                       * Return to DESB
+         ORG   ,                       *
+DESB_SIZE EQU  *-DESB                  * Length of DESB
+*
+DESN     DSECT ,                       * Return to DESN
+         ORG   ,                       *
+DESN_SIZE EQU  *-DESN                  * Length of DESN
+*
+DESD     DSECT ,                       * Return to DESD
+         ORG   ,                       *
+DESD_SIZE EQU  *-DESD                  * Length of DESD
+*
+DESX     DSECT ,                       * Return to DESX
+         ORG   ,                       *
+DESX_SIZE EQU  *-DESX                  * Length of DESX
+*
+DST      DSECT ,                       * Return to DST
+         ORG   ,                       *
+DST_SIZE EQU   *-DST                   * Length of DST
+*
+DESRCS   DSECT ,                       * Return to DESRCS
+         ORG   ,                       *
+DESRCS_SIZE EQU *-DESRCS               * Length of DESRCS
+*
+DESR     DSECT ,                       * Return to DESR
+         ORG   ,                       *
+DESR_SIZE EQU  *-DESR                  * Length of DESR
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

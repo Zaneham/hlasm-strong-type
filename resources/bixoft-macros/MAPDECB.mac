@@ -1,0 +1,263 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Data Event Control Block
+.* The DECB must be located below 16M
+.*
+&LABEL   MAPDECB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPDECB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPDECB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'DECB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPDECB).MEND
+&BXA_MAC_MAPDECB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_DECB
+&BXA_CB_DECB SETC 'DECB'
+.*
+.* DECTYPE1 - TYPE OF LENGTH OPERAND
+DECLNS   EQUOVR ,,b,DECTYPE1
+DECRSV01 EQUOVR ,,b,DECTYPE1
+DECRSV02 EQUOVR ,,b,DECTYPE1
+DECRSV03 EQUOVR ,,b,DECTYPE1
+DECRSV04 EQUOVR ,,b,DECTYPE1
+DECRSV05 EQUOVR ,,b,DECTYPE1
+DECRSV06 EQUOVR ,,b,DECTYPE1
+DECRSV07 EQUOVR ,,b,DECTYPE1
+.*
+.* DECTYPE2 - TYPE OF OPERATION
+DECRDSF  EQUOVR ,,b,DECTYPE2
+DECRDSB  EQUOVR ,,b,DECTYPE2
+DECWRSF  EQUOVR ,,b,DECTYPE2
+DECWRSD  EQUOVR ,,b,DECTYPE2
+DECRSV08 EQUOVR ,,b,DECTYPE2
+DECWRSZ  EQUOVR ,,b,DECTYPE2
+DECRSV09 EQUOVR ,,b,DECTYPE2
+DECWRSFR EQUOVR ,,b,DECTYPE2
+.*
+.* DECBECBF - FLAG FIELD
+DECBWAIT EQUOVR ,,b,DECBECBF
+DECBPOST EQUOVR ,,b,DECBECBF
+DECRSV11 EQUOVR ,,b,DECBECBF
+DECRSV12 EQUOVR ,,b,DECBECBF
+DECRSV13 EQUOVR ,,b,DECBECBF
+DECRSV14 EQUOVR ,,b,DECBECBF
+DECRSV15 EQUOVR ,,b,DECBECBF
+DECRSV16 EQUOVR ,,b,DECBECBF
+.*
+.* DECBTYP1 - OPTION BYTE
+DECRSV17 EQUOVR ,,b,DECBTYP1
+DECRSV18 EQUOVR ,,b,DECBTYP1
+DECRSV19 EQUOVR ,,b,DECBTYP1
+DECRSV20 EQUOVR ,,b,DECBTYP1
+DECRSV21 EQUOVR ,,b,DECBTYP1
+DECRSV22 EQUOVR ,,b,DECBTYP1
+DECBLNS  EQUOVR ,,b,DECBTYP1
+DECBARS  EQUOVR ,,b,DECBTYP1
+.*
+.* DECBTYP2 - TYPE OF I/O REQUEST
+DECBRDK  EQUOVR ,,b,DECBTYP2
+DECRSV23 EQUOVR ,,b,DECBTYP2
+DECBRDKU EQUOVR ,,b,DECBTYP2
+DECRSV24 EQUOVR ,,b,DECBTYP2
+DECBWRK  EQUOVR ,,b,DECBTYP2
+DECBWRKN EQUOVR ,,b,DECBTYP2
+DECRSV25 EQUOVR ,,b,DECBTYP2
+DECRSV26 EQUOVR ,,b,DECBTYP2
+.*
+.* DECBEXC1 - EXCEPTIONAL CONDITION CODE BYTE 1
+DECEXRNF EQUOVR ,,b,DECBEXC1
+DECEXRLC EQUOVR ,,b,DECBEXC1
+DECEXNSP EQUOVR ,,b,DECBEXC1
+DECEXINV EQUOVR ,,b,DECBEXC1
+DECEXERR EQUOVR ,,b,DECBEXC1
+DECEXUBK EQUOVR ,,b,DECBEXC1
+DECEXOFL EQUOVR ,,b,DECBEXC1
+DECEXDUP EQUOVR ,,b,DECBEXC1
+.*
+.* DECBEXC2 - EXCEPTIONAL CONDITION CODE BYTE 2
+DECRSV27 EQUOVR ,,b,DECBEXC2
+DECRSV28 EQUOVR ,,b,DECBEXC2
+DECRSV29 EQUOVR ,,b,DECBEXC2
+DECRSV30 EQUOVR ,,b,DECBEXC2
+DECRSV31 EQUOVR ,,b,DECBEXC2
+DECRSV32 EQUOVR ,,b,DECBEXC2
+DECEXASR EQUOVR ,,b,DECBEXC2
+DECEXRKU EQUOVR ,,b,DECBEXC2
+.*
+.* DECCC2 - COMPLETION CODE BYTE 2
+DECCCRNF EQUOVR ,,b,DECCC2
+DECCCRLC EQUOVR ,,b,DECCC2
+DECCCNSP EQUOVR ,,b,DECCC2
+DECCCINV EQUOVR ,,b,DECCC2
+DECCCERR EQUOVR ,,b,DECCC2
+DECCCEOD EQUOVR ,,b,DECCC2
+DECCCUER EQUOVR ,,b,DECCC2
+DECCCREX EQUOVR ,,b,DECCC2
+.*
+.* DECCC3 - COMPLETION CODE BYTE 3
+DECRSV33 EQUOVR ,,b,DECCC3
+DECCCWRI EQUOVR ,,b,DECCC3
+DECCCEXS EQUOVR ,,b,DECCC3
+DECCCNBK EQUOVR ,,b,DECCC3
+DECCCWDI EQUOVR ,,b,DECCC3
+DECCCSDK EQUOVR ,,b,DECCC3
+DECCCOPT EQUOVR ,,b,DECCC3
+DECCCKFF EQUOVR ,,b,DECCC3
+.*
+.* DECTYPE1 - TYPE OF LENGTH OPERAND
+DECVERFY EQUOVR ,,b,DECTYPE1
+DECOFLOW EQUOVR ,,b,DECTYPE1
+DECEXSRC EQUOVR ,,b,DECTYPE1
+DECFDBCK EQUOVR ,,b,DECTYPE1
+DECACTAD EQUOVR ,,b,DECTYPE1
+DECDYNBF EQUOVR ,,b,DECTYPE1
+DECRDEX  EQUOVR ,,b,DECTYPE1
+DECRELBA EQUOVR ,,b,DECTYPE1
+.*
+.* DECTYPE2 - TYPE OF OPERATION
+DECKEYS  EQUOVR ,,b,DECTYPE2
+DECBKLNS EQUOVR ,,b,DECTYPE2
+DECTYPRU EQUOVR ,,b,DECTYPE2
+DECTYPR  EQUOVR ,,b,DECTYPE2
+DECOPRD  EQUOVR ,,b,DECTYPE2
+DECSRKEY EQUOVR ,,b,DECTYPE2
+DECWRADD EQUOVR ,,b,DECTYPE2
+DECRSV35 EQUOVR ,,b,DECTYPE2
+.*
+.* DECTYPE1 - TYPE OF LENGTH OPERAND
+DECRDAPL EQUOVR ,,b,DECTYPE1
+DECRSV43 EQUOVR ,,b,DECTYPE1
+DECRSV44 EQUOVR ,,b,DECTYPE1
+DECRSV45 EQUOVR ,,b,DECTYPE1
+DECRSV46 EQUOVR ,,b,DECTYPE1
+DECSTRME EQUOVR ,,b,DECTYPE1
+DECSAREA EQUOVR ,,b,DECTYPE1
+DECSLNTH EQUOVR ,,b,DECTYPE1
+.*
+.* DECONLTT - FLAG BYTE FOR BSC AND 2760 ONLINE TEST
+DECONLTS EQUOVR ,,b,DECONLTT
+DECRCVMS EQUOVR ,,b,DECONLTT
+DECRSV47 EQUOVR ,,b,DECONLTT
+DECRSV48 EQUOVR ,,b,DECONLTT
+DECRSV49 EQUOVR ,,b,DECONLTT
+DECRSV50 EQUOVR ,,b,DECONLTT
+DECRSV51 EQUOVR ,,b,DECONLTT
+DECRSV52 EQUOVR ,,b,DECONLTT
+.*
+.* DECFLAGS - OPERATION STATUS
+DECWACK  EQUOVR ,,b,DECFLAGS
+DECERRMS EQUOVR ,,b,DECFLAGS
+DECDIFAC EQUOVR ,,b,DECFLAGS
+DECALTAC EQUOVR ,,b,DECFLAGS
+DECBADID EQUOVR ,,b,DECFLAGS
+DECNOBUF EQUOVR ,,b,DECFLAGS
+DECNEGRP EQUOVR ,,b,DECFLAGS
+DECREVRS EQUOVR ,,b,DECFLAGS
+DECSSMSG EQUOVR ,,b,DECFLAGS
+DECSTXNQ EQUOVR ,,b,DECFLAGS
+.*
+.* DECERRST - I/O ERROR STATUS FLAGS
+DECSIO3  EQUOVR ,,b,DECERRST
+DECUNDEF EQUOVR ,,b,DECERRST
+DECERPER EQUOVR ,,b,DECERRST
+DECDIAGN EQUOVR ,,b,DECERRST
+DECDSABL EQUOVR ,,b,DECERRST
+DECRSV53 EQUOVR ,,b,DECERRST
+DECRSV54 EQUOVR ,,b,DECERRST
+DECRSV55 EQUOVR ,,b,DECERRST
+.*
+         MNOTE *,'Including IHADECB mapping macro'
+         IHADECB ,
+         EQUOVR *END
+*
+         ORG   ,                       *
+DECB_LEN EQU   *-DECB                  * Length of DECB
+DECB_BSAM_LEN  EQU L'DECBLFMT+DECBLFMT-DECB * Length of DECB for BSAM
+DECB_BISAM_LEN EQU L'DECBEXC2+DECBEXC2-DECB * Length of DECB for BISAM
+DECB_BDAM_LEN  EQU L'DECNAA+DECNAA-DECB     * Length of DECB for BDAM
+DECB_QTAM_LEN  EQU L'DECPOLPA+DECPOLPA-DECB * Length of DECB for QTAM
+DECB_BTAM_LEN  EQU L'DECWAREA+DECWAREA-DECB * Length of DECB for BTAM
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

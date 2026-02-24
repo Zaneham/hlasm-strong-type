@@ -1,0 +1,111 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for equates
+.*
+         MAPEQU
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPEQU                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Prevent multiple expansion
+         GBLB  &BXA_MAC_MAPEQU
+         AIF   (&BXA_MAC_MAPEQU).MEND
+&BXA_MAC_MAPEQU SETB  1
+.*
+         MNOTE *,'Generating Equates'
+*
+* Equates for registers
+*
+         GENMAPS (REGS,BITS)
+.*
+.* Put equates in a DSECT to prevent warning messages in ASM listing
+BXA_EQU  DSECT
+*
+* Equates for masks
+*
+NNNN     EQU   B'0000'                 *
+NNNY     EQU   B'0001'                 *
+NNYN     EQU   B'0010'                 *
+NNYY     EQU   B'0011'                 *
+NYNN     EQU   B'0100'                 *
+NYNY     EQU   B'0101'                 *
+NYYN     EQU   B'0110'                 *
+NYYY     EQU   B'0111'                 *
+YNNN     EQU   B'1000'                 *
+YNNY     EQU   B'1001'                 *
+YNYN     EQU   B'1010'                 *
+YNYY     EQU   B'1011'                 *
+YYNN     EQU   B'1100'                 *
+YYNY     EQU   B'1101'                 *
+YYYN     EQU   B'1110'                 *
+YYYY     EQU   B'1111'                 *
+NOBYTE   EQU   NNNN                    *
+ALLBYTES EQU   YYYY                    *
+*
+* Equates for ALETs
+*
+ALET_PRIM EQU  0                       * Alet for PASN
+ALET_SEC  EQU  1                       * Alet for SASN
+ALET_HOME EQU  2                       * ALET for HASN
+*
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

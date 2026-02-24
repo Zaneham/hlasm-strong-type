@@ -1,0 +1,380 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Create a literal pool. This macro replaces the normal LTORG
+.* instruction. The required OPSYN is issued by the PGM macro.
+.*
+&LABEL   RLTORG
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC RLTORG                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_SUBR               * Current subroutine
+         GBLC  &BXA_RD_LAB(50)         * Labels for remote data
+         GBLC  &BXA_RD_OPC(50)         * Opcodes for remote data
+         GBLC  &BXA_RD_ARG(50)         * Pos Arguments for remote data
+         GBLC  &BXA_RD_ALG(50)         * Alignment for remote data
+         LCLA  &I                      * Index for BXA_RD_xxx
+.*
+.**!!    GBLA  &BXA_RD_NDX(50)         * Indexes for keywords
+.**!!    GBLC  &BXA_RD_KEY(50)         * Keyword names
+.**!!    GBLC  &BXA_RD_VAL(50)         * Keyword values
+.*       LCLA  &I                      * Index for BXA_RD_LAB/OPC/ARG
+.**!!    LCLA  &J                      * Index for BXA_RD_NDX/KEY/VAL
+         LCLC  &LAB                    * Entry from BXA_RD_LAB
+         LCLC  &OPC                    * Entry from BXA_RD_OPC
+         LCLC  &ARG                    * Entry from BXA_RD_ARG
+         LCLC  &ALG                    * Entry from BXA_RD_ALG
+.**!!    LCLC  &KEY                    * Entry from BXA_RD_KEY
+.**!!    LCLC  &VAL                    * Entry from BXA_RD_VAL
+.**!!    LCLC  &K1                     * First character from &KEY
+.*
+.* Define DCB-parameters
+.**!!    LCLC  &BFALN,&BFTEK,&BLKSIZE,&BUFCB,&BUFOFF,&BUFL,&BUFNO,     *
+               &CYLOFL,&DCBE,&DDNAME,&DEVD,&DSORG,&EODAD,&EROPT,&EXLST,*
+               &KEYLEN,&LIMCT,&LRECL,&MACRF,&MSHI,&MSWA,&NCP,&NTM,     *
+               &OPTCD,&RECFM,&RKP,&SMSI,&SMSW,&SYNAD
+.*
+.* Check that we're not in the midst of a subroutine
+         AIF   ('&BXA_SUBR' EQ '*MAIN').NOERR1
+.ERR1    MNOTE 8,'Missing ENDSR statement'
+.NOERR1  ANOP
+.*
+.* Generate code
+&LABEL   LABEL H                       * Align on halfword
+.*
+.* Insert remote data
+         AIF   (N'&BXA_RD_LAB EQ 0).LOOP2OK * Skip RDATA loop
+**********************************************************************
+*
+* Remote data definitions
+*
+**********************************************************************
+.* Generate remote data definitions from tables
+&I       SETA  0                       * &I indexes BXA_RD_LAB/OPC/ARG
+&J       SETA  1                       * &J indexes BXA_RD_NDX/KEY/VAL
+.LOOP2   ANOP
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&BXA_RD_LAB).LOOP2OK * End of loop
+&LAB     SETC  '&BXA_RD_LAB(&I)'       * Extract Label for remote data
+&OPC     SETC  '&BXA_RD_OPC(&I)'       * Extract Remote opcode
+&ARG     SETC  '&BXA_RD_ARG(&I)'       * Extract Remote data operands
+&ALG     SETC  '&BXA_RD_ALG(&I)'       * Extract Remote data alignment
+.*
+         AIF   (K'&ALG EQ 0).LOOP2GO   * No alignment
+         DS    0&ALG                   * Align
+.LOOP2GO ANOP
+.**!!    AIF   ('&OPC' EQ 'DCB').KEY   * Go process macro with keywords
+         AIF   ('&OPC' EQ 'CLOSE').LOOP2MFL * Go process macro, MF=L
+         AIF   ('&OPC' EQ 'MGCRE').LOOP2MFL * Go process macro, MF=L
+         AIF   ('&OPC' EQ 'OPEN').LOOP2MFL * Go process macro with MF=L
+         AIF   ('&OPC' EQ 'WTO').LOOP2MFL * Go process macro with MF=L
+&LAB     &OPC  &ARG
+         AGO   .LOOP2                  * Go process next entry
+.LOOP2MFL ANOP
+&LAB     &OPC  &ARG,MF=L
+         AGO   .LOOP2                  * Go process next entry
+.LOOP2OK ANOP
+         AGO   .MEND
+.*
+.* KEYwords section: extract keyword parameters from tables
+.* - Select all entries from BXA_RD_NDX/KEY/VAL with an index value
+.*   equal to the current index for BXA_RD_LAB/OPC/ARG. These entries
+.*   specify the keywords for this macro expansion.
+.*   All entries are copied to locals, which are ultimately used
+.*   to generate the macro specified in BXA_RD_OPC.
+.*
+.KEY     ANOP  ,                       * Init: Wipe all keywords
+&BFALN   SETC  ''
+&BFTEK   SETC  ''
+&BLKSIZE SETC ''
+&BUFCB   SETC  ''
+&BUFOFF  SETC  ''
+&BUFL    SETC  ''
+&BUFNO   SETC  ''
+&CYLOFL  SETC  ''
+&DCBE    SETC  ''
+&DDNAME  SETC  ''
+&DEVD    SETC  ''
+&DSORG   SETC  ''
+&EODAD   SETC  ''
+&EROPT   SETC  ''
+&EXLST   SETC  ''
+&KEYLEN  SETC  ''
+&LIMCT   SETC  ''
+&LRECL   SETC  ''
+&MACRF   SETC  ''
+&MSHI    SETC  ''
+&MSWA    SETC  ''
+&NCP     SETC  ''
+&NTM     SETC  ''
+&OPTCD   SETC  ''
+&RECFM   SETC  ''
+&RKP     SETC  ''
+&SMSI    SETC  ''
+&SMSW    SETC  ''
+&SYNAD   SETC  ''
+.*
+.LOOP3   ANOP
+         AIF   (&J GT N'&BXA_RD_NDX).LOOP3OK * End of table
+         AIF   (&BXA_RD_NDX(&J) NE &I).LOOP3OK * End of loop
+.* Valid entry: extract values from tables
+&VAL     SETC  '&BXA_RD_VAL(&J)'       * Extract keyword value
+&KEY     SETC  '&BXA_RD_KEY(&J)'       * Extract keyword name
+&KEY     SETC  (UPPER '&KEY')          * Convert to upper case
+&K1      SETC  '&KEY'(1,1)             * Extract first character
+         AIF   ('&K1' EQ 'B').LOOP3B
+         AIF   ('&K1' EQ 'C').LOOP3C
+         AIF   ('&K1' EQ 'D').LOOP3D
+         AIF   ('&K1' EQ 'E').LOOP3E
+         AIF   ('&K1' EQ 'K').LOOP3K
+         AIF   ('&K1' EQ 'L').LOOP3L
+         AIF   ('&K1' EQ 'M').LOOP3M
+         AIF   ('&K1' EQ 'N').LOOP3N
+         AIF   ('&K1' EQ 'O').LOOP3O
+         AIF   ('&K1' EQ 'R').LOOP3R
+         AIF   ('&K1' EQ 'S').LOOP3S
+.LOOP3ERR ANOP
+&KEY     SETC  (DOUBLE '&KEY')         * Double embedded quotes
+         MNOTE 8,'RDATA &OPC specified unknown keyword: &KEY'
+         AGO   .LOOP3
+.*
+.LOOP3B  ANOP
+         AIF   ('&KEY' EQ 'BFALN').BFALN
+         AIF   ('&KEY' EQ 'BFTEK').BFTEK
+         AIF   ('&KEY' EQ 'BLKSIZE').BLKSIZE
+         AIF   ('&KEY' EQ 'BUFCB').BUFCB
+         AIF   ('&KEY' EQ 'BUFOFF').BUFOFF
+         AIF   ('&KEY' EQ 'BUFL').BUFL
+         AIF   ('&KEY' EQ 'BUFNO').BUFNO
+         AGO   .LOOP3ERR
+.*
+.LOOP3C  ANOP
+         AIF   ('&KEY' EQ 'CYLOFL').CYLOFL
+         AGO   .LOOP3ERR
+.*
+.LOOP3D  ANOP
+         AIF   ('&KEY' EQ 'DCBE').DCBE
+         AIF   ('&KEY' EQ 'DDNAME').DDNAME
+         AIF   ('&KEY' EQ 'DEVD').DEVD
+         AIF   ('&KEY' EQ 'DSORG').DSORG
+         AGO   .LOOP3ERR
+.*
+.LOOP3E  ANOP
+         AIF   ('&KEY' EQ 'EODAD').EODAD
+         AIF   ('&KEY' EQ 'EROPT').EROPT
+         AIF   ('&KEY' EQ 'EXLST').EXLST
+         AGO   .LOOP3ERR
+.*
+.LOOP3K  ANOP
+         AIF   ('&KEY' EQ 'KEYLEN').KEYLEN
+         AGO   .LOOP3ERR
+.*
+.LOOP3L  ANOP
+         AIF   ('&KEY' EQ 'LIMCT').LIMCT
+         AIF   ('&KEY' EQ 'LRECL').LRECL
+         AGO   .LOOP3ERR
+.*
+.LOOP3M  ANOP
+         AIF   ('&KEY' EQ 'MACRF').MACRF
+         AIF   ('&KEY' EQ 'MSHI').MSHI
+         AIF   ('&KEY' EQ 'MSWA').MSWA
+         AGO   .LOOP3ERR
+.*
+.LOOP3N  ANOP
+         AIF   ('&KEY' EQ 'NCP').NCP
+         AIF   ('&KEY' EQ 'NTM').NTM
+         AGO   .LOOP3ERR
+.*
+.LOOP3O  ANOP
+         AIF   ('&KEY' EQ 'OPTCD').OPTCD
+         AGO   .LOOP3ERR
+.*
+.LOOP3R  ANOP
+         AIF   ('&KEY' EQ 'RECFM').RECFM
+         AIF   ('&KEY' EQ 'RKP').RKP
+         AGO   .LOOP3ERR
+.*
+.LOOP3S  ANOP
+         AIF   ('&KEY' EQ 'SMSI').SMSI
+         AIF   ('&KEY' EQ 'SMSW').SMSW
+         AIF   ('&KEY' EQ 'SYNAD').SYNAD
+         AGO   .LOOP3ERR
+.*
+.BFALN   ANOP
+&BFALN   SETC  '&VAL'
+         AGO   .LOOP3NX
+.BFTEK   ANOP
+&BFTEK   SETC  '&VAL'
+         AGO   .LOOP3NX
+.BLKSIZE ANOP
+&BLKSIZE SETC  '&VAL'
+         AGO   .LOOP3NX
+.BUFCB   ANOP
+&BUFCB   SETC  '&VAL'
+         AGO   .LOOP3NX
+.BUFOFF  ANOP
+&BUFOFF  SETC  '&VAL'
+         AGO   .LOOP3NX
+.BUFL    ANOP
+&BUFL    SETC  '&VAL'
+         AGO   .LOOP3NX
+.BUFNO   ANOP
+&BUFNO   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.CYLOFL  ANOP
+&CYLOFL  SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.DCBE    ANOP
+&DCBE    SETC  '&VAL'
+         AGO   .LOOP3NX
+.DDNAME  ANOP
+&DDNAME  SETC  '&VAL'
+         AGO   .LOOP3NX
+.DEVD    ANOP
+&DEVD    SETC  '&VAL'
+         AGO   .LOOP3NX
+.DSORG   ANOP
+&DSORG   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.EODAD   ANOP
+&EODAD   SETC  '&VAL'
+         AGO   .LOOP3NX
+.EROPT   ANOP
+&EROPT   SETC  '&VAL'
+         AGO   .LOOP3NX
+.EXLST   ANOP
+&EXLST   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.KEYLEN  ANOP
+&KEYLEN  SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.LIMCT   ANOP
+&LIMCT   SETC  '&VAL'
+         AGO   .LOOP3NX
+.LRECL   ANOP
+&LRECL   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.MACRF   ANOP
+&MACRF   SETC  '&VAL'
+         AGO   .LOOP3NX
+.MSHI    ANOP
+&MSHI    SETC  '&VAL'
+         AGO   .LOOP3NX
+.MSWA    ANOP
+&MSWA    SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.NCP     ANOP
+&NCP     SETC  '&VAL'
+         AGO   .LOOP3NX
+.NTM     ANOP
+&NTM     SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.OPTCD   ANOP
+&OPTCD   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.RECFM   ANOP
+&RECFM   SETC  '&VAL'
+         AGO   .LOOP3NX
+.RKP     ANOP
+&RKP     SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.SMSI    ANOP
+&SMSI    SETC  '&VAL'
+         AGO   .LOOP3NX
+.SMSW    ANOP
+&SMSW    SETC  '&VAL'
+         AGO   .LOOP3NX
+.SYNAD   ANOP
+&SYNAD   SETC  '&VAL'
+         AGO   .LOOP3NX
+.*
+.* Go process next entry
+.LOOP3NX ANOP
+&J       SETA  &J+1                    * point next entry
+         AGO   .LOOP3
+.*
+.* Select macro to expand
+.LOOP3OK ANOP
+         AIF   ('&OPC' EQ 'DCB').DCB
+         MNOTE 8,'RDATA &OPC not supported'
+         AGO   .LOOP2
+.*
+.DCB     ANOP
+&LAB     DCB   BFALN=&BFALN,BFTEK=&BFTEK,BLKSIZE=&BLKSIZE,             *
+               BUFCB=&BUFCB,BUFOFF=&BUFOFF,BUFL=&BUFL,BUFNO=&BUFNO,    *
+               CYLOFL=&CYLOFL,DCBE=&DCBE,DDNAME=&DDNAME,DEVD=&DEVD,    *
+               DSORG=&DSORG,EODAD=&EODAD,EROPT=&EROPT,EXLST=&EXLST,    *
+               KEYLEN=&KEYLEN,LIMCT=&LIMCT,LRECL=&LRECL,               *
+               MACRF=&MACRF,MSHI=&MSHI,MSWA=&MSWA,NCP=&NCP,            *
+               NTM=&NTM,OPTCD=&OPTCD,RECFM=&RECFM,RKP=&RKP,            *
+               SMSI=&SMSI,SMSW=&SMSW,SYNAD=&SYNAD
+         AGO   .LOOP2
+.*
+.MEND    MEND

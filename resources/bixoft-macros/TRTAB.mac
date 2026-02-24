@@ -1,0 +1,356 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates tables for use wit TR and/or TRT instructions
+.*
+&LABEL   TRTAB &TYPE,                  * Base type of table            *
+               &CHARS=                 * Other valid characters
+.*
+.* &TYPE:  UC       for uppercase characters (A-Z)
+.*         LC       for lowercase characters (a-z)
+.*         ALPHA    for lower and/or uppercase characters (A-Z, a-z)
+.*         DIGITS   for decimal digits (0-9)
+.*         HEX      for hex digits (0-9, A-F)
+.*         NOT      for anything except specified &CHARS
+.*         NOTUC    for anything except uppercase
+.*         NOTLC    for anything except lowercase
+.*         NOTALPHA for anything except upper and/or lowercase chars
+.*         NOTDIGIT for anything except decimal digits
+.*         NOTHEX   for anything except hex digits
+.*         TOHEX    for translation from X'00'-X'0F' to readable hex
+.*         TOLOWER  for translation from uppercase to lowercase
+.*         TOUPPER  for translation from lowercase to uppercase
+.* &CHARS: a sublist of allowable characters, decimal codes, or hex
+.*         codes in the range 0-255 (X'00'-X'FF'). In singles or in
+.*         pairs for translation.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC TRTAB                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare locals
+         LCLC  &UC,&LC,&DIG,&NOT,&TOHEX
+.*
+.* Check the validity of the LABEL parameter
+         AIF   (K'&LABEL NE 0).NOERR1
+ERROR1   MNOTE 8,'Missing label parameter on TRTAB macro'
+.NOERR1  ANOP
+.*
+.* Check validity of TYPE pararmeter
+         AIF   ('&TYPE' EQ 'UC').UC
+         AIF   ('&TYPE' EQ 'LC').LC
+         AIF   ('&TYPE' EQ 'ALPHA').ALPHA
+         AIF   ('&TYPE' EQ 'DIGITS').DIGITS
+         AIF   ('&TYPE' EQ 'HEX').HEX
+         AIF   ('&TYPE' EQ 'NOT').NOT
+         AIF   ('&TYPE' EQ 'NOTUC').NOTUC
+         AIF   ('&TYPE' EQ 'NOTLC').NOTLC
+         AIF   ('&TYPE' EQ 'NOTALPHA').NOTALPHA
+         AIF   ('&TYPE' EQ 'NOTDIGIT').NOTDIGIT
+         AIF   ('&TYPE' EQ 'NOTHEX').NOTHEX
+         AIF   ('&TYPE' EQ 'TOHEX').TOHEX
+         AIF   ('&TYPE' EQ 'TOLOWER').TOLOWER
+         AIF   ('&TYPE' EQ 'TOUPPER').TOUPPER
+         AIF   ('&TYPE' EQ '').NOTYPE
+         MNOTE 8,'Invalid TYPE specified on TRTAB macro'
+         MEXIT
+.*
+.* Set locals, depending on TYPE parameter
+.UC      ANOP
+&UC      SETC  'UC'
+         AGO   .NOTYPE
+.LC      ANOP
+&LC      SETC  'LC'
+         AGO   .NOTYPE
+.ALPHA   ANOP
+&UC      SETC  'UC'
+&LC      SETC  'LC'
+         AGO   .NOTYPE
+.DIGITS  ANOP
+&DIG     SETC  'DIG'
+         AGO   .NOTYPE
+.HEX     ANOP
+&UC      SETC  'HEX'
+&DIG     SETC  'DIG'
+         AGO   .NOTYPE
+.NOT     ANOP
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.NOTUC   ANOP
+&UC      SETC  'UC'
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.NOTLC   ANOP
+&LC      SETC  'LC'
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.NOTALPHA ANOP
+&UC      SETC  'UC'
+&LC      SETC  'LC'
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.NOTDIGIT ANOP
+&DIG     SETC  'DIG'
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.NOTHEX  ANOP
+&UC      SETC  'HEX'
+&DIG     SETC  'DIG'
+&NOT     SETC  'YES'
+         AGO   .NOTYPE
+.TOHEX   ANOP
+&TOHEX   SETC  'YES'
+         AGO   .NOTYPE
+.TOLOWER ANOP
+&UC      SETC  'LC'
+&LC      SETC  'LC'
+         AGO   .NOTYPE
+.TOUPPER ANOP
+&UC      SETC  'UC'
+&LC      SETC  'UC'
+         AGO   .NOTYPE
+.NOTYPE  ANOP
+.*
+.* Variable NOT must be either YES or NO
+         AIF   ('&NOT' EQ 'YES').NOTOK
+&NOT     SETC  'NO'
+.NOTOK   ANOP
+.*
+         PUSH  PRINT
+         PRINT NODATA
+.*
+.* Pre-fill table, depending on NOT-parameter
+         AIF   ('&NOT' EQ 'YES').LABELNO
+&LABEL   DC    256X'00'                * All codes invalid, except:
+         AGO   .LABELOK
+.LABELNO ANOP
+&LABEL   DC    256X'FF'                * All codes valid, except:
+.LABELOK ANOP
+.*
+.* Generate allowed uppercase characters
+         AIF   ('&UC' NE 'HEX').NOTUCHEX
+         AIF   ('&NOT' EQ 'YES').UCHEXNO
+         ORG   &LABEL+C'A'             * Starting with 'A'
+         DC    C'ABCDEF'               * 6 valid chars
+         AGO   .NOTUCHEX
+.UCHEXNO ANOP
+         ORG   &LABEL+C'A'             * Starting with 'A'
+         DC    6X'00'                  * 6 invalid chars
+.NOTUCHEX ANOP
+.*
+         AIF   ('&UC' NE 'UC').NOTUCUC
+         AIF   ('&NOT' EQ 'YES').UCUCNO
+         ORG   &LABEL+C'A'             * Starting with 'A'
+         DC    C'ABCDEFGHI'            * 9 valid chars
+         ORG   &LABEL+C'J'             * Starting with 'J'
+         DC    C'JKLMNOPQR'            * 9 more valid chars
+         ORG   &LABEL+C'S'             * Starting with 'S'
+         DC    C'STUVWXYZ'             * the last 8 valid chars
+         AGO   .NOTUCUC
+.UCUCNO  ANOP
+         ORG   &LABEL+C'A'             * Starting with 'A'
+         DC    9X'00'                  * 9 invalid chars
+         ORG   &LABEL+C'J'             * Starting with 'J'
+         DC    9X'00'                  * 9 more invalid chars
+         ORG   &LABEL+C'S'             * Starting with 'S'
+         DC    8X'00'                  * the last 8 invalid chars
+.NOTUCUC ANOP
+.*
+         AIF   ('&UC' NE 'LC').NOTUCLC
+         ORG   &LABEL+C'A'             * Starting with 'A'
+         DC    C'abcdefghi'            * 9 valid chars
+         ORG   &LABEL+C'J'             * Starting with 'J'
+         DC    C'jklmnopqr'            * 9 more valid chars
+         ORG   &LABEL+C'S'             * Starting with 'S'
+         DC    C'stuvwxyz'             * the last 8 valid chars
+.NOTUCLC ANOP
+.*
+.* Generate allowed lowercase characters
+         AIF   ('&LC' NE 'LC').NOTLCLC
+         AIF   ('&NOT' EQ 'YES').LCLCNO
+         ORG   &LABEL+C'a'             * Starting with 'a'
+         DC    C'abcdefghi'            * 9 valid chars
+         ORG   &LABEL+C'j'             * Starting with 'j'
+         DC    C'jklmnopqr'            * 9 more valid chars
+         ORG   &LABEL+C's'             * Starting with 's'
+         DC    C'stuvwxyz'             * the last 8 valid chars
+         AGO   .NOTLCLC
+.LCLCNO  ANOP
+         ORG   &LABEL+C'a'             * Starting with 'a'
+         DC    9X'00'                  * 9 invalid chars
+         ORG   &LABEL+C'j'             * Starting with 'j'
+         DC    9X'00'                  * 9 more invalid chars
+         ORG   &LABEL+C's'             * Starting with 's'
+         DC    8X'00'                  * the last 8 invalid chars
+.NOTLCLC ANOP
+.*
+         AIF   ('&LC' NE 'UC').NOTLCUC
+         ORG   &LABEL+C'a'             * Starting with 'a'
+         DC    C'ABCDEFGHI'            * 9 valid chars
+         ORG   &LABEL+C'j'             * Starting with 'j'
+         DC    C'JKLMNOPQR'            * 9 more valid chars
+         ORG   &LABEL+C's'             * Starting with 's'
+         DC    C'STUVWXYZ'             * the last 8 valid chars
+.NOTLCUC ANOP
+.*
+.* Generate allowed digit-characters
+         AIF   ('&DIG' NE 'DIG').NOTDIG
+         AIF   ('&NOT' EQ 'YES').DIGNO
+         ORG   &LABEL+C'0'             * Starting with '0'
+         DC    C'0123456789'           * 10 valid chars
+         AGO   .NOTDIG
+.DIGNO   ANOP
+         ORG   &LABEL+C'0'             * Starting with '0'
+         DC    10X'00'                 * 10 invalid chars
+.NOTDIG  ANOP
+.*
+.* Generate allowed tohex-characters
+         AIF   ('&TOHEX' NE 'YES').NOTTOHEX
+         ORG   &LABEL                  * Starting with X'00'
+         DC    C'0123456789ABCDEF'     * 16 valid chars
+.NOTTOHEX ANOP ,                       *
+.*
+.* If &CHARS has no value, we're done
+         AIF   (K'&CHARS EQ 0).ENDMAC
+.*
+.* &CHARS must be in sublist notation
+         AIF   ('&CHARS'(1,1) EQ '(').NOERR2
+.ERROR2  MNOTE 8,'CHARS parameter must be specified in sublist notation*
+               '
+.NOERR2  ANOP
+.*
+.* Initialize locals for looping thru the &CHARS table
+         LCLA  &I
+         LCLC  &ARG1,&ARG2
+&I       SETA  0
+.*
+.* Loop thru all the CHARS-entries. Each entry is a self-defining term
+.* or a sublist of two self-defining term. Each term should represent
+.* a 1-byte value. If 1 term is defined, it will be translated unto
+.* itself, otherwise the first term will be translated into the second.
+.*
+.LOOP    ANOP
+&I       SETA  &I+1
+         AIF   (&I GT N'&CHARS).LOOPEND
+.* ARG can be a single argument or a sublist of two arguments
+         AIF   ('&CHARS(&I)'(1,1) EQ '(').SUBLIST
+.* ARG is a single argument
+&ARG1    SETC  '&CHARS(&I)'
+&ARG2    SETC  ''
+.* If NOT is specified, ARG2 must be X'00'
+         AIF   ('&NOT' EQ 'NO').ARG_OK
+&ARG2    SETC  'X''00'''
+         AGO   .ARG_OK
+.*
+.SUBLIST ANOP
+         AIF   (N'&CHARS(&I) EQ 0).ERROR3A
+         AIF   (N'&CHARS(&I) EQ 1).ERROR3B
+         AIF   (N'&CHARS(&I) GT 2).ERROR3C
+         AGO   .NOERR3
+.ERROR3A MNOTE 8,'Empty sublist on CHARS-parameter: ignored'
+         AGO   .LOOP
+.ERROR3B MNOTE 8,'Sublist with only one sub-parm on CHARS-parameter: ig*
+               nored'
+         AGO   .LOOP
+.ERROR3C MNOTE 8,'Sublist on CHARS-parameter with more than 2 sub-parms*
+               : ignored'
+         AGO   .LOOP
+.ERROR3D MNOTE 8,'Sublist on CHARS-parameter contains empty sub-paramet*
+               er: ignored'
+         AGO   .LOOP
+.NOERR3  ANOP
+.* ARG is a valid double argument
+&ARG1    SETC  '&CHARS(&I,1)'
+         AIF   (K'&ARG1 EQ 0).ERROR3D
+&ARG2    SETC  '&CHARS(&I,2)'
+         AIF   (K'&ARG2 EQ 0).ERROR3D
+.ARG_OK  ANOP
+.* If ARG1 has only 1 character, change it to C'x'
+         AIF   (K'&ARG1 GT 1).ARG1OK1
+&ARG1    SETC  'C'''.'&ARG1'.''''
+.ARG1OK1 ANOP  ,
+         AIF   ('&ARG1'(1,1) NE '''').ARG1OK2
+&ARG1    SETC  'C'.'&ARG1'
+.ARG1OK2 ANOP  ,
+.* If ARG2 is empty, copy ARG1
+         AIF   (K'&ARG2 GT 0).ARG2OK1
+&ARG2    SETC  '&ARG1'
+.ARG2OK1 ANOP  ,
+.* If ARG2 has only 1 character, change it to C'x'
+         AIF   (K'&ARG2 GT 1).ARG2OK2
+&ARG2    SETC  'C'''.'&ARG2'.''''
+.ARG2OK2 ANOP  ,
+         AIF   ('&ARG2'(1,1) NE '''').ARG2OK3
+&ARG2    SETC  'C'.'&ARG2'
+.ARG2OK3 ANOP  ,
+.*
+.* Generate table entry
+         ORG   &LABEL+&ARG1            * Translatable code
+         DC    &ARG2                   * resulting code
+.*
+.* And go process next CHARS-entry
+         AGO   .LOOP
+.*
+.LOOPEND ANOP
+.ENDMAC  ANOP
+* Reset program counter to end-of-table
+         ORG
+.*
+         POP   PRINT
+.*
+.MEND    MEND

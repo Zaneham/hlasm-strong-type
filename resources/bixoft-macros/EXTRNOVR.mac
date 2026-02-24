@@ -1,0 +1,159 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro fills the stack of EXTRN modifications for use by the
+.* EXTRN macro, which replaces the assembler's EXTRN instruction
+.*
+&LABEL   EXTRNOVR &OPT,                * See below for valid keywords  *
+               &NEWNAM                 * New name for *NEWNAME option
+.*
+.* &LABEL mandatory, except when &OPT=*END
+.*        The specified EXTRN name will be overridden.
+.* &OPT   specifies one of the following:
+.*        *END cancels all outstanding EXTRNOVR requests
+.*        *SUPPRESS suppresses the definition of &LABEL
+.*        *WXTRN   changes the EXTRN name to a WXTRN name
+.*        *NEWNAME changes the EXTRN for &LABEL into one for &NEWNAM,
+.*              i.e. Specify *NEWNAME,newname
+.* &NEWNAM Specifies the new name, if &OPT=*NEWNAME
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EXTRNOVR               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_EXTRNOVR           * Ptr to last valid
+         GBLC  &BXA_EXTRNOVR_LAB(50)   * Labels
+         GBLC  &BXA_EXTRNOVR_NAM(50)   * New names
+         LCLA  &I                      * Index
+.*
+.* Check LABEL parameter
+         AIF   (K'&LABEL GT 0).NOERR1
+         AIF   ('&OPT' EQ '*END').NOERR1
+.ERR1    MNOTE 8,'Missing label parameter'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check the OPT parameter
+         AIF   (K'&OPT NE 0).NOERR2A
+.ERR2A   MNOTE 8,'Missing parameter(s)'
+         MEXIT
+.NOERR2A ANOP  ,
+         AIF   ('&OPT' EQ '*SUPPRESS').NOERR2
+         AIF   ('&OPT' EQ '*WXTRN').NOERR2
+         AIF   ('&OPT' EQ '*NEWNAME').NOERR2
+         AIF   ('&OPT' EQ '*END').NOERR2
+.ERR2B   MNOTE 8,'&OPT is not a valid keyword'
+         MEXIT
+.NOERR2  ANOP  ,
+.*
+.* Check the NEWNAME parameter (must be present if &OPT = *NEWNAME)
+         AIF   ('&OPT' EQ '*NEWNAME' AND K'&NEWNAM EQ 0).ERR3A
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'New name not specified with option *NEWNAME'
+         MEXIT
+.NOERR3  ANOP
+.*
+.* Check number of parameters
+         AIF   ('&OPT' EQ '*END' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*END').NOERR4
+         AIF   ('&OPT' EQ '*SUPPRESS' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*SUPPRESS').NOERR4
+         AIF   ('&OPT' EQ '*WXTRN' AND N'&SYSLIST GT 1).ERR4A
+         AIF   ('&OPT' EQ '*WXTRN').NOERR4
+         AIF   (N'&SYSLIST GT 2).ERR4B
+         AGO   .NOERR4
+.ERR4A   MNOTE 4,'More than 1 argument: remainder ignored'
+         AGO   .NOERR4
+.ERR4B   MNOTE 4,'More than 2 arguments: remainder ignored'
+.NOERR4  ANOP
+.*
+.* Option *END requires differen logic
+         AIF   ('&OPT' EQ '*END').END
+.*
+.* Other options: add entry to tables
+&I       SETA  &BXA_EXTRNOVR+1         * Next free entry
+&BXA_EXTRNOVR_LAB(&I) SETC '&LABEL'    * Insert label
+&BXA_EXTRNOVR_NAM(&I) SETC '&OPT'      * Insert *SUPPRESS or *WXTRN
+         AIF   ('&OPT' NE '*NEWNAME').NAMOK * For option *NEWNAME:
+&BXA_EXTRNOVR_NAM(&I) SETC '&NEWNAM'   * replace *NEWNAME with new name
+.NAMOK   ANOP  ,                       *
+&BXA_EXTRNOVR SETA &I                  * And update ptr to last valid
+.*
+.* Replace EXTRN-instruction by our EXTRN-macro on the first override
+         AIF   (&BXA_EXTRNOVR GT 1).MEND
+         OPSYNS EXTRN                  * Replace EXTRN by _EXTRN
+         MEXIT
+.*
+.* Ending current EXTRNOVR requests. Issue a message for any unused
+.* entries in BXA_EXTRNOVR tables.
+.END     ANOP
+         AIF   (&BXA_EXTRNOVR EQ 0).MEND * No entries remain
+&I       SETA  0                       * I indexes BXA_EXTRNOVR_xxx
+.LOOP1   ANOP  ,                       * For all current entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_EXTRNOVR).LOOP1OK * At end: quit loop
+         MNOTE 4,'EXTRNOVR for &BXA_EXTRNOVR_LAB(&I) discarded'
+         AGO   .LOOP1
+.LOOP1OK ANOP
+&BXA_EXTRNOVR SETA 0                   * Reset valid counter to 0
+.*
+.* Disable our DS-macro by replacing _DS by original DS-instruction
+         OPSYNS _DS                    * Reset DS-instruction
+.*
+.MEND    MEND

@@ -1,0 +1,163 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for standard MVS save-areas
+.*           and for Bixoft internal/external save-areas
+.*
+&LABEL   MAPSAVE &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSAVE                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSAVE        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'BXASAVE').EMBED
+         AIF   ('&CB' EQ 'SAVEAREA').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSAVE).MEND
+&BXA_MAC_MAPSAVE SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_BXASAVE
+         GBLC  &BXA_CB_SAVEAREA
+&BXA_CB_BXASAVE  SETC 'SAVE'
+&BXA_CB_SAVEAREA SETC 'SAVE'
+.*
+         MNOTE *,'Generating BXASAVE Dsect'
+*
+* DSECT for save areas
+*
+* Issue USING SAVEAREA,R13
+*
+* In ESTAE-type subroutines, 2 internal SA's are used to copy the
+* contents of the external SA, and the save info from entry into the
+* ESTAE-type subroutine. The external SA is thus available again for
+* any invoked functions that require R13 to point to a save area.
+*
+BXASAVE  DSECT ,                       *
+SAVEPRFX DS    0XL16                   * Bixoft prefix for save-areas
+SAVEID   DS    CL8                     * Only used by Bixoft, valid
+*                                      *   only for external SA's and
+*                                      *   on 1st SA of an SA-subchain
+SAVEPTPT DS    A                       * Ptr to ptr to this area
+SAVEPTSA DS    A                       * Ptr to SA used on entry
+SAVEPRFX_LEN EQU *-SAVEPRFX            * Length of prefix
+*
+SAVEAREA DS    0XL72                   * Standard save-area
+SAVEPTRS DS    0XL12                   * Define first 3 words at once
+SAVEHDR  DS    F                       * External SA: reserved for PL1 *
+                                       *     for SRB: saved ret.addr.  *
+                                       * Internal SA: address of BEGSR
+SAVEPREV DS    F                       * Backward pointer
+SAVEF1SA EQU   SAVEPREV,,C'C'          * Character value F1SA in first *
+                                       *   savearea on chain
+SAVENEXT DS    F                       * Forward pointer
+SAVEDR13 EQU   SAVEPREV                * Saved value of reg 13
+SAVEDR14 DS    F                       * Saved value of reg 14
+SAVEDR15 DS    F                       * Saved value of reg 15
+SAVEDR0  DS    F                       * Saved value of reg 0
+SAVEDR1  DS    F                       * Saved value of reg 1
+SAVEDR2  DS    F                       * Saved value of reg 2
+SAVEDR3  DS    F                       * Saved value of reg 3
+SAVEDR4  DS    F                       * Saved value of reg 4
+SAVEDR5  DS    F                       * Saved value of reg 5
+SAVEDR6  DS    F                       * Saved value of reg 6
+SAVEDR7  DS    F                       * Saved value of reg 7
+SAVEDR8  DS    F                       * Saved value of reg 8
+SAVEDR9  DS    F                       * Saved value of reg 9
+SAVEDR10 DS    F                       * Saved value of reg 10
+SAVEDR11 DS    F                       * Saved value of reg 11
+SAVEDR12 DS    F                       * Saved value of reg 12
+*
+SAVEAREA_END EQU *                     * End of standard MVS save-area
+SAVEAREA_LEN EQU *-SAVEAREA            * Length of standard save-area
+*
+* Following fields are used only by Bixoft. These are defined only for
+*    external save-areas, and serve to tie the chain of internal SA's
+*    to the external SA.
+*
+SAVEINT  DS    0XL8                    * Defines both pointers at once
+SAVEINTF DS    A                       * Pointer to first internal SA
+SAVEINTU DS    A                       * Pointer to last-used int. SA
+*
+         ORG   ,                       *
+         DS    0D                      * Align for internal Save areas
+BXASAVE_LEN EQU *-BXASAVE              * Length of complete DSECT
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

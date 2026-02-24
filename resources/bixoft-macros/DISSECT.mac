@@ -1,0 +1,211 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro Dissects a parameter into its constituent parts
+.*
+&LABEL   DISSECT &TYPE,                * Type of parameter to dissect  *
+               &INPUT                  * Parameter to dissect
+.*
+.* TYPE must be one of the following:
+.*   - DB  = Displacement(Base)
+.*   - DLB = Displacement(Length,Base)
+.*   - DRB = Displacement(Register,Base)
+.*   - DXB = Displacement(indeX,Base)
+.*   - I   = Immediate
+.*   - M   = Mask
+.*   - R   = Register
+.* INPUT will normally be a parameter passed to a macro that replaces
+.*       some machine instruction. May have been pre-processed with
+.*       the SPLIT macro.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC DISSECT                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLC  &BXA_PRM(3)             * Output parameters
+         LCLC  &IN                     * Input string
+         LCLC  &OP1                    * Operand before (
+         LCLC  &OP2                    * First operand in ()
+         LCLC  &OP3                    * Second operand in ()
+         LCLC  &C                      * Single character from input
+         LCLA  &I,&J                   * Work var.
+         LCLA  &PAR                    * Nr of parentheses levels
+         LCLB  &STRING                 * On if scanning within quotes
+         LCLB  &FINDPAR                * On if parentheses present
+         LCLB  &SPLIT                  * On if parentheses hold a comma
+.*
+.* Determine what to do
+         AIF   ('&TYPE' EQ 'I').TYPEOK * Immediate operand
+         AIF   ('&TYPE' EQ 'M').TYPEOK * Mask operand
+         AIF   ('&TYPE' EQ 'R').TYPEOK * Register operand
+&FINDPAR SETB  1                       * Parentheses may be present
+         AIF   ('&TYPE' EQ 'DB').TYPEOK * Displacement(Base)
+&SPLIT   SETB  1                       * Two arguments in parentheses
+         AIF   ('&TYPE' EQ 'DLB').TYPEOK * Displacement(Length,Base)
+         AIF   ('&TYPE' EQ 'DRB').TYPEOK * Displacement(Register,Base)
+         AIF   ('&TYPE' EQ 'DXB').TYPEOK * Displacement(indeX,Base)
+.ERR1    MNOTE 8,'Invalid TYPE specified on DISSECT macro'
+         MEXIT ,                       *
+.TYPEOK  ANOP  ,                       *
+.*
+.* Set up for processing
+         AIF   (K'&INPUT EQ 0).EXIT    * No input: do nothing
+&IN      SETC  '&INPUT'                *
+.*
+.* Before the actual dissection starts embedded comments - if any -
+.* must be removed.
+&I       SETA  ('&IN' FIND ' ')        * Search embedded space
+         AIF   (&I EQ 0).NOCOMMNT      * No space: no comments
+.LOOP1   ANOP  ,                       * Search backward
+&I       SETA  ('&IN' FIND ''' ')      * Find quote or space
+         AIF   (&I EQ 0).NOCOMMNT      * No comment found: done
+&C       SETC  '&IN'(&I,1)             * Extract character found
+         AIF   ('&C' EQ '''').LOOP1QU  * Found a quote
+.* Must be a space
+         AIF   (NOT &STRING).LOOP1OK   * Found start of comment
+         AGO   .LOOP1NX                * Go continue search
+.LOOP1QU ANOP  ,                       * Handle quote
+&STRING  SETB  (&STRING XOR 1)         * Flip string status
+.LOOP1NX ANOP  ,                       * Continue search
+         AIF   (&I EQ K'&IN).NOCOMMNT  * Trailing char: no comment fnd
+&IN      SETC  '&IN'(&I+1,*)           * Remove treated text
+         AGO   .LOOP1                  *
+.LOOP1OK ANOP  ,                       * Leading space found
+&I       SETA  K'&INPUT-K'&IN          * Nr of chars before comment
+&IN      SETC  '&INPUT'(1,&I)          * Extract relevant input
+.NOCOMMNT ANOP ,                       *
+.*
+.* First we must extract the OP1 field. This field starts at position 1
+.* and ends when either:
+.* - the input field is exhausted
+.* - If FINDPAR is on: a left parenthesis is found, which is not
+.*   preceded by an arithmetic operator (+-*/)
+.*
+         AIF   (&FINDPAR).FINDPAR      * Need to look for a ( ??
+.NOPAR   ANOP  ,                       * Parentheses do not matter
+&OP1     SETC  '&IN'                   * Just copy the argument
+.*
+.* If register is specified as (reg), remove the parentheses
+         AIF   ('&TYPE' NE 'R').EXIT   * Only for register operand
+         AIF   ('&OP1'(1,1) NE '(').EXIT * Must start with left par
+         AIF   ('&OP1'(K'&OP1,1) NE ')').EXIT * And end with right par
+&OP1     SETC  '&OP1'(2,K'&OP1-2)      * Remove parentheses
+         AGO   .EXIT                   * And be done with it
+.*
+.* If last character is not a closing parenthesis, only the
+.* displacement field is present, and no action is required.
+.FINDPAR ANOP  ,                       * Find parentheses if present
+         AIF   ('&IN'(K'&IN,1) NE ')').NOPAR * Displacement only?
+.*
+.* There are parentheses which may be relevant. Search backward to
+.* find the matching opening parenthesis.
+&PAR     SETA  0                       * Level of parentheses
+&STRING  SETB  0                       * No string
+&I       SETA  K'&IN+1                 * Point beyond string-end
+.LOOP2   ANOP  ,                       * Search backward
+&I       SETA  &I-1                    * Point previous character
+         AIF   (&I LT 1).LOOP2ERR      * No matching parenthesis found
+&C       SETC  '&IN'(&I,1)             * Extract single character
+         AIF   ('&C' EQ '(').LOOP2LP   * Found a left parenthesis
+         AIF   ('&C' EQ ')').LOOP2RP   * Found a right parenthesis
+         AGO   .LOOP2                  *
+.LOOP2ERR MNOTE 8,'Non-matching parentheses in operand'
+         MEXIT ,                       *
+.LOOP2RP ANOP  ,                       * Handle right parentheses
+&PAR     SETA  &PAR+1                  * Add 1 to level of parentheses
+         AGO   .LOOP2                  *
+.LOOP2LP ANOP  .                       * Handle left parentheses
+&PAR     SETA  &PAR-1                  *
+         AIF   (&PAR GT 0).LOOP2       * Not all levels closed: contin.
+.* Found matching opening parenthesis at &I: check preceding character
+         AIF   (&I LE 1).NOPAR         * Displacement only?
+&J       SETA  &I-1                    * Point preceding character
+&C       SETC  '&IN'(&J,1)             * Extract preceding character
+&J       SETA  ('+-*/' FIND '&C')      * This is an arithmetic term?
+         AIF   (&J NE 0).NOPAR         * Must be part of displacement
+.* Ok: extract displacement into OP1
+&OP1     SETC  '&IN'(1,&I-1)           * Displ. up to left parenthesis
+&IN      SETC  '&IN'(&I+1,*)           * Keep remainder for len/base
+&IN      SETC  '&IN'(1,K'&IN-1)        * But remove outer parentheses
+.*
+.* If SPLIT is off the remainder goes into OP2, otherwise it must be
+.* split into OP2 and OP3.
+         AIF   (&SPLIT).SPLIT          * Need to split?
+.NOSPLIT ANOP  ,                       * Nothing to split
+&OP2     SETC  '&IN'                   * Copy remainder
+         AGO   .EXIT                   * And be done with it
+.*
+.* Check for a comma: if not present, there's nothing to split!
+.SPLIT   ANOP  ,                       * Try to split IN to OP2 and OP3
+&I       SETA  ('&IN' FIND ',')        * Locate comma in string
+         AIF   (&I EQ 0).NOSPLIT       *
+         AIF   (&I EQ 1).NOOP2         * OP2 omitted?
+&OP2     SETC  '&IN'(1,&I-1)           * OP2 up to & excluding comma
+.NOOP2   ANOP  ,                       *
+         AIF   (&I EQ K'&IN).NOOP3     * OP3 omitted?
+&OP3     SETC  '&IN'(&I+1,*)           * OP3 follows comma
+.NOOP3   ANOP  ,                       *
+.*
+.* Exit point: copy result to global variables
+.EXIT    ANOP  ,                       *
+&BXA_PRM(1) SETC '&OP1'                *
+&BXA_PRM(2) SETC '&OP2'                *
+&BXA_PRM(3) SETC '&OP3'                *
+.*
+.MEND    MEND

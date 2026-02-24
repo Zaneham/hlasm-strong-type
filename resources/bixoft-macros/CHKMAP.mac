@@ -1,0 +1,112 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Checking function for parameters of MAP-macro's
+.*
+&LABEL   CHKMAP &DSECT=,               * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CHKMAP                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Initialize variables
+&BXA_RC  SETA  0                       * Init to no error
+.*
+.* Check the LABEL parameter
+         AIF   ('&DSECT' EQ 'YES' AND K'&LABEL NE 0).ERR1
+         AGO   .NOERR1
+.ERR1    MNOTE 4,'LABEL should not be specified with DSECT=YES'
+         AIF   (&BXA_RC GE 4).NOERR1
+&BXA_RC  SETA  4
+.NOERR1  ANOP
+.*
+.* Check the DSECT parameter
+         AIF   ('&DSECT' EQ 'YES').NOERR2
+         AIF   ('&DSECT' EQ 'NO').NOERR2
+.ERR2    MNOTE 8,'DSECT parameter not YES or NO'
+         AIF   (&BXA_RC GE 8).NOERR2
+&BXA_RC  SETA  8
+.NOERR2  ANOP
+.*
+.* Check PRFX parameter
+         AIF   ('&DSECT' EQ 'YES' AND K'&PRFX NE 0).ERR3A
+         AGO   .NOERR3
+.ERR3A   MNOTE 4,'PRFX parameter specified with DSECT=YES: ignored'
+         AIF   (&BXA_RC GE 4).NOERR3
+&BXA_RC  SETA  4
+.NOERR3  ANOP
+.*
+.* For DSECT=NO either LABEL or PRFX must be specified
+         AIF   ('&DSECT' EQ 'YES').NOERR4
+         AIF   (K'&LABEL EQ 0 AND K'&PRFX EQ 0).ERR4A
+         AGO   .NOERR4
+.ERR4A   MNOTE 8,'Either LABEL or PRFX must be specified with DSECT=NO'
+         AIF   (&BXA_RC GE 8).NOERR4
+&BXA_RC  SETA  8
+.NOERR4  ANOP
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES' AND K'&CB NE 0).ERR5A
+         AGO   .NOERR5
+.ERR5A   MNOTE 4,'CB parameter specified with DSECT=YES: ignored'
+         AIF   (&BXA_RC GE 4).NOERR5
+&BXA_RC  SETA  4
+.NOERR5  ANOP
+.*
+.MEND    MEND

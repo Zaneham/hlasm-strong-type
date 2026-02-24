@@ -1,0 +1,225 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* The assembler program accepts as a JCL-parameter a specification
+.* for the variable SYSPARM. The value entered in the JCL will be
+.* passed to a global set symbol named &SYSPARM. The value specified
+.* in the JCL is passed as a single string. This macro decomposes the
+.* string into separate parameters. Then the parameters are checked
+.* and handled. 7 different keywords are allowed:
+.* - DBG     : Generate debugging code (DBG-macro expansion)
+.* - NODBG   : Do not generate debugging code
+.* - NOSRLIST: Do not generate a list of subroutines
+.* - SRLIST  : Generate a list of subroutines
+.* - SRXREF  : Generate a cross reference of subroutines
+.* - SHOWALL : Do not suppress any statement, report EJECT statements
+.* - OPT     : Optimize generated code
+.* - NOOPT   : Do not optimize generated code
+.* - LICENSE=...... Name and version of the license for this software
+.* - LICSTAT=IAGREE If you agree to the license terms
+.*
+.* The default is: NODBG,SRXREF,NOOPT,LICENSE(NONE),LICSTAT(NOTOK)
+.* If conflicting options are entered, the last one specified will
+.* take precedence.
+.*
+         SYSPARM
+.*
+.* Declare variables
+.*
+         GBLB  &SP_DBG                 * On for DBG
+         GBLB  &SP_OPT                 * On for OPT
+         GBLB  &SP_SRLIST              * On for SRLIST or SRXREF
+         GBLB  &SP_SRXREF              * On for SRXREF
+         GBLB  &SP_SHOWALL             * On for SHOWALL
+         GBLB  &SP_LICOK               * On if valid license accepted
+         GBLC  &SP_LICENSE             * License name / version
+         GBLC  &SP_LICSTAT             * License status
+         LCLC  &P(5)                   * Array to contain parms
+         LCLA  &I                      * Character index for &SYSPARM
+         LCLA  &J                      * Character index for &PARM
+         LCLA  &N                      * Next character to extract
+         LCLA  &X                      * Index into array &P
+         LCLC  &PARM                   * Current entry from array &P
+         LCLC  &NAME                   * Name contained in &PARM
+         LCLC  &VALUE                  * Value contained in &PARM
+.*
+.* Set defaults
+.*
+&SP_DBG  SETB  0                       * Default: no debugging code
+&SP_OPT  SETB  0                       * Default: no optimization
+&SP_SRLIST SETB 1                      * Default: produces subroutine
+&SP_SRXREF SETB 1                      *          cross reference
+&SP_LICOK  SETB 0                      * Default: license not ok
+&SP_LICENSE SETC 'NONE'                * Default license name
+&SP_LICSTAT SETC 'NOTOK'               * Default license status
+         AIF   (K'&SYSPARM EQ 0).MEND
+.*
+.* First the sysparm string is to be split into substrings
+.*
+&I       SETA  0                       * Initialize for
+&N       SETA  1                       *   extraction of parameters
+&X       SETA  1                       *   from &SYSPARM
+.LOOP1   ANOP
+&I       SETA  &I+1                    * Increment character index
+         AIF   (&I GT K'&SYSPARM).LOOP1OK * end of string
+         AIF   ('&SYSPARM'(&I,1) NE ',').LOOP1 * end of substring
+&P(&X)   SETC  '&SYSPARM'(&N,&I-&N)    * Extract substring
+&N       SETA  &I+1                    * Point to next substring
+&X       SETA  &X+1                    * Increment substring counter
+         AGO   .LOOP1                  * Go check next character
+.LOOP1OK ANOP
+&P(&X)   SETC  '&SYSPARM'(&N,&I-&N)    * Extract last substring
+.*
+.* Now check that keywords are valid
+.* &X now is count of parms to check
+&I       SETA  0                       * Index into array &P
+.LOOP2   ANOP
+&I       SETA  &I+1                    * Point to next parameter
+         AIF   (&I GT &X).LOOP2OK      * End of loop
+&PARM    SETC  '&P(&I)'                * Copy current entry
+         AIF   ('&PARM' EQ '').LOOP2   * Skip empty parameter
+         AIF   ('&PARM' EQ 'DBG').DBG  * Set debug mode on
+         AIF   ('&PARM' EQ 'NODBG').NODBG * Turn debug mode off
+         AIF   ('&PARM' EQ 'OPT').OPT  * Set optimization on
+         AIF   ('&PARM' EQ 'NOOPT').NOOPT * Turn optimization off
+         AIF   ('&PARM' EQ 'SHOWALL').SHOWALL * Set SHOWALL mode on
+         AIF   ('&PARM' EQ 'SRLIST').SRLIST * Set SRLIST mode on
+         AIF   ('&PARM' EQ 'SRXREF').SRXREF * Set SRXREF mode on
+         AIF   ('&PARM' EQ 'NOSRLIST').NOSRLIST * Turn SRLIST off
+.* Check to see if parameter can be split into name=value pair
+&J       SETA  ('&PARM' FIND '=')      * Contains =sign?
+         AIF   (&J EQ 0).LOOP2ER       * No =sign: signal error
+&NAME    SETC  '&PARM'(1,&J-1)         * Extract parameter name
+&VALUE   SETC  '&PARM'(&J+1,*)         * Extract parameter value
+         AIF   ('&NAME' EQ 'LICENSE').LICENSE * Select license id
+         AIF   ('&NAME' EQ 'LICSTAT').LICSTAT * Register license status
+.LOOP2ER MNOTE 8,'Invalid sysparm operand: &PARM'
+         AGO   .LOOP2                  * Go try next parameter
+.*
+.DBG     ANOP
+&SP_DBG  SETB  1                       * Enable debugging
+         AGO   .LOOP2
+.*
+.NODBG   ANOP
+&SP_DBG  SETB  0                       * Disable debugging
+         AGO   .LOOP2
+.*
+.OPT     ANOP
+&SP_OPT  SETB  1                       * Enable optimization
+         AGO   .LOOP2
+.*
+.NOOPT   ANOP
+&SP_OPT  SETB  0                       * Disable optimization
+         AGO   .LOOP2
+.*
+.SHOWALL ANOP
+&SP_SHOWALL SETB 1                     * Do not suppress any statement
+         AGO   .LOOP2
+.*
+.SRLIST  ANOP
+&SP_SRLIST SETB 1                      * Create a list of subroutines
+&SP_SRXREF SETB 0                      * But no cross reference
+         AGO   .LOOP2
+.*
+.SRXREF  ANOP
+&SP_SRLIST SETB 1                      * Create a list of subroutines
+&SP_SRXREF SETB 1                      * And a cross reference
+         AGO   .LOOP2
+.*
+.NOSRLIST ANOP
+&SP_SRLIST SETB 0                      * Create no list of subroutines
+&SP_SRXREF SETB 0                      * And no cross reference
+         AGO   .LOOP2
+.*
+.LICENSE ANOP
+&SP_LICENSE SETC '&VALUE'              * Register license name
+         AGO   .LOOP2
+.*
+.LICSTAT ANOP
+&SP_LICSTAT SETC '&VALUE'              * Register license status
+         AGO   .LOOP2
+.LOOP2OK ANOP  ,
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+.*
+.* Check that a valid license id was entered
+         AIF   ('&SP_LICENSE' EQ 'BXAPL1.0').LICOK
+         AIF   ('&SP_LICENSE' EQ 'GPL2.0').LICOK
+         MNOTE 4,'License id &SP_LICENSE entered: not valid, BXA macros*
+                are disabled'
+         AGO   .MEND
+.LICOK   ANOP  ,
+.*
+.* Check whether the license was accepted
+         AIF   ('&SP_LICSTAT' EQ 'IAGREE').LICSOK
+         MNOTE 4,'License status &SP_LICSTAT entered: you did not agree*
+                to the terms in license &SP_LICENSE, BXA macros are dis*
+               abled'
+         AGO   .MEND
+.LICSOK  ANOP  ,
+         MNOTE 1,'For usage of the BXA macros you have agreed to the te*
+               rms of license &SP_LICENSE'
+***********************************************************************
+**
+** For the terms and conditions of the license you have selected
+** please check the text of the license, which should be in the
+** macro library. Alternatively, you can find a copy on our site:
+** GPL2.0   - http://www.hlasm.com/english/gpl
+** BXAPL1.0 - http://www.hlasm.com/english/license
+**
+***********************************************************************
+&SP_LICOK  SETB 1                      * License was accepted
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.MEND    MEND

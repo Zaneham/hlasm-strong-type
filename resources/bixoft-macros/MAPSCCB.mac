@@ -1,0 +1,181 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Service Call Control Block
+.*
+.* --> The SCCB can be found through the CVTSCPIN pointer
+.*
+&LABEL   MAPSCCB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSCCB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSCCB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SCCB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSCCB).MEND
+&BXA_MAC_MAPSCCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SCCB
+&BXA_CB_SCCB SETC 'SCCB'
+.*
+.* SCCBIFM1 - INSTALLED FACILITY MAP BYTE 1.
+SCCBCHPI EQUOVR ,,b,SCCBIFM1
+SCCBCHPS EQUOVR ,,b,SCCBIFM1
+SCCBCHPR EQUOVR ,,b,SCCBIFM1
+SCCBCPUI EQUOVR ,,b,SCCBIFM1
+SCCBCPUR EQUOVR ,,b,SCCBIFM1
+.*
+.* SCCBIFM2 - INSTALLED FACILITY MAP BYTE 2.
+SCCBSGNL EQUOVR ,,b,SCCBIFM2
+SCCBOMR  EQUOVR ,,b,SCCBIFM2
+SCCBSTST EQUOVR ,,b,SCCBIFM2
+SCCBRSTR EQUOVR ,,b,SCCBIFM2
+SCCBITRC EQUOVR ,,b,SCCBIFM2
+SCCBLPRM EQUOVR ,,b,SCCBIFM2
+SCCBWDAT EQUOVR ,,b,SCCBIFM2
+.*
+.* SCCBIFM3 - INSTALLED FACILITY MAP BYTE 3.
+SCCBSIR  EQUOVR ,,b,SCCBIFM3
+SCCBSEI  EQUOVR ,,b,SCCBIFM3
+SCCBSER  EQUOVR ,,b,SCCBIFM3
+SCCBCARS EQUOVR ,,b,SCCBIFM3
+SCCBESUM EQUOVR ,,b,SCCBIFM3
+SCCBESEI EQUOVR ,,b,SCCBIFM3
+SCCBESER EQUOVR ,,b,SCCBIFM3
+SCCBCARL EQUOVR ,,b,SCCBIFM3
+.*
+.* SCCBIFM4 - INSTALLED FACILITY MAP BYTE 4
+SCCBVFR  EQUOVR ,,b,SCCBIFM4
+SCCBEVNT EQUOVR ,,b,SCCBIFM4
+SCCBRRGI EQUOVR ,,b,SCCBIFM4
+.*
+.* SCCBCON1 - BITS 0-7 OF CONFIGURATION
+SCCBBFY  EQUOVR ,,b,SCCBCON1
+SCCBSOPF EQUOVR ,,b,SCCBCON1
+SCCBIRIN EQUOVR ,,b,SCCBCON1
+SCCBCSCF EQUOVR ,,b,SCCBCON1
+.*
+.* SCCBCON2 - BITS 8-15 OF CONFIGURATION
+SCCBCSLO EQUOVR ,,b,SCCBCON2
+.*
+.* SCCBCON3 - BITS 16-23 OF CONFIGURATION
+SCCBDAOM EQUOVR ,,b,SCCBCON3
+SCCBCKSM EQUOVR ,,b,SCCBCON3
+.*
+.* SCCBCON4 - BITS 24-31 OF CONFIGURATION
+SCCBPLO  EQUOVR ,,b,SCCBCON4
+SCCBBFP  EQUOVR ,,b,SCCBCON4
+.*
+.* SCCBCPFL - CPU CHARACTERISTIC FLAGS BYTE 1.
+SCCBVFIN EQUOVR ,,b,SCCBCPFL
+SCCBVFCN EQUOVR ,,b,SCCBCPFL
+SCCBVFSB EQUOVR ,,b,SCCBCPFL
+SCCBCRIN EQUOVR ,,b,SCCBCPFL
+.*
+.* SCCBCPF2 - CPU CHARACTERISTIC FLAGS BYTE 2.
+SCCBMPSB EQUOVR ,,b,SCCBCPF2
+SCCBPER2 EQUOVR ,,b,SCCBCPF2
+.*
+.* Unnamed field at SCCBCPF2+10
+SCCBKSID EQUOVR ,,b,SCCBCPF2+10
+.*
+         MNOTE *,'Including IHASCCB mapping macro'
+         IHASCCB ,                     * Generate SCCB
+         EQUOVR *END
+*
+SCCB     DSECT ,                       * Reset to SCCB DSECT
+         ORG
+SCCB_LEN EQU   *-SCCB                  * Length of SCCB
+*
+SCCBCP   DSECT ,                       * Reset to SCCBCP DSECT
+         ORG
+SCCBCP_LEN EQU *-SCCBCP                * Length of SCCBCP
+*
+SCCBHSA  DSECT ,                       * Reset to SCCBHSA DSECT
+         ORG
+SCCBHSA_LEN EQU *-SCCBHSA              * Length of SCCBHSA
+*
+SCCBMPF  DSECT ,                       * Reset to SCCBMPF DSECT
+         ORG
+SCCBMPF_LEN EQU *-SCCBMPF              * Length of SCCBMPF
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

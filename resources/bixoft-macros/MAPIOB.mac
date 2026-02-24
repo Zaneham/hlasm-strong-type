@@ -1,0 +1,328 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Input/Output Block
+.*
+&LABEL   MAPIOB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPIOB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPIOB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'IOB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPIOB).MEND
+&BXA_MAC_MAPIOB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_IOB
+&BXA_CB_IOB SETC 'IOB'
+.*
+.* IOBCFLG1 - I/O INDICATORS
+IOBV6CHN EQUOVR ,,b,IOBCFLG1
+IOBRSV02 EQUOVR ,,b,IOBCFLG1
+IOBRSV03 EQUOVR ,,b,IOBCFLG1
+IOBRSV04 EQUOVR ,,b,IOBCFLG1
+IOBPTST  EQUOVR ,,b,IOBCFLG1
+IOBABAPP EQUOVR ,,b,IOBCFLG1
+IOBRSTCH EQUOVR ,,b,IOBCFLG1
+IOBPCI   EQUOVR ,,b,IOBCFLG1
+.*
+.* IOBNFLG1 - FLAG BYTE
+IOBPRTOV EQUOVR ,,b,IOBNFLG1
+IOBSEGMT EQUOVR ,,b,IOBNFLG1
+IOBWRITE EQUOVR ,,b,IOBNFLG1
+IOBREAD  EQUOVR ,,b,IOBNFLG1
+IOBUPDAT EQUOVR ,,b,IOBNFLG1
+IOBBKSPC EQUOVR ,,b,IOBNFLG1
+IOBSPAN  EQUOVR ,,b,IOBNFLG1
+IOBUPERR EQUOVR ,,b,IOBNFLG1
+IOBFIRST EQUOVR ,,b,IOBNFLG1
+.*
+.* IOBDEQIN - DEQUEUE LOOP INDICATOR
+IOBDEQ   EQUOVR ,,b,IOBDEQIN
+IOBRSV07 EQUOVR ,,b,IOBDEQIN
+IOBRSV08 EQUOVR ,,b,IOBDEQIN
+IOBRSV09 EQUOVR ,,b,IOBDEQIN
+IOBRSV10 EQUOVR ,,b,IOBDEQIN
+IOBRSV11 EQUOVR ,,b,IOBDEQIN
+IOBRSV12 EQUOVR ,,b,IOBDEQIN
+IOBRSV13 EQUOVR ,,b,IOBDEQIN
+.*
+.* IOBFLAG1 - FLAG BYTE 1
+IOBDATCH EQUOVR ,,b,IOBFLAG1
+IOBCMDCH EQUOVR ,,b,IOBFLAG1
+IOBERRTN EQUOVR ,,b,IOBFLAG1
+IOBRPSTN EQUOVR ,,b,IOBFLAG1
+IOBCYCCK EQUOVR ,,b,IOBFLAG1
+IOBFCREX EQUOVR ,,b,IOBFLAG1
+IOBIOERR EQUOVR ,,b,IOBFLAG1
+IOBUNREL EQUOVR ,,b,IOBFLAG1
+IOBRSTRT EQUOVR ,,b,IOBFLAG1
+IOBSPSVC EQUOVR ,,b,IOBFLAG1
+.*
+.* IOBFLAG2 - FLAG BYTE 2
+IOBHALT  EQUOVR ,,b,IOBFLAG2
+IOBSENSE EQUOVR ,,b,IOBFLAG2
+IOBPURGE EQUOVR ,,b,IOBFLAG2
+IOBRRT3  EQUOVR ,,b,IOBFLAG2
+IOBRDHA0 EQUOVR ,,b,IOBFLAG2
+IOBRRT2  EQUOVR ,,b,IOBFLAG2
+IOBALTTR EQUOVR ,,b,IOBFLAG2
+IOBSKUPD EQUOVR ,,b,IOBFLAG2
+IOBSTATO EQUOVR ,,b,IOBFLAG2
+IOBPNCH  EQUOVR ,,b,IOBFLAG2
+.*
+.* IOBSENS0 - FIRST SENSE BYTE
+IOBS0B0  EQUOVR ,,b,IOBSENS0
+IOBS0B1  EQUOVR ,,b,IOBSENS0
+IOBS0B2  EQUOVR ,,b,IOBSENS0
+IOBS0B3  EQUOVR ,,b,IOBSENS0
+IOBS0B4  EQUOVR ,,b,IOBSENS0
+IOBS0B5  EQUOVR ,,b,IOBSENS0
+IOBS0B6  EQUOVR ,,b,IOBSENS0
+IOBS0B7  EQUOVR ,,b,IOBSENS0
+IOBSNSC9 EQUOVR ,,b,IOBSENS0
+.*
+.* IOBSENS1 - SECOND SENSE BYTE
+IOBS1B0  EQUOVR ,,b,IOBSENS1
+IOBS1B1  EQUOVR ,,b,IOBSENS1
+IOBS1B2  EQUOVR ,,b,IOBSENS1
+IOBS1B3  EQUOVR ,,b,IOBSENS1
+IOBS1B4  EQUOVR ,,b,IOBSENS1
+IOBS1B5  EQUOVR ,,b,IOBSENS1
+IOBS1B6  EQUOVR ,,b,IOBSENS1
+IOBS1B7  EQUOVR ,,b,IOBSENS1
+.*
+.* IOBFL3 - FLAG 3 - STATUS ERROR COUNTS FOR MAGNETIC
+IOBCCC   EQUOVR ,,b,IOBFL3
+IOBICC   EQUOVR ,,b,IOBFL3
+IOBCDC   EQUOVR ,,b,IOBFL3
+IOBACU   EQUOVR ,,b,IOBFL3
+IOBCNC   EQUOVR ,,b,IOBFL3
+IOBSDR   EQUOVR ,,b,IOBFL3
+IOBMSG   EQUOVR ,,b,IOBFL3
+IOBICL   EQUOVR ,,b,IOBFL3
+IOBJAM   EQUOVR ,,b,IOBFL3
+IOBLOG   EQUOVR ,,b,IOBFL3
+.*
+.* IOBUSTAT - CSW UNIT STATUS FLAGS
+IOBUSB0  EQUOVR ,,b,IOBUSTAT
+IOBUSB1  EQUOVR ,,b,IOBUSTAT
+IOBUSB2  EQUOVR ,,b,IOBUSTAT
+IOBUSB3  EQUOVR ,,b,IOBUSTAT
+IOBUSB4  EQUOVR ,,b,IOBUSTAT
+IOBUSB5  EQUOVR ,,b,IOBUSTAT
+IOBUSB6  EQUOVR ,,b,IOBUSTAT
+IOBUSB7  EQUOVR ,,b,IOBUSTAT
+.*
+.* IOBCSTAT - CSW CHANNEL STATUS FLAGS (3800)
+IOBCSB0  EQUOVR ,,b,IOBCSTAT
+IOBCSB1  EQUOVR ,,b,IOBCSTAT
+IOBCSB2  EQUOVR ,,b,IOBCSTAT
+IOBCSB3  EQUOVR ,,b,IOBCSTAT
+IOBCSB4  EQUOVR ,,b,IOBCSTAT
+IOBCSB5  EQUOVR ,,b,IOBCSTAT
+IOBCSB6  EQUOVR ,,b,IOBCSTAT
+IOBCSB7  EQUOVR ,,b,IOBCSTAT
+.*
+.* Unnamed field - LAST TWO BYTES OF IOBCSW
+IOBCSTAT+1 DSOVR *NEWNAME,IOBRESCT     * Residual count after read
+.*
+.* IOBFLAG4 - FLAG BYTE
+IOBGDPOL EQUOVR ,,b,IOBFLAG4
+IOBCC3WE EQUOVR ,,b,IOBFLAG4
+IOBPMERR EQUOVR ,,b,IOBFLAG4
+IOBCEF   EQUOVR ,,b,IOBFLAG4
+IOBRSV41 EQUOVR ,,b,IOBFLAG4
+IOBRSV42 EQUOVR ,,b,IOBFLAG4
+IOBJES3I EQUOVR ,,b,IOBFLAG4
+IOBRSV44 EQUOVR ,,b,IOBFLAG4
+.*
+.* IOBBTAMF - FLAG BYTE FOR BTAM
+IOBPRMER EQUOVR ,,b,IOBBTAMF
+IOBINUSE EQUOVR ,,b,IOBBTAMF
+IOBRSV14 EQUOVR ,,b,IOBBTAMF
+IOBRSV15 EQUOVR ,,b,IOBBTAMF
+IOBRSV16 EQUOVR ,,b,IOBBTAMF
+IOBRSV17 EQUOVR ,,b,IOBBTAMF
+IOBRFTMG EQUOVR ,,b,IOBBTAMF
+IOBOLTST EQUOVR ,,b,IOBBTAMF
+.*
+.* IOBFL4 - FLAG 4 - SENSE ERROR COUNTS FOR MAGNETIC
+IOBOVR   EQUOVR ,,b,IOBFL4
+IOBREJ   EQUOVR ,,b,IOBFL4
+IOBDCK   EQUOVR ,,b,IOBFL4
+IOBBUS   EQUOVR ,,b,IOBFL4
+IOBEQP   EQUOVR ,,b,IOBFL4
+IOBENT   EQUOVR ,,b,IOBFL4
+IOBRSV47 EQUOVR ,,b,IOBFL4
+IOBRSV46 EQUOVR ,,b,IOBFL4
+.*
+.* IOBAMAF - SMS  DIAGNOSTICS BYTE TO DESCRIBE
+IOBBDFPL EQUOVR ,,v,IOBAMAF
+IOBPGMCK EQUOVR ,,v,IOBAMAF
+IOBBADRC EQUOVR ,,v,IOBAMAF
+IOBBADLT EQUOVR ,,v,IOBAMAF
+IOBNCRLT EQUOVR ,,v,IOBAMAF
+IOBPOUT  EQUOVR ,,v,IOBAMAF
+IOBOUTIO EQUOVR ,,v,IOBAMAF
+IOBRLTTB EQUOVR ,,v,IOBAMAF
+IOBFLOCK EQUOVR ,,v,IOBAMAF
+IOBNFILE EQUOVR ,,v,IOBAMAF
+IOBPAD   EQUOVR ,,v,IOBAMAF
+IOBMMERR EQUOVR ,,v,IOBAMAF
+IOBSHDW  EQUOVR ,,v,IOBAMAF
+IOBRBNNP EQUOVR ,,v,IOBAMAF
+.*
+.* IOBINDCT - INDICATORS
+IOBDEQCP EQUOVR ,,b,IOBINDCT
+IOBUNSCH EQUOVR ,,b,IOBINDCT
+IOBOVPTR EQUOVR ,,b,IOBINDCT
+IOBKEYAD EQUOVR ,,b,IOBINDCT
+IOBRSV27 EQUOVR ,,b,IOBINDCT
+IOBRSV28 EQUOVR ,,b,IOBINDCT
+IOBRSV29 EQUOVR ,,b,IOBINDCT
+IOBCHNNL EQUOVR ,,b,IOBINDCT
+.*
+.* IOBUNSQR - REASON FOR UNSCHEDULED QUEUE
+IOBCPBSY EQUOVR ,,b,IOBUNSQR
+IOBNTAV1 EQUOVR ,,b,IOBUNSQR
+IOBNTAV2 EQUOVR ,,b,IOBUNSQR
+IOBKNWR  EQUOVR ,,b,IOBUNSQR
+IOBKNRWR EQUOVR ,,b,IOBUNSQR
+IOBRSV30 EQUOVR ,,b,IOBUNSQR
+IOBRSV31 EQUOVR ,,b,IOBUNSQR
+IOBRSV32 EQUOVR ,,b,IOBUNSQR
+.*
+.* IOBSTATA - STATUS INDICATORS
+IOBAVLFL EQUOVR ,,b,IOBSTATA
+IOBRSV20 EQUOVR ,,b,IOBSTATA
+IOBRSV21 EQUOVR ,,b,IOBSTATA
+IOBRSV22 EQUOVR ,,b,IOBSTATA
+IOBRSV23 EQUOVR ,,b,IOBSTATA
+IOBRSV24 EQUOVR ,,b,IOBSTATA
+IOBRSV25 EQUOVR ,,b,IOBSTATA
+IOBRSV26 EQUOVR ,,b,IOBSTATA
+.*
+.* IOBDTYPE - THE TYPE OF REQUEST AND SPECIFIED OPTIONS
+IOBVERFY EQUOVR ,,b,IOBDTYPE
+IOBOVFLO EQUOVR ,,b,IOBDTYPE
+IOBEXTSC EQUOVR ,,b,IOBDTYPE
+IOBFDBCK EQUOVR ,,b,IOBDTYPE
+IOBACTAD EQUOVR ,,b,IOBDTYPE
+IOBDYNBF EQUOVR ,,b,IOBDTYPE
+IOBRDEXC EQUOVR ,,b,IOBDTYPE
+IOBRELBL EQUOVR ,,b,IOBDTYPE
+.*
+.* IOBDTYP2 - SECOND BYTE OF OPTIONS AND REQUESTS
+IOBSKEY  EQUOVR ,,b,IOBDTYP2
+IOBSBLKL EQUOVR ,,b,IOBDTYP2
+IOBSUFFX EQUOVR ,,b,IOBDTYP2
+IOBRQUST EQUOVR ,,b,IOBDTYP2
+IOBTYPE  EQUOVR ,,b,IOBDTYP2
+IOBADDTY EQUOVR ,,b,IOBDTYP2
+IOBRELEX EQUOVR ,,b,IOBDTYP2
+.*
+.* IOBSTAT1 - FLAG BYTE
+IOBABNRM EQUOVR ,,b,IOBSTAT1
+IOBNEWVL EQUOVR ,,b,IOBSTAT1
+IOBSYNCH EQUOVR ,,b,IOBSTAT1
+IOBPASS2 EQUOVR ,,b,IOBSTAT1
+IOBENQUE EQUOVR ,,b,IOBSTAT1
+IOBBUFF  EQUOVR ,,b,IOBSTAT1
+IOBADDVU EQUOVR ,,b,IOBSTAT1
+IOBSIORT EQUOVR ,,b,IOBSTAT1
+.*
+.* IOBREQ - REQUEST FLAGS
+IOBREC31 EQUOVR ,,b,IOBREQ
+IOBKEY31 EQUOVR ,,b,IOBREQ
+IOBDAT31 EQUOVR ,,b,IOBREQ
+.*
+         MNOTE *,'Including IEZIOB mapping macro'
+         IEZIOB ,
+         DSOVR *END
+         EQUOVR *END
+*
+IOB      DSECT ,                       * Resume IOB DSECT
+         ORG
+IOB_LEN  EQU   *-IOB                   * Length of IOB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

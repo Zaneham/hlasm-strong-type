@@ -1,0 +1,203 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Call a program that may have another AMODE
+.*
+.* This macro is intended for calling a program that may or may not
+.* be in another AMODE. Registers R0 thru R13 arer supposed to be
+.* set up for interfacing with the target program, and will therefore
+.* not be modified by this program.
+.*
+&LABEL   GLUE  &DEST,                  * Destination register          *
+               &AMODE,                 * Desired AMODE                 *
+               &MF=                    * Macro form
+.*
+.* &DEST specifies the register containing the destination address
+.*       which is the entry point address of the program to be
+.*       invoked.
+.* &AMODE specifies the AMODE for the called program, used only on MF=E
+.*     - 31: Makes sure the destination pgm is called with AMODE=31
+.*     - 24: Makes sure the destination pgm is called with AMODE=24
+.*     - Omitted: Amode is taken from &DEST-register:
+.*       AMODE 24 if bit0 is 0, AMODE 31 if bit0 is 1
+.* &MF   Specifies the macro form:
+.*     - L specifies the list form
+.*     - (E,addr) or (E,(reg)) specifies the execute form
+.*       addr must be a location, that is addressed thru R13, and
+.*       must reside below the 16M-line
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC GLUE                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_MF                    * E or L
+         LCLC  &_MF2                   * Plist address of MF=(E,addr)
+         LCLC  &_REG                   * Plist ptr if MF=(E,(reg))
+         LCLC  &EPA_OFFSET             * Offset of EPA in PLIST
+&EPA_OFFSET SETC '8'                   * Length of code before EPA
+.*
+.* Check the DEST parameter
+         AIF   (K'&DEST NE 0).NOERR1   * If specified: OK
+         AIF   ('&MF' EQ 'L').NOERR1   * Optional for MF=L
+.ERR1    MNOTE 8,'No destination register specified'
+.NOERR1  ANOP
+.*
+.* Check AMODE parameter
+         AIF   ('&_MF' EQ 'L' AND T'&AMODE EQ 'O').NOERR2
+         AIF   ('&_MF' EQ 'L').ERR2A
+         AIF   (T'&AMODE EQ 'O').NOERR2
+         AIF   ('&AMODE' EQ '31').NOERR2
+         AIF   ('&AMODE' EQ '24').NOERR2
+         AGO   .ERR2B
+.ERR2A   MNOTE 4,'AMODE parameter ignored: not allowed with MF=L'
+         AGO   .NOERR2
+.ERR2B   MNOTE 8,'If specified, AMODE parameter must be 24 or 31'
+.NOERR2  ANOP
+.*
+.* Check the MF parameter
+         AIF   (K'&MF EQ 0).ERR3A      * Must be specified
+&_MF     SETC  '&MF'                   * Assume MF=x
+         AIF   ('&MF' EQ 'L').NOERR3   * Ok if MF=L
+         AIF   ('&MF'(1,1) NE '(').ERR3B * MF<>L: must be sublist
+         AIF   (N'&MF NE 2).ERR3B      * Must be two subparms
+&_MF     SETC  '&MF(1)'                * Assume MF=(x,...)
+&_MF2    SETC  '&MF(2)'                * Extract plist address
+         AIF   ('&MF(1)' NE 'E').ERR3B * Must be MF=(E,...)
+         AIF   ('&_MF2'(1,1) NE '(').NOERR3 * Plist not a (reg)
+&_REG    SETC  '&MF(2,1)'              * Extract register
+         AIF   ('&_REG' EQ 'R14').ERR3C
+         AIF   ('&_REG' EQ 'R15').ERR3C
+         AIF   ('&_REG' EQ '14').ERR3C
+         AIF   ('&_REG' EQ '15').ERR3C
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'MF parameter not specified'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'MF parameter must be L, (E,addr), or (E,(reg))'
+         AGO   .NOERR3
+.ERR3C   MNOTE 8,'Plist address cannot be passed in R14 or R15'
+.NOERR3  ANOP
+.*
+.* Check the number of parameters
+         AIF   ('&_MF' EQ 'L' AND N'&SYSLIST GT 1).ERR4
+         AIF   ('&_MF' EQ 'E' AND N'&SYSLIST GT 2).ERR4
+         AGO   .NOERR4
+.ERR4    MNOTE 4,'Too many parameters specified: ignored'
+.NOERR4  ANOP
+.*
+.* Select the right MF
+         AIF   ('&_MF' EQ 'E').MFE
+         AIF   ('&_MF' EQ 'L').MFL
+         MNOTE 12,'Internal error'
+.*
+.MFE     ANOP
+.*
+.* Put destination address into plist
+         AIF   ('&_REG' NE '').PUTR    * Plist addressed by reg?
+         ST    &DEST,&EPA_OFFSET+&_MF2 * Store address into plist
+         AGO   .PUTOK
+.PUTR    ANOP  ,                       * Use reg to address plist
+         ST    &DEST,&EPA_OFFSET.(,R15) * Store address into plist
+.PUTOK   ANOP
+.*
+.* If AMODE specified: insert it into the destination address
+         AIF   (T'&AMODE EQ 'O').AMOK  * No amode specified
+         AIF   ('&AMODE' EQ '31').AM31 * Check AMODE
+.AM24    ANOP  ,                       * Insert zeros in bits 0-7
+         AIF   ('&_REG' NE '').AM24R   * Plist addressed by reg?
+         MVI   &EPA_OFFSET+&_MF2,X'00' * Make it a clean 24-bit address
+         AGO   .AMOK
+.AM24R   ANOP  ,                       * Use _reg to address plist
+         MVI   &EPA_OFFSET.(&_REG),X'00' * Insert 8 zero-bits
+         AGO   .AMOK
+.*
+.AM31    ANOP  ,                       * Insert 1 into bit 0
+         AIF   ('&_REG' NE '').AM31R   * Plist addressed by reg?
+         OI    &EPA_OFFSET+&_MF2,BIT0  * Turn on high-order bit
+         AGO   .AMOK
+.AM31R   ANOP  ,                       * Use _reg to address plist
+         OI    &EPA_OFFSET.(&_REG),BIT0 * Insert a single 1-bit
+.AMOK    ANOP  ,                       * AMode in EPA now ok
+.*
+.* Form the return address, with high-order bit set
+         BASR  R14,R0                  * R14 now points to this address
+_GLUE1&SYSNDX EQU *                    *
+         LA    R15,_GLUE2&SYSNDX-_GLUE1&SYSNDX * offset to ret-point
+         ALR   R14,R15                 * Point to ret-addr with amode  *
+                                       *       preserved
+         AIF   ('&_REG' NE '').PLISTR  * Plist pointered by reg?
+         LA    R15,&_MF2               * Point to plist
+         AGO   .PLISTOK
+.PLISTR  ANOP
+         LR    R15,&_REG               * Copy plist-addr to R15
+.PLISTOK ANOP  ,                       * R15 now ptr to plist
+.*
+.* Call the 'plist' - which actually is a mini-routine.
+         BAKR  R14,R15                 * Call program through glue-mod
+_GLUE2&SYSNDX EQU *                    * Return-point after BAKR
+         MEXIT
+.*
+.MFL     ANOP
+&LABEL   LABEL H
+         L     R15,&EPA_OFFSET.(,R15)  * Load AMODE + dest.address
+         BASSM R14,R15                 * Call intended program
+         PR    ,                       * Reset AMODE & return to caller
+         DS    F                       * Destination addr, bit 0=AMODE
+         MEXIT
+.*
+.MEND    MEND

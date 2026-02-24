@@ -1,0 +1,138 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Service Request Block
+.*
+&LABEL   MAPSRB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPSRB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPSRB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'SRB').EMBED
+         AIF   ('&CB' EQ 'XSRB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPSRB).MEND
+&BXA_MAC_MAPSRB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_SRB
+&BXA_CB_SRB SETC 'SRB'
+.*
+.* SRBEPA - ADDRESS OF ENTRY POINT (31-BIT USERS)
+SRBMODE  EQUOVR ,,b,SRBEPA
+.*
+.* SRBRMTRA - ADDRESS OF RESOURCE MANAGER  ROUTINE (31-BIT USERS)
+SRBRMODE EQUOVR ,,b,SRBRMTRA
+.*
+.* SRBFLGS - SRB OPTION FLAGS
+SRBLLREQ EQUOVR ,,b,SRBFLGS
+SRBLLHLD EQUOVR ,,b,SRBFLGS
+SRBFRREQ EQUOVR ,,b,SRBFLGS
+SRBFRRCL EQUOVR ,,b,SRBFLGS
+SRBSUSP  EQUOVR ,,b,SRBFLGS
+SRBPNONQ EQUOVR ,,b,SRBFLGS
+SRBPSYS  EQUOVR ,,v,SRBFLGS
+.*
+.* SRBFLGS1 - SRB TYPE FLAGS.
+SRBMAIN  EQUOVR ,,b,SRBFLGS1
+SRBSP245 EQUOVR ,,b,SRBFLGS1
+SRBBLK24 EQUOVR ,,b,SRBFLGS1
+SRBXESF  EQUOVR ,,b,SRBFLGS1
+SRB1STS  EQUOVR ,,b,SRBFLGS1
+SRBPMCS  EQUOVR ,,b,SRBFLGS1
+SRBMSCHD EQUOVR ,,b,SRBFLGS1
+SRBTOKNP EQUOVR ,,b,SRBFLGS1
+.*
+         MNOTE *,'Including IHASRB mapping macro'
+         IHASRB LIST=YES               *
+         EQUOVR *END                   *
+*
+SRBSECT  DSECT ,                       * Resume SRB DSECT
+         ORG   ,                       *
+SRB_LEN  EQU   *-SRB                   * Length of SRB
+*
+XSRB     EQU   SRB                     * eXtended SRB
+         ORG   ,                       * Position to end of SRB
+XSRBNX   DS    A                       * Addr. of next free XSRB+SRBPL
+         DS    0D                      * Round up to doubleword boundry
+XSRB_LEN EQU   *-XSRB                  *
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

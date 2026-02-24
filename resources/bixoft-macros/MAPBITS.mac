@@ -1,0 +1,103 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Mapping macro for bit equates
+.*
+         MAPBITS
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPBITS                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* &BXA_BITS is used to prevent expanding MAPBITS more than once
+         GBLB  &BXA_MAC_MAPBITS
+.*
+         AIF   (&BXA_MAC_MAPBITS).MEND
+&BXA_MAC_MAPBITS SETB 1
+.*
+         MNOTE *,'Including IEZBITS'
+.*
+.* Put equates in a DSECT to prevent warning messages in ASM listing
+BXA_EQU  DSECT
+         IEZBITS
+*
+* Other equates for bits
+*
+NOBITS   EQU   X'00'                   *
+ALLBITS  EQU   X'FF'                   *
+*
+NOT_BIT0 EQU   ALLBITS-BIT0            *
+NOT_BIT1 EQU   ALLBITS-BIT1            *
+NOT_BIT2 EQU   ALLBITS-BIT2            *
+NOT_BIT3 EQU   ALLBITS-BIT3            *
+NOT_BIT4 EQU   ALLBITS-BIT4            *
+NOT_BIT5 EQU   ALLBITS-BIT5            *
+NOT_BIT6 EQU   ALLBITS-BIT6            *
+NOT_BIT7 EQU   ALLBITS-BIT7            *
+*
+* Equates for Plists
+LISTEND  EQU   BIT0                    *
+NOT_LISTEND EQU X'FF'-LISTEND          *
+*
+* Equates for Amode
+AMODE31  EQU   BIT0                    *
+AMODE24  EQU   X'FF'-AMODE31           *
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

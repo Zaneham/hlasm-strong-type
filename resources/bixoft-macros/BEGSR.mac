@@ -1,0 +1,370 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro generates entry logic for subroutines
+.*
+&LABEL   BEGSR &TYPE=,                 * Nothing, ESTAE, or RETRY      *
+               &LVL=                   * ESTAE level
+.*
+.* &TYPE - if omitted or defaulted to INT, specifies a normal
+.*         (ie: INTernal) subroutine
+.*       - if ESTAE, specifies an ESTAE-type recovery routine
+.*         The ESTAE is required to specify as the user parameter the
+.*         external savearea (=R13) as set up by the PGM-macro.
+.*       - if RETRY, specifies a dedicated retry routine. For these
+.*         routines no save-area is needed, and no exit code is gen'd
+.* &LVL  - Nesting level of active ESTAE routines. Normally value
+.*         should be one, except for ESTAE's that are to protect
+.*         another (active) ESTAE.
+.*
+.* Remark: Save area usage for ESTAE-type subroutines differs somewhat
+.*         from the normal SA standards. It takes two inteernal SA's:
+.*         the first is used to store regsters R14-R12 from the
+.*         external SA, the second is used to store registers R14-R2,
+.*         R3 with the contents of R13, R4-R6 with the contents of the
+.*         first three fullwords of the external SA, and R7-R12 with
+.*         garbage. The external SA is then available for reuse and
+.*         can be addressed thru R13 in the usual way.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC BEGSR                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_PGM                * PGM macro included?
+         GBLB  &BXA_MAC_MAPPSA         * PSA mapping included?
+         GBLC  &BXA_ENTRY              * Entry parm of PGM-macro
+         GBLC  &BXA_USE_R12            * USING label for R12
+         GBLC  &BXA_WALAB              * USING label for workarea
+         GBLC  &BXA_SUBR               * Current subroutine name
+         GBLC  &BXA_SUBRTP             * Current subroutine type
+         GBLC  &BXA_SRUNAM(50)         * Array with used subr names
+         GBLB  &BXA_SRUSVC(50)         * Array with used subr SVC-modes
+         GBLC  &BXA_SRUASC(50)         * Array with used subr ASC-modes
+         GBLC  &BXA_SRDNAM(50)         * Array with defined subroutines
+         GBLB  &BXA_SRDDUP(50)         * Multiple def.subr. indicators
+         GBLC  &BXA_SRDTYP(50)         * Types of defined subroutines
+         GBLA  &BXA_SRNAML             * Max subr name length
+         GBLC  &BXA_SR_CALLER(50)      * Array with callers of subrs
+         GBLC  &BXA_SR_CALLED(50)      * Array with called subrs
+         GBLC  &BXA_USEC_ROUT(50)      * Routines with SCOPE=CALLED
+         GBLC  &BXA_USEC_ARGL(50)      * Labels for SCOPE=CALLED
+         GBLC  &BXA_USEC_ARG1(50)      * DSECTs for SCOPE=CALLED
+         GBLC  &BXA_USEC_ARG2(50)      * Bases for SCOPE=CALLED
+         GBLC  &BXA_PGM_LABEL          * Label used by PGM macro
+         GBLB  &BXA_SVCMODE            * Current SVC-mode
+         GBLC  &SYSASCE                * Current ASC-mode
+         LCLA  &I                      * Index into BXA_SRDNAM
+         LCLB  &SRDDUP                 * On if &LABEL is a duplicate
+         LCLC  &_TYPE                  * Type of subroutine
+         LCLC  &_LABEL                 * New label if LABEL not unique
+         LCLC  &_REG                   * Workreg to find internal SA
+         LCLB  &BYMAIN                 * On if &LABEL called by *MAIN
+         LCLB  &PASS2                  * On when doing 2nd SA (ESTAE)
+.*
+.* PGM must have been included
+         AIF   (&BXA_PGM).NOERR0A
+         MNOTE 8,'PGM macro must be coded before using BEGSR/ENDSR'
+         MEXIT
+.NOERR0A ANOP
+.*
+.* Check that the structured programming stack is empty
+         CHK_STACK RESET=YES           *
+.*
+.* BEGSR may not be issued within another subroutine
+         AIF   ('&BXA_SUBR' EQ '*MAIN').NOERR1
+.ERR1    MNOTE 8,'Nested subroutine definition or missing ENDSR'
+.NOERR1  ANOP
+.*
+.* Check the LABEL parameter
+         AIF   (K'&LABEL EQ 0).ERR2A
+         AIF   ('&LABEL' EQ '*MAIN').ERR2B
+         AGO   .NOERR2
+.ERR2A   MNOTE 8,'Required label parameter is missing'
+         MEXIT
+.ERR2B   MNOTE 8,'Subroutine name ''*MAIN'' is invalid'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* Check the TYPE parameter
+&_TYPE   SETC  '&TYPE'
+         AIF   ('&TYPE' EQ 'INT').NOERR3
+         AIF   ('&TYPE' EQ 'ESTAE').NOERR3
+         AIF   ('&TYPE' EQ 'RETRY').NOERR3
+         AIF   (K'&TYPE NE 0).ERR3
+&_TYPE   SETC  'INT'
+         AGO   .NOERR3
+.ERR3    MNOTE 8,'TYPE parameter must be INT, ESTAE, RETRY, or omitted'
+.NOERR3  ANOP
+.*
+.* Check the LVL parameter
+         AIF   ('&TYPE' EQ 'ESTAE' AND K'&LVL EQ 0).ERR4A
+         AIF   ('&TYPE' EQ 'ESTAE' AND K'&LVL NE 0).NOERR4B
+         AIF   (K'&LVL EQ 0).NOERR4
+         AGO   .ERR4B
+.ERR4A   MNOTE 8,'LVL parameter missing on ESTAE-type subroutine'
+         AGO   .NOERR4
+.ERR4B   MNOTE 4,'LVL parameter ignored: valid only with ESTAE-type sub*
+               routines'
+.NOERR4B ANOP
+         AIF   (K'&LVL NE 1).ERR4C     * Max 1 char
+         AIF   ('&LVL' LT '0' OR '&LVL' GT '9').ERR4D * Numeric?
+         AIF   ('&LVL' EQ '0').ERR4E   * 0 is invalid
+         AIF   ('&LVL' GT '4').ERR4F   * Too many levels
+         AGO   .NOERR4
+.ERR4C   MNOTE 8,'LVL parameter contains more than 1 character'
+         AGO   .NOERR4
+.ERR4D   MNOTE 8,'LVL parameter not a valid digit'
+         AGO   .NOERR4
+.ERR4E   MNOTE 8,'LVL parameter must not be 0'
+         AGO   .NOERR4
+.ERR4F   MNOTE 8,'LVL parameter should not exceed 4'
+.NOERR4  ANOP
+.*
+.* Check that the subroutine name does not occur in array BXA_SRDNAM
+&_LABEL  SETC  '&LABEL'                *
+&I       SETA  0                       * Start loop
+.LOOP0   ANOP
+&I       SETA  &I+1                    * Point to next entry
+         AIF   ('&BXA_SRDNAM(&I)' EQ '').LOOP0OK * End of table
+         AIF   ('&BXA_SRDNAM(&I)' EQ '&LABEL').LOOP0F * Found
+         AGO   .LOOP0                  * Go process next entry
+.LOOP0F  ANOP  ,                       * Matching entry found
+&SRDDUP  SETB  1                       * Signal this is a duplicate
+&_LABEL  SETC  '&LABEL._&SYSNDX'       * Create unique label
+&I       SETA  1+N'&BXA_SRDNAM         * Point beyond last entry
+.LOOP0OK ANOP  ,                       * &I now points to empty entry
+.*
+.* Add subroutine name to array
+&BXA_SRDNAM(&I) SETC '&LABEL'          * Add entry,
+&BXA_SRDDUP(&I) SETB (&SRDDUP)         *   copy duplicate status
+&BXA_SRDTYP(&I) SETC '&_TYPE'.'&LVL'   *   and subroutine type
+         AIF   (K'&LABEL LE &BXA_SRNAML).NAMLOK * Check name length
+&BXA_SRNAML SETA K'&LABEL              * Increase max. name length
+         AIF   (K'&LABEL GE 5).NAMLOK  * Max. name length must at least
+&BXA_SRNAML SETA 5                     *   equal 5 (for *MaIN)
+.NAMLOK  ANOP
+.*
+.* Check the arrays BXA_SR_CALLED / BXA_SR_CALLER to see if this
+.* subroutine is ever invoked from *MAIN. If it is, include logic
+.* to test whether we must use the first internal save area. If it is
+.* never called by *MAIN code, simply use the next available save area
+.* on the chain of internal SA's.
+.*
+         AIF   ('&BXA_ENTRY' EQ 'SUBR').LOOP1OK * &BYMAIN defaults to 0
+&I       SETA  0                       * I indexes BXA_SR_CALLED/CALLER
+.LOOP1   ANOP  ,                       * Loop thru SR XREF tables
+&I       SETA  &I+1                    * Point to next entry
+         AIF   (&I GT N'&BXA_SR_CALLED).LOOP1OK * End of table: endloop
+         AIF   ('&BXA_SR_CALLED(&I)' NE '&LABEL').LOOP1 * Wrong subr
+         AIF   ('&BXA_SR_CALLER(&I)' NE '*MAIN').LOOP1 * Not by *MAIN
+.LOOP1F  ANOP  ,                       * Found
+&BYMAIN  SETB  1                       * Flag by *MAIN & quit loop
+.LOOP1OK ANOP
+.*
+.* If this is an ESTAE or RETRY type subroutine, we must
+.* check the arrays BXA_SR_CALLED / BXA_SR_CALLER again to see if
+.* this subroutine has been called by any other routine (including
+.* *MAIN). These calls must now be flagged as errors.
+.*
+         AIF   ('&TYPE' EQ '').LOOP2OK
+&BYMAIN  SETB  1                       * ESTAE may be invoked by *MAIN
+&I       SETA  0                       * I indexes BXA_SR_CALLED/CALLER
+.LOOP2   ANOP  ,                       * Loop thru SR XREF tables
+&I       SETA  &I+1                    * Point to next entry
+         AIF   (&I GT N'&BXA_SR_CALLED).LOOP2OK * End of table: endloop
+         AIF   ('&BXA_SR_CALLED(&I)' NE '&LABEL').LOOP2 * Wrong subr
+         MNOTE 8,'Illegal EXSR of &TYPE type subroutine found in &BXA_S*
+               R_CALLER(&I)'
+         AGO   .LOOP2
+.LOOP2OK ANOP
+.*
+.* Set current subroutine name
+&BXA_SUBR SETC '&LABEL'
+&BXA_SUBRTP SETC '&TYPE'
+.*
+.* Generate code
+         DROP  ,                       * No valid registers
+&_LABEL  DS    0H                      * Begin SubRoutine
+&_REG    SETC  'R14'                   * Use R14 to locate int.SA
+.*
+.* For ESTAE-routines we first establish correct addressability
+         AIF   ('&TYPE' NE 'ESTAE').NOESTAE
+.* Establish correct addressability
+         LR    R12,R15                 * Copy entry-point address
+         USE   &LABEL,R12              * R12 contains routine address
+.* R13 may or may not point to a save-area: don't use!
+         SH    R2,=AL2(SAVEPRFX_LEN)   * Adjust R2 from ptr to ext.SA
+         USE   BXASAVE,R2              *   to ptr to BXASAVE area
+         L     R10,=AL4(_&BXA_PGM_LABEL._ID) * Get ptr to workarea ID
+         CLC   SAVEID,0(R10)           * Compare workarea ID
+         ABND  NE                      * Must be equal!
+*                                      * Ok: R2 is valid workarea-ptr
+         LR    R3,R13                  * Save original R13
+         LA    R13,SAVEAREA            * Point to savearea (=workarea)
+         DROP  R2                      * BXASAVE no longer needed
+*
+         USE   &BXA_WALAB,R13,         * Set workarea addressable      *
+               START=&BXA_WALAB+SAVEPRFX_LEN * upward from savearea
+         LM    R4,R6,SAVEPTRS          * Copy data from external SA
+.*
+&_REG    SETC  'R7'                    * Use R7 to locate int.SA
+&BYMAIN  SETB  1                       * *MAIN might invoke ESTAE
+         AGO   .USEOK
+.NOESTAE ANOP
+.*
+.* Set up USINGs for non-ESTAE routines
+         USE   &BXA_USE_R12,R12        * Set program addressable
+         USE   &BXA_WALAB,R13,         * Set workarea addressable      *
+               START=&BXA_WALAB+SAVEPRFX_LEN * upward from savearea
+         AIF   ('&TYPE' EQ 'RETRY').USEC
+.*
+.* Set correct SVCmode and ASC-mode for this subroutine
+&I       SETA  0                       * I indexes BXA_SRUxxx
+.LOOP4   ANOP  ,                       * Loop thru SRU... tables
+&I       SETA  &I+1                    * Point to next entry
+         AIF   (&I GT N'&BXA_SRUNAM).LOOP4NF * End of table: not found
+         AIF   ('&BXA_SRUNAM(&I)' NE '&LABEL').LOOP4 * Skip mismatch
+&BXA_SVCMODE SETB (&BXA_SRUSVC(&I))    * Copy invoker's SVC/prob. mode
+&SYSASCE SETC  '&BXA_SRUASC(&I)'       * Copy invoker's ASC mode
+         AGO   .LOOP4OK                * And done
+.LOOP4NF ANOP
+         MNOTE 1,'Subroutine defined before it is called, state may be *
+               ambiguous'
+.LOOP4OK ANOP
+.USEOK   ANOP
+*
+* Find first available internal save-area
+         AIF   ('&TYPE' EQ 'ESTAE').NOSAVR
+         ST    &_REG,SAVED&_REG        * Save Ret.addr. in current SA
+.NOSAVR  ANOP
+         AIF   (&BYMAIN).BYMAIN        * May be called by *MAIN?
+.*                                     * No: don't check for first SA
+         L     &_REG,SAVEINTU          * Point to last-used save-area
+         AGO   .CONTIN
+.BYMAIN  ANOP  ,                       * May be called by *MAIN
+         LT    &_REG,SAVEINTU          * Point to last-used save-area
+         BZ    _SUBR1ST_&SYSNDX        * If zero: use first
+.CONTIN  ANOP  ,
+INT      USE   SAVEAREA,&_REG          * Address save-area
+.PASS2   ANOP
+         LT    &_REG,INT.SAVENEXT      * Point to next internal SA
+         ABND  Z                       * No save-area: Abend
+         AIF   (NOT &BYMAIN).NBYMAIN   * May be called by *MAIN?
+.*                                     * Yes: insert code for first SA
+         B     _SUBR_OK_&SYSNDX        * If valid: go use it
+_SUBR1ST_&SYSNDX EQU *                 * Use first save-area
+         L     &_REG,SAVEINTF          * Point to first save-area
+_SUBR_OK_&SYSNDX EQU *                 * REG now a valid SA pointer
+.*
+.NBYMAIN ANOP  ,
+.*
+.* For ESTAE routines: copy external SA regs 14-12, then go allocate
+.*                     second internal SA
+.* For normal routines: Save regs 14-12 in allocated SA
+.*
+         AIF   ('&TYPE' NE 'ESTAE').SAVREGS
+         AIF   (&PASS2).SAVREGS        * Second pass completed?
+&PASS2   SETB  1                       * Start second pass
+         MVC   INT.SAVEDR14(15*L'SAVEDR14),SAVEDR14 * Copy R14-R12
+         LA    R15,&LABEL              * Point to routine EPA
+         ST    R15,INT.SAVEHDR         * Set ptr to routine
+*
+* R14-R2 still contain original values, R3 contains original R13,
+* R4-R6 contain remaining info from SAVEAREA.
+* Allocate second SA where all this stuff can be stored.
+&BYMAIN  SETB  0                       * Cannot allocate 1st SA
+         AGO   .PASS2
+.*
+.SAVREGS ANOP
+         ST    &_REG,SAVEINTU          * Save pointer to last used SA
+*
+* Save registers: REG now points to an available internal SA
+.* Register 13 is not saved because this would disrupt the chain of
+.* internal save-areas. R13 must retain its value thru all subr's.
+         AIF   ('&TYPE' EQ 'ESTAE').STMR14
+         STM   R15,R12,INT.SAVEDR15    * Save unchanged registers
+         MVC   INT.SAVED&_REG,SAVED&_REG * Copy org. value of REG
+         AGO   .DROPINT
+.*
+.STMR14  ANOP  ,                       * Save to second int.SA (ESTAE)
+         STM   R14,R12,INT.SAVEDR14    * Save original & changed regs
+.*
+.DROPINT ANOP  ,                       *
+         LA    R0,&LABEL               * Point to routine EPA
+         ST    R0,INT.SAVEHDR          * Set ptr to routine
+         DROP  INT                     * SAVEAREA (internal)
+.*
+.* USEs with SCOPE=CALLED must now be included from BXA_USEC_... tables
+.USEC    ANOP
+&I       SETA  0                       * I indexes BXA_USEC_...
+.LOOP3   ANOP  ,                       * Check all entries
+&I       SETA  &I+1                    * Point nexy entry
+         AIF   (&I GT N'&BXA_USEC_ROUT).LOOP3OK * At end: quit loop
+         AIF   ('&BXA_USEC_ROUT(&I)' NE '&LABEL').LOOP3 * Skip mismatch
+&_LABEL  SETC  '&BXA_USEC_ARGL(&I)'    * Copy label parameter
+&_LABEL  USE   &BXA_USEC_ARG1(&I),&BXA_USEC_ARG2(&I)
+         AGO   .LOOP3                  *
+.LOOP3OK ANOP  ,                       *
+.*
+.* Add USE for PSA, if PSA mapped in this program
+         AIF   (NOT &BXA_MAC_MAPPSA).NOPSA
+         USE   PSA,R0                  * PSA always valid at 0
+.NOPSA   ANOP  ,                       *
+.*
+.MEND    MEND

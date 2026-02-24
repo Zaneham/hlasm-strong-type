@@ -1,0 +1,169 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Job Control Table
+.*
+&LABEL   MAPJCT &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPJCT                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPJCT         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'ACT').EMBED
+         AIF   ('&CB' EQ 'JCT').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPJCT).MEND
+&BXA_MAC_MAPJCT SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_ACT
+         GBLC  &BXA_CB_JCT
+&BXA_CB_ACT SETC 'JCT'
+&BXA_CB_JCT SETC 'JCT'
+.*
+.* JCTIDENT - JCT ID = 0
+JCTID EQUOVR ,,v,JCTIDENT
+.*
+.* JCTJSTAT - JOB STATUS INDICATORS
+JCTJSTPC EQUOVR ,,b,JCTJSTAT
+JCTABEND EQUOVR ,,b,JCTJSTAT
+INCMSTS  EQUOVR ,,b,JCTJSTAT
+INDMCTLG EQUOVR ,,b,JCTJSTAT
+INCMCAT  EQUOVR ,,b,JCTJSTAT
+INCMNSET EQUOVR ,,b,JCTJSTAT
+.*
+.* JCTJMGLV - 4 BITS FOR MESSAGE LEVEL -SET BY IEFVJA
+INCMMGL1 EQUOVR ,,b,JCTJMGLV
+INCMMGL2 EQUOVR ,,b,JCTJMGLV
+INCMALL  EQUOVR ,,b,JCTJMGLV
+.*
+.* JCTRSW1 - CHECKPOINT/RESTART SWITCHES
+JCTWARMS EQUOVR ,,b,JCTRSW1
+JCTSTERM EQUOVR ,,b,JCTRSW1
+JCTCONTR EQUOVR ,,b,JCTRSW1
+JCTCKFT  EQUOVR ,,b,JCTRSW1
+JCTCKPTR EQUOVR ,,b,JCTRSW1
+JCTSTEPR EQUOVR ,,b,JCTRSW1
+.*
+.* JCTRSW2 - CHECKPOINT/RESTART SWITCHES
+JCTSYSCK EQUOVR ,,b,JCTRSW2
+JCTNARST EQUOVR ,,b,JCTRSW2
+JCTNORST EQUOVR ,,b,JCTRSW2
+JCTNOCKP EQUOVR ,,b,JCTRSW2
+JCTRESTT EQUOVR ,,b,JCTRSW2
+JCTDSOCR EQUOVR ,,b,JCTRSW2
+JCTDSOJB EQUOVR ,,b,JCTRSW2
+.*
+.* JCTJSB - JOB STATUS SWITCHES
+JCTHASDD EQUOVR ,,b,JCTJSB
+JCTJSBIN EQUOVR ,,b,JCTJSB
+JCTJSBAL EQUOVR ,,b,JCTJSB
+JCTJSBEX EQUOVR ,,b,JCTJSB
+JCTJSBTM EQUOVR ,,b,JCTJSB
+.*
+.* JCTSTAT2 - ADDITIONAL STATUS INDICATORS
+JCTSPSYS EQUOVR ,,b,JCTSTAT2
+JCTADSPC EQUOVR ,,b,JCTSTAT2
+JCTENDIT EQUOVR ,,b,JCTSTAT2
+JCTSWSM  EQUOVR ,,b,JCTSTAT2
+JCTPERFM EQUOVR ,,b,JCTSTAT2
+JCTBLP   EQUOVR ,,b,JCTSTAT2
+JCTSISO  EQUOVR ,,b,JCTSTAT2
+JCTSWAUP EQUOVR ,,b,JCTSTAT2
+.*
+.* ACTIDENT - TABLE ID  ACT = 16
+ACTID EQUOVR ,,v,ACTIDENT
+.*
+.* IEFAJCTB does no provide a DSECT statement
+JCT      DSECT ,
+.*
+         MNOTE *,'Including IEFAJCTB mapping macro'
+         IEFAJCTB ,
+         EQUOVR *END
+*
+JCT      DSECT ,                       * Resume JCT DSECT
+         ORG
+JCT_LEN  EQU   JCTLNGTH                * Length of JCT
+.*
+ACT      EQU   IEFAACTB                * Label for ACT
+ACT_LEN  EQU   *-ACT                   * Length of ACT
+.*
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

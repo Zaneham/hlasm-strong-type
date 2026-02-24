@@ -1,0 +1,194 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Turn on a bit in a bit-field
+.*
+&LABEL   SETON &ADR,                   * Address of bit-field          *
+               &MASK                   * Bit field mask
+.*
+.* Syntax 1:
+.* &ADR  specifies the location in storage where the bit-field resides
+.*       must be in offset(register) notation, or a symbolic name.
+.* &MASK specifies which bits are to be turned on
+.*
+.* Syntax 2:
+.* &ADR  specifies the name of a DCL-declared bit. Any number of
+.*       arguments may follow, but they all have to be DCL-declared
+.*       bit names too.
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC SETON                  * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLB  &BITS                   * On for syntax 2
+         LCLA  &I                      * Index for SYSLIST
+         LCLA  &J                      * Index for BIT and LOC
+         LCLA  &MASKVAL                * Calculated mask value
+         LCLA  &VAL                    * Mask value for any one bit
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &ARG1                   * Using label preceding dot
+         LCLC  &ARG2                   * Field name following dot
+         LCLC  &LOC(5)                 * Locations with bits
+         LCLC  &_LOC                   * Current location
+         LCLC  &BIT(5)                 * Bit names
+.*
+.* Check the ADR parameter
+         AIF   (K'&ADR NE 0).NOERR1
+.ERR1A   MNOTE 8,'Missing argument(s)'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* &ADR is a defined bit-field?
+         AIF   (T'&ADR NE 'b').NOTABIT
+&BITS    SETB  1
+.NOTABIT ANOP
+.*
+.* Check the MASK parameter
+         AIF   (&BITS).NOERR2
+         AIF   (K'&MASK NE 0).NOERR2
+.ERR2    MNOTE 8,'Mask of bits to turn on not specified'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* Check nr of parameters
+         AIF   (&BITS).NOERR3
+         AIF   (N'&SYSLIST LE 2).NOERR3
+.ERR3    MNOTE 4,'You cannot specify more than 1 mask with &ADR: remain*
+               der ignored'
+.NOERR3  ANOP
+.*
+.* Generate code for syntax 1
+         AIF   (&BITS).CHKBITS
+&LABEL   OI    &ADR,&MASK              * Turn bit(s) on
+         MEXIT
+.*
+.* Check all bit-names in &SYSLIST
+.CHKBITS ANOP
+&I       SETA  0                       * I is index to SYSLIST
+.LOOP1   ANOP  ,                       * Loop thru all SYSLIST entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&ARG     SETC  '&SYSLIST(&I)'          * Extract argument
+         AIF   (T'&ARG NE 'b').LOOP1R1 * Wrong type: error 1
+.* Retrieve bit mask value
+&ARG1    SETC  ''                      * Assume no using label in &ARG
+&ARG2    SETC  '&ARG'                  *
+&J       SETA  ('&ARG2' FIND '.')      * Find location of dot
+         AIF   (&J EQ 0).LOOP1ND       * No dot found in arg
+         AIF   (&J EQ 1).LOOP1R3       * Starting dot is an error
+&ARG1    SETC  '&ARG'(1,&J-1)          * Extract using label
+         AIF   (&J EQ K'&ARG).LOOP1R3  * Trailing dot is an error
+&ARG2    SETC  '&ARG'(&J+1,*)          * Extract field name
+.LOOP1ND ANOP  ,                       * ARG2 now contans field name
+         GBLC  &(BXA_BITF_&ARG2)       * Name for byte location
+         AIF   (K'&(BXA_BITF_&ARG2) EQ 0).LOOP1R2 * No location: error2
+&BIT(&I) SETC  '&ARG2'                 * Put bit name in table
+&LOC(&I) SETC  '&(BXA_BITF_&ARG2)'     * And byte location too
+         AIF   (K'&ARG1 EQ 0).LOOP1    * Unlabeled: ok
+&LOC(&I) SETC  '&ARG1'.'.&LOC(&I)'     * Prefix with label
+         AGO   .LOOP1                  *
+.*
+.LOOP1R1 ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not defined as a bit field: ignored'
+         AGO   .LOOP1
+.LOOP1R2 ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG bit has no known location: ignored'
+         AGO   .LOOP1
+.LOOP1R3 ANOP
+&ARG     SETC  (DOUBLE '&ARG')
+         MNOTE 8,'&ARG is not a valid bitfield name: ignored'
+         AGO   .LOOP1
+.LOOP1OK ANOP
+.*
+.* Validated bit-names and byte locations now in BIT() and LOC()
+.* Empty entries may exist for erroneous operands.
+.* Entries with equal byte locations will be taken together,
+.* and processed entries will be wiped.
+.* Arguments are taken together by ORing their bit masks.
+&LABEL   LABEL ,
+.*
+&I       SETA  0                       * I indexes LOC/BIT
+.LOOP2   ANOP  ,                       * For all entries
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP2OK * At end: quit loop
+&_LOC    SETC  '&LOC(&I)'              * Extract byte location
+         AIF   (K'&_LOC EQ 0).LOOP2    * Skip processed records
+&ARG     SETC  '&BIT(&I)'              * Create argument from bit name
+&MASKVAL SETA  L'&BIT(&I)              * Length attrib = mask value!
+.*
+&J       SETA  &I                      * J indexes LOC/BIT (inner loop)
+.LOOP3   ANOP  ,                       * For all remaining entries
+&J       SETA  &J+1                    * Point next entry
+         AIF   (&J GT N'&SYSLIST).LOOP3OK * At end: quit loop
+         AIF   ('&LOC(&J)' NE '&_LOC').LOOP3 * Skip mismatch
+&VAL     SETA  L'&BIT(&J)              * Retrieve mask bit value
+&MASKVAL SETA  (&MASKVAL OR &VAL)      * Take bit masks together
+&ARG     SETC  '&MASKVAL'              * Create completed argument
+&LOC(&J) SETC  ''                      * Wipe entry
+         AGO   .LOOP3                  *
+.LOOP3OK ANOP  ,                       * ARG is now complete
+.*
+.* Generate OI instruction to turn bits on
+         OI    &_LOC,&ARG
+         AGO   .LOOP2
+.LOOP2OK ANOP
+.*
+.MEND    MEND

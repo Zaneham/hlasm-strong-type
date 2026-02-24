@@ -1,0 +1,316 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's EQU statement
+.*
+&LABEL   EQU   &VALUE,                 * Value to be assigned          *
+               &LEN,                   * Length attribute              *
+               &TYPE                   * Type attribute
+.*
+.* &LABEL mandatory
+.* &VALUE specifies the value to be assigned to &LABEL
+.* &LEN   specifies an explicit length attribute
+.* &TYPE  specifies an explicit type attribute
+.*        IBM-assigned types are:
+.*        $ - WXTRN symbol
+.*        @ - Graphics field
+.*        A - A-type address field
+.*        B - Binary field
+.*        C - Character field
+.*        D - Long floating point field
+.*        E - Short floating point field
+.*        F - Fullword fixed-point field
+.*        G - Fixed-point field, explicit length
+.*        H - Halfword fixed-point field
+.*        I - Machine instruction
+.*        J - Control section name
+.*        K - Floating point field, explicit length
+.*        L - Extended floating point field
+.*        M - Macro instruction
+.*        N - Self-defining term
+.*        O - Omitted operand
+.*        P - Packed decimal field
+.*        Q - Q-type address field
+.*        R - Address field of type A, S, Q, V, Y, with explicit length
+.*        S - S-type address field
+.*        T - EXTRN symbol
+.*        U - Undefined
+.*        V - V-type address field
+.*        W - CCW or CCWn instruction
+.*        X - Hexadecimal field
+.*        Y - Y-type address field
+.*        Z - Zoned decimal field
+.*        Bixoft-assigned types are:
+.*        a - Access register
+.*        b - Bit field
+.*        c - Control register
+.*        f - Floating point register
+.*        g - General purpose register
+.*        j - Embedded control block (DCL-declared)
+.*        p - Pointer register
+.*        v - Value assigned to a code field
+.*        0 - Literal decimal number of unspecified type and length
+.*
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC EQU                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_NUMVAL             * Return value from CHKLIT
+         GBLA  &BXA_EQUOVR             * Ptr to last valid
+         GBLC  &BXA_EQUOVR_LAB(50)     * Labels
+         GBLC  &BXA_EQUOVR_VAL(50)     * Values
+         GBLC  &BXA_EQUOVR_LEN(50)     * Lengths
+         GBLC  &BXA_EQUOVR_LOC(50)     * Locations
+         GBLC  &BXA_EQUOVR_TYP(50)     * Types
+         LCLA  &I                      * Index
+         LCLC  &_LABEL                 *
+         LCLC  &_VALUE                 *
+         LCLC  &_LEN                   *
+         LCLC  &_LOC                   * location for bit-fields
+         LCLC  &_TYPE                  *
+         LCLC  &_TYP                   * Single-letter value
+         LCLB  &SIMPLE_VAL             * On if VALUE is simply a var
+         LCLB  &RENAMED                * On if *NEWNAME entry found
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST LE 3).NOERR1
+.ERR1    MNOTE 4,'More than 3 arguments: remainder ignored'
+.NOERR1  ANOP  ,                       *
+.*
+.* Set up default values
+&_LABEL  SETC  '&LABEL'                *
+&_VALUE  SETC  '&VALUE'                *
+&_LEN    SETC  '&LEN'                  *
+&_TYPE   SETC  '&TYPE'                 *
+.*
+.* Check for overrides from EQUOVR
+.CHKOVR  ANOP  ,                       *
+&RENAMED SETB  0                       * No *NEWNAME found
+&I       SETA  0                       * I indexes BXA_EQUOVR_xxx
+.LOOP1   ANOP  ,                       * Search entry
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT &BXA_EQUOVR).LOOP1NF * At end: not found
+         AIF   ('&BXA_EQUOVR_LAB(&I)' NE '&_LABEL').LOOP1 *Skip mismtch
+.*
+.* Found a match: set up replacement variables
+         AIF   ('&BXA_EQUOVR_VAL(&I)' NE '*NEWNAME').NOLAB
+&RENAMED SETB  1                       * *NEWNAME found
+&_LABEL  SETC  '&BXA_EQUOVR_LEN(&I)'   * Len contains new label for equ
+         AGO   .NOLEN                  * VAL and LEN not valid, TYP    *
+                                       *    not examined
+.NOLAB   ANOP  ,                       *
+.* Override value?
+         AIF   (K'&BXA_EQUOVR_VAL(&I) EQ 0).NOVAL
+&_VALUE  SETC  '&BXA_EQUOVR_VAL(&I)'   * Pick up override value
+.NOVAL   ANOP  ,                       *
+.* Override length?
+         AIF   (K'&BXA_EQUOVR_LEN(&I) EQ 0).NOLEN
+&_LEN    SETC  '&BXA_EQUOVR_LEN(&I)'   * Pick up overriding length
+.NOLEN   ANOP
+.* Override type? If bit/value field: also pick up location!
+         AIF   (K'&BXA_EQUOVR_TYP(&I) EQ 0).NOTYP
+&_TYPE   SETC  '&BXA_EQUOVR_TYP(&I)'   * Pick up overriding type
+         AIF   ('&_TYPE' EQ 'C''b''').TYP
+         AIF   ('&_TYPE' EQ 'C''v''').TYP
+         AGO   .NOTYP
+.TYP     ANOP  ,
+&_LOC    SETC  '&BXA_EQUOVR_LOC(&I)'   * Pick up location of bit/value
+.NOTYP   ANOP
+.*
+.* Remove the entry from the tables
+.* Replace current entry by the last-valid,
+.*    then decrement last-valid pointer
+         AIF   (&I EQ &BXA_EQUOVR).DECR * Skip copy if current=last
+&BXA_EQUOVR_LAB(&I) SETC '&BXA_EQUOVR_LAB(&BXA_EQUOVR)'
+&BXA_EQUOVR_VAL(&I) SETC '&BXA_EQUOVR_VAL(&BXA_EQUOVR)'
+&BXA_EQUOVR_LEN(&I) SETC '&BXA_EQUOVR_LEN(&BXA_EQUOVR)'
+&BXA_EQUOVR_TYP(&I) SETC '&BXA_EQUOVR_TYP(&BXA_EQUOVR)'
+&BXA_EQUOVR_LOC(&I) SETC '&BXA_EQUOVR_LOC(&BXA_EQUOVR)'
+.DECR    ANOP  ,                       * Decrement last-valid pointer
+&BXA_EQUOVR SETA &BXA_EQUOVR-1         *    by one
+         AIF   (&RENAMED).CHKOVR       * Check for OVR for renamed EQU
+.*
+.* Generate _EQU statement with overrides, unless *SUPPRESS specified
+.LOOP1NF ANOP  ,                       *
+         AIF   ('&_VALUE' EQ '*SUPPRESS').MEND
+.*
+.* If &_LOC is not empty, the type is overriden to a bit/value-EQUate.
+.* Put the location in the BXA_BITF table before generating the _EQU.
+         AIF   (K'&_LOC EQ 0).NOTABIT
+         AIF   (D'&_LOC).LOCOK
+         MNOTE 8,'Location &_LOC has not (yet) been defined'
+.LOCOK   ANOP  ,
+         GBLC  &(BXA_BITF_&_LABEL)     * Define location variable
+&(BXA_BITF_&_LABEL) SETC '&_LOC'       * And set it to the bit's loc.
+&_LEN    SETC  '&_VALUE'               * Force length to be mask value
+         AGO   .GEN                    * No need to copy implicit type
+.NOTABIT ANOP
+.*
+.* If Type neither specified nor overridden, then copy Type from
+.* &_VALUE if that is a simple expression. I.e. it contains no
+.* parentheses, and no arithmetic (+, -, *, or /).
+.* If it is a length equate (*-something) then default to type '0'
+         AIF   (K'&_TYPE GT 0).TYPEOK  * Type already set
+&I       SETA  ('&_VALUE' FIND '+-*/()')
+         AIF   (&I EQ 0).CHKLIT        * Not a simple expression
+.*
+.* Check whether this is a valid simple length equate
+         AIF   (K'&_LEN NE 0).TYPEOK   * Length given: dont force type
+         AIF   (K'&_VALUE LT 3).TYPEOK * Cannot be *-x
+         AIF   ('&_VALUE'(1,2) NE '*-').TYPEOK * Cannot be *-x
+&_VALUE  SETC  '&_VALUE'(3,*)          * Extract base location
+&I       SETA  ('&_VALUE' FIND '+-*/()')
+         AIF   (&I NE 0).RST_VAL       * Not a simple expression
+         AIF   (NOT D'&_VALUE).RST_VAL * Base location not yet defined
+&_VALUE  SETC  '*-'.'&_VALUE'          * Restore original value
+&_TYPE   SETC  'C''0'''                * Force type of 0
+&_LEN    SETC  '&_VALUE'               * Set length equal to value
+         AGO   .GEN                    * Go generate the equate
+.RST_VAL ANOP  ,                       *
+&_VALUE  SETC  '*-'.'&_VALUE'          * Restore original value
+         AGO   .TYPEOK                 *
+.*
+.* All cases excluded, except literals
+.CHKLIT  ANOP  ,                       *
+         CHKLIT &_VALUE                * Check for being literal number
+         AIF   (&BXA_RC EQ 0).TYPE0    * It is a literal number
+&I       SETA  ('&_VALUE' FIND '''')   * Contains a quote?
+         AIF   (&I GT 0).TYPEOK        * Not a simple expression
+.* Must be a simple variable expression
+&_TYPE   SETC  'T''&_VALUE'            * Copy type of &_VALUE
+&SIMPLE_VAL SETB 1                     * Signal VALUE as a simple var
+         AGO   .TYPEOK
+.TYPE0   ANOP  ,                       * For numeric literals,
+         AIF   (K'&_LEN NE 0).TYPEOK   * Unless length already given,
+&_TYPE   SETC  'C''0'''                * Force type of 0
+.TYPEOK  ANOP  ,                       *
+.* For TYPE=0 set length, except if defaulted and value > X'FFFF'
+         AIF   ('&_TYPE' NE 'C''0''').NOT0 * For type of 0
+         AIF   ('&TYPE' EQ 'C''0''').SETLEN0 * For type of 0
+&I       SETA  &_VALUE                 * Determine value of literal
+         AIF   (&I GT 65535).NOT0      * Max length = X'FFFF'
+.SETLEN0 ANOP  ,                       *
+&_LEN    SETC  '&_VALUE'               * Set length to value
+.NOT0    ANOP ,                        * For future reference
+.*
+.* If this is an EQU for a register (of any kind) then it must be
+.* added to the register translate tables. If the type was specified
+.* explicitly, check the value specified. Otherwise check the tables
+.* of defined registers.
+         AIF   (K'&TYPE EQ 0).CPYTYP   * Type is implicit: other logic
+         AIF   (K'&TYPE LT 4).ERR2     * must be C'.'
+         AIF   ('&TYPE'(1,2) NE 'C''').ERR2 * Check for leading C'
+         AIF   ('&TYPE'(4,1) NE '''').ERR2 * Check for terminating '
+&_TYP    SETC  '&TYPE'(3,1)            * Extract type character
+         AIF   ('&_TYP' GT 'z').GEN    * Catch (nearly) all cases
+         AIF   ('&_TYP' LT 'a').GEN    * Skip non-Bixoft codes
+         AIF   ('&_TYP' EQ 'g').ADDREG * general purpose register
+         AIF   ('&_TYP' EQ 'a').ADDREG * access register
+         AIF   ('&_TYP' EQ 'c').ADDREG * control register
+         AIF   ('&_TYP' EQ 'f').ADDREG * floating point register
+         AGO   .GEN                    * Not a register equate
+.ERR2    MNOTE 8,'Type parameter not specified as C''.'''
+         MEXIT
+.*
+.* The type designation is implicit: see if the &_VALUE operand
+.* specifies a register. If that is the case: copy its number and type
+.CPYTYP  ANOP
+         AIF   (NOT &SIMPLE_VAL).GEN   * Not copying a register: skip
+         GBLA  &(BXA_REGN_&_VALUE)     * Declare number field of source
+         GBLC  &(BXA_REGT_&_VALUE)     * Declare type field of source
+&_TYP    SETC  '&(BXA_REGT_&_VALUE)'   * Copy type-letter
+         AIF   ('&_TYP' EQ '').GEN     * Not a register-type: skip
+         GBLA  &(BXA_REGN_&_LABEL)     * Declare number field of reg
+         GBLC  &(BXA_REGT_&_LABEL)     * Declare type field of reg
+&(BXA_REGN_&_LABEL) SETA &(BXA_REGN_&_VALUE) * Copy register number
+&(BXA_REGT_&_LABEL) SETC '&_TYP'       * Copy the type designation
+         AGO   .GEN
+.*
+.* If a register is declared with explicit type, then assign its
+.* number and type to BXA_REGN_... and BXA_REGT_... respectively
+.ADDREG  ANOP
+         GBLA  &(BXA_REGN_&_LABEL)     * Declare field for reg number
+         GBLC  &(BXA_REGT_&_LABEL)     * Declare field for reg type
+&(BXA_REGN_&_LABEL) SETA &_VALUE       * The designated register number
+&(BXA_REGT_&_LABEL) SETC '&_TYP'       * The type-designating character
+.*
+.* Start generating the ultimate _EQU statement
+.GEN     ANOP
+         AIF   (K'&_TYPE NE 0).EQU3
+         AIF   (K'&_LEN NE 0).EQU2
+.*
+.* Simple equate
+&_LABEL  _EQU  &_VALUE
+         AGO   .EQUOK
+.*
+.* Equate with explicit length attribute
+.EQU2    ANOP  ,                       * EQU with two arguments
+&_LABEL  _EQU  &_VALUE,&_LEN
+         AGO   .EQUOK
+.*
+.* Equate with explicit type attribute and/or explicit length attribute
+.EQU3    ANOP  ,                       * EQU with three arguments
+&_LABEL  _EQU  &_VALUE,&_LEN,&_TYPE
+.*
+.EQUOK   ANOP  ,
+         AIF   (T'&_LABEL NE 'b').MEND
+         AIF   (L'&_LABEL NE 0).MEND
+         MNOTE 4,'What use is a bit mask with a zero value?'
+.*
+.MEND    MEND

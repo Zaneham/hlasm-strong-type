@@ -1,0 +1,166 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Branch and Save on condition
+.*
+&LABEL   BASC  &COND,                  * Condition                     *
+               &REG,                   * Register for return address   *
+               &DEST,                  * Destination address or (reg)  *
+               &TYPE=LOCAL             * BAS/BASR
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC BASC                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         LCLC  &_REG                   *
+         LCLC  &OPCD                   * Opcode
+         LCLC  &ENDLAB                 * Skip label
+.*
+.* &COND specifies on which condition the BAS is to be executed
+.*       valid values are:  E,  H,  L,  M,  O,  P,  Z, and
+.*                         NE, NH, NL, NM, NO, NP, NZ
+.* &REG  Specifies the register to contain the return address
+.* &DEST Specifies the address to branch to. If specified as a
+.*       (register) a BASR will be generated in stead of a BAS.
+.* &TYPE Specifies whether the designated routine is reached thru
+.*       a local (BAS) branch or a remote (BASR) branch
+.*
+.* Check the condition parameter
+         AIF   ('&COND' EQ 'E').NOERR1
+         AIF   ('&COND' EQ 'NE').NOERR1
+         AIF   ('&COND' EQ 'Z').NOERR1
+         AIF   ('&COND' EQ 'NZ').NOERR1
+         AIF   ('&COND' EQ 'H').NOERR1
+         AIF   ('&COND' EQ 'NH').NOERR1
+         AIF   ('&COND' EQ 'L').NOERR1
+         AIF   ('&COND' EQ 'NL').NOERR1
+         AIF   ('&COND' EQ 'M').NOERR1
+         AIF   ('&COND' EQ 'NM').NOERR1
+         AIF   ('&COND' EQ 'O').NOERR1
+         AIF   ('&COND' EQ 'NO').NOERR1
+         AIF   ('&COND' EQ 'P').NOERR1
+         AIF   ('&COND' EQ 'NP').NOERR1
+.ERR1    MNOTE 8,'First parameter specified unknown condition mnemonic'
+.NOERR1  ANOP
+.*
+.* Check the register value specified
+         AIF   ('&REG'(1,1) NE '(').NOERR2
+         AIF   (N'&REG EQ 0).ERR2A
+         AIF   (N'&REG GT 1).ERR2B
+         AGO   .NOERR2
+.ERR2A   MNOTE 8,'Second parm specifies no registers in sublist'
+         AGO   .NOERR2
+.ERR2B   MNOTE 8,'Second parm specifies more than 1 register in sublist*
+               '
+.NOERR2  ANOP
+.*
+.* Check the destination parameter
+         AIF   ('&DEST'(1,1) NE '(').NOERR3
+         AIF   (N'&DEST EQ 0).ERR3A
+         AIF   (N'&DEST GT 1).ERR3B
+         AGO   .NOERR3
+.ERR3A   MNOTE 8,'Third parm specifies no registers in sublist'
+         AGO   .NOERR3
+.ERR3B   MNOTE 8,'Third parm specifies more than 1 register in sublist'
+.NOERR3  ANOP
+.*
+.* Check the TYPE parameter
+         AIF   ('&TYPE' EQ 'LOCAL').NOERR4
+         AIF   ('&TYPE' EQ 'REMOTE').NOERR4
+.ERR4    MNOTE 8,'TYPE parameter must be LOCAL or REMOTE'
+.NOERR4  ANOP
+.*
+.* Extract register to use from REG-parameter
+&_REG    SETC  '&REG'
+         AIF   ('&REG'(1,1) NE '(').REGOK
+&_REG    SETC  '&REG(1)'
+.REGOK   ANOP
+.*
+.* Create Bx opcode to use if condition not met
+         AIF   (K'&COND EQ 1).OPCD1
+.* Condition is Nx --> create a Bx opcode
+&OPCD    SETC  'B'.'&COND'(2,1)
+         AGO   .OPCDOK
+.OPCD1   ANOP
+.* Condition is x --> create a BNx opcode
+&OPCD    SETC  'BN'.'&COND'
+.OPCDOK  ANOP
+.*
+.* Generate branch over BAS in case condition not met
+&ENDLAB  SETC  '_BAS&SYSNDX'
+&LABEL   &OPCD &ENDLAB                 * Condition not met: skip branch
+.*
+.* Generate BAS or BASR depending on DEST parameter
+         AIF   ('&DEST'(1,1) EQ '(').BASR
+         AIF   ('&TYPE' EQ 'REMOTE').REMOTE
+.* Must be a local branch: generate a BAS
+         BAS   &REG,&DEST              * Condition OK: branch
+         AGO   .EXIT
+.*
+.REMOTE  ANOP  ,
+         L     R15,=AL4(&DEST)         * Condition OK: load terget addr
+         BASR  &REG,R15                * and branch to routine
+         AGO   .EXIT
+.*
+.BASR    ANOP  ,
+         BASR  &REG,&DEST(1)           * Condition OK: branch
+.*
+.EXIT    ANOP  ,
+&ENDLAB  LABEL ,
+.*
+.MEND    MEND

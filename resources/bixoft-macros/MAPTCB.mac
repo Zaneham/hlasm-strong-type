@@ -1,0 +1,394 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Task Control Block
+.*
+&LABEL   MAPTCB &DSECT=YES,            * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPTCB                 * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPTCB         * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'TCB').EMBED
+         AIF   ('&CB' EQ 'TCBFIX').EMBED
+         AIF   ('&CB' EQ 'TCBXTNT2').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPTCB).MEND
+&BXA_MAC_MAPTCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_TCB
+         GBLC  &BXA_CB_TCBFIX
+         GBLC  &BXA_CB_TCBXTNT2
+&BXA_CB_TCB SETC 'TCB'
+&BXA_CB_TCBFIX SETC 'TCB'
+&BXA_CB_TCBXTNT2 SETC 'TCB'
+.*
+.* TCBPMASK - SPIE BITS
+.* TCBPM    EQUOVR ,,b,TCBPMASK        * Last seen in OS/390 V2R6
+.*
+.* TCBCMPF - INDICATOR FLAGS
+TCBCREQ  EQUOVR ,,b,TCBCMPF
+TCBCSTEP EQUOVR ,,b,TCBCMPF
+TCBCPP   EQUOVR ,,b,TCBCMPF
+TCBDMPO  EQUOVR ,,b,TCBCMPF
+TCBSTCC  EQUOVR ,,b,TCBCMPF
+TCBNOCC  EQUOVR ,,b,TCBCMPF
+TCBCDBL  EQUOVR ,,b,TCBCMPF
+TCBCASID EQUOVR ,,b,TCBCMPF
+TCBCWTO  EQUOVR ,,b,TCBCMPF
+TCBRV316 EQUOVR ,,b,TCBCMPF
+TCBCIND  EQUOVR ,,b,TCBCMPF
+TCBCMSG  EQUOVR ,,b,TCBCMPF
+.*
+.* TCBABF - FLAG BYTE
+TCBMOD91 EQUOVR ,,b,TCBABF
+TCBNOCHK EQUOVR ,,b,TCBABF
+TCBGRPH  EQUOVR ,,b,TCBABF
+TCBTCPP  EQUOVR ,,b,TCBABF
+TCBTCP   EQUOVR ,,b,TCBABF
+TCBOLTEP EQUOVR ,,b,TCBABF
+.*
+.* TCBPKF - STORAGE PROTECTION KEY FOR THIS TASK.
+TCBFLAG  EQUOVR ,,b,TCBPKF
+TCBZERO  EQUOVR ,,b,TCBPKF
+.*
+.* TCBFLGS1 - FIRST TCB FLAG BYTE
+TCBFA    EQUOVR ,,b,TCBFLGS1
+TCBFE    EQUOVR ,,b,TCBFLGS1
+TCBFERA  EQUOVR ,,b,TCBFLGS1
+TCBNONPR EQUOVR ,,b,TCBFLGS1
+TCBPDUMP EQUOVR ,,b,TCBFLGS1
+TCBFT    EQUOVR ,,b,TCBFLGS1
+TCBFS    EQUOVR ,,b,TCBFLGS1
+TCBFX    EQUOVR ,,b,TCBFLGS1
+.*
+.* TCBFLGS2 - SECOND FLAG BYTE
+TCBFOINP EQUOVR ,,b,TCBFLGS2
+TCBFSTI  EQUOVR ,,b,TCBFLGS2
+TCBFABOP EQUOVR ,,b,TCBFLGS2
+TCBFSMC  EQUOVR ,,b,TCBFLGS2
+TCBFJMC  EQUOVR ,,b,TCBFLGS2
+TCBFDSOP EQUOVR ,,b,TCBFLGS2
+TCBFETXR EQUOVR ,,b,TCBFLGS2
+TCBFTS   EQUOVR ,,b,TCBFLGS2
+.*
+.* TCBFLGS3 - THIRD FLAG BYTE.
+TCBFSM   EQUOVR ,,b,TCBFLGS3
+TCBRT1S  EQUOVR ,,b,TCBFLGS3
+TCBABTRM EQUOVR ,,b,TCBFLGS3
+TCBFXSET EQUOVR ,,b,TCBFLGS3
+TCBENQRM EQUOVR ,,b,TCBFLGS3
+TCBDWSTA EQUOVR ,,b,TCBFLGS3
+.*
+.* TCBFLGS4 - NONDISPATCHABILITY FLAGS
+TCBNDUMP EQUOVR ,,b,TCBFLGS4
+TCBSER   EQUOVR ,,b,TCBFLGS4
+TCBRQENA EQUOVR ,,b,TCBFLGS4
+TCBHNDSP EQUOVR ,,b,TCBFLGS4
+TCBUXNDV EQUOVR ,,b,TCBFLGS4
+TCBRBWF  EQUOVR ,,b,TCBFLGS4
+TCBONDSP EQUOVR ,,b,TCBFLGS4
+.*
+.* TCBFLGS5 - MORE NONDISPATCHABILITY FLAGS.
+TCBFC    EQUOVR ,,b,TCBFLGS5
+TCBABWF  EQUOVR ,,b,TCBFLGS5
+TCBUXNDF EQUOVR ,,b,TCBFLGS5
+TCBPAGE  EQUOVR ,,b,TCBFLGS5
+TCBANDSP EQUOVR ,,b,TCBFLGS5
+TCBSYS   EQUOVR ,,b,TCBFLGS5
+TCBSTP   EQUOVR ,,b,TCBFLGS5
+TCBFCD1  EQUOVR ,,b,TCBFLGS5
+TCBPNDSP EQUOVR ,,b,TCBFLGS5
+.*
+.* TCBPURGE - HIGH ORDER BYTE
+TCBJPQF  EQUOVR ,,b,TCBPURGE
+.*
+.* TCBTME - ADDRESS OF THE TIMER QUEUE ELEMENT (TQE)
+TCBTQET  EQUOVR ,,b,TCBTME
+.*
+.* TCBTSFLG - TIME SHARING FLAGS
+TCBTSTSK EQUOVR ,,b,TCBTSFLG
+TCBSTPPR EQUOVR ,,b,TCBTSFLG
+TCBATT   EQUOVR ,,b,TCBTSFLG
+TCBTIOTG EQUOVR ,,b,TCBTSFLG
+TCBSMCP  EQUOVR ,,b,TCBTSFLG
+TCBDYDSP EQUOVR ,,b,TCBTSFLG
+TCBCPUBN EQUOVR ,,b,TCBTSFLG
+.*
+.* TCBNSTAE - FLAGS INTERNAL TO STAE ROUTINE
+TCBSTABE EQUOVR ,,b,TCBNSTAE
+TCBQUIES EQUOVR ,,b,TCBNSTAE
+TCB33E   EQUOVR ,,b,TCBNSTAE
+TCBPPSUP EQUOVR ,,b,TCBNSTAE
+TCBHALT  EQUOVR ,,b,TCBNSTAE
+TCBSYNCH EQUOVR ,,b,TCBNSTAE
+TCBSTCUR EQUOVR ,,b,TCBNSTAE
+.*
+.* TCBTCTGF - FLAG BYTE FOR TIMING CONTROL TABLE
+TCBSMFGF EQUOVR ,,b,TCBTCTGF
+.*
+.* TCBNDSP1 - BYTE 1
+TCBDARTN EQUOVR ,,b,TCBNDSP1
+TNONDISP EQUOVR ,,b,TCBNDSP1
+TCBDARPN EQUOVR ,,b,TCBNDSP1
+PNONDISP EQUOVR ,,b,TCBNDSP1
+TCBRSTND EQUOVR ,,b,TCBNDSP1
+TCBRSPND EQUOVR ,,b,TCBNDSP1
+TCBDDRND EQUOVR ,,b,TCBNDSP1
+TCBTPSP  EQUOVR ,,b,TCBNDSP1
+TCBPIEND EQUOVR ,,b,TCBNDSP1
+TCBABTIN EQUOVR ,,b,TCBNDSP1
+.*
+.* TCBNDSP2 - BYTE 2
+TCBABD   EQUOVR ,,b,TCBNDSP2
+TCBSTPP  EQUOVR ,,b,TCBNDSP2
+TCBNDSVC EQUOVR ,,b,TCBNDSP2
+TCBNDTS  EQUOVR ,,b,TCBNDSP2
+TCBIWAIT EQUOVR ,,b,TCBNDSP2
+TCBOWAIT EQUOVR ,,b,TCBNDSP2
+TCBDSS   EQUOVR ,,b,TCBNDSP2
+TCBABE   EQUOVR ,,b,TCBNDSP2
+.*
+.* TCBNDSP3 - BYTE 3
+TCBLJSND EQUOVR ,,b,TCBNDSP3
+TCBNDNYI EQUOVR ,,b,TCBNDSP3
+TCBSRBND EQUOVR ,,b,TCBNDSP3
+TCBSLPER EQUOVR ,,b,TCBNDSP3
+TCBS3MR  EQUOVR ,,b,TCBNDSP3
+TCBAREQ  EQUOVR ,,b,TCBNDSP3
+TCBNDSMF EQUOVR ,,b,TCBNDSP3
+TCBNDINT EQUOVR ,,b,TCBNDSP3
+.*
+.* TCBRECDE - ABEND RECURSION BYTE
+TCBREC   EQUOVR ,,b,TCBRECDE
+TCBOPEN  EQUOVR ,,v,TCBRECDE
+TCBCLOSD EQUOVR ,,v,TCBRECDE
+TCBCLOSE EQUOVR ,,v,TCBRECDE
+TCBCLOSF EQUOVR ,,v,TCBRECDE
+TCBGREC  EQUOVR ,,v,TCBRECDE
+TCBADUMP EQUOVR ,,v,TCBRECDE
+TCBPTAXE EQUOVR ,,v,TCBRECDE
+TCBMESG  EQUOVR ,,v,TCBRECDE
+TCBDYNAM EQUOVR ,,v,TCBRECDE
+TCBDAMSG EQUOVR ,,v,TCBRECDE
+TCBQTIP  EQUOVR ,,v,TCBRECDE
+TCBTCAMP EQUOVR ,,v,TCBRECDE
+TCBINDRC EQUOVR ,,v,TCBRECDE
+TCBSAVCD EQUOVR ,,v,TCBRECDE
+TCBTYP1W EQUOVR ,,v,TCBRECDE
+TCBWTPSE EQUOVR ,,v,TCBRECDE
+TCBVTAM1 EQUOVR ,,v,TCBRECDE
+TCBVTAM2 EQUOVR ,,v,TCBRECDE
+TCBVTAM3 EQUOVR ,,v,TCBRECDE
+TCBVTAM4 EQUOVR ,,v,TCBRECDE
+TCBNOSTA EQUOVR ,,v,TCBRECDE
+TCBSTRET EQUOVR ,,v,TCBRECDE
+TCBCONVR EQUOVR ,,v,TCBRECDE
+TCBDARET EQUOVR ,,v,TCBRECDE
+TCBTYP1R EQUOVR ,,v,TCBRECDE
+TCBNEWRB EQUOVR ,,v,TCBRECDE
+TCBMCCNS EQUOVR ,,v,TCBRECDE
+.*
+.* TCBFLGS6 - TASK-RELATED FLAGS
+TCBRV    EQUOVR ,,b,TCBFLGS6
+TCBPIE17 EQUOVR ,,b,TCBFLGS6
+TCBCPU   EQUOVR ,,b,TCBFLGS6
+TCBSPVLK EQUOVR ,,b,TCBFLGS6
+TCBMIGR  EQUOVR ,,b,TCBFLGS6
+TCBAPG   EQUOVR ,,b,TCBFLGS6
+TCBNTJS  EQUOVR ,,b,TCBFLGS6
+.*
+.* TCBFLGS7 - TASK-RELATED FLAGS
+TCBGPECB EQUOVR ,,b,TCBFLGS7
+TCBSVCSP EQUOVR ,,b,TCBFLGS7
+TCBSTACK EQUOVR ,,b,TCBFLGS7
+TCBSVCS  EQUOVR ,,b,TCBFLGS7
+TCBRSTSK EQUOVR ,,b,TCBFLGS7
+TCBADMP  EQUOVR ,,b,TCBFLGS7
+TCBGTOFM EQUOVR ,,b,TCBFLGS7
+.*
+.* TCBDAR - DAMAGE ASSESSMENT ROUTINE (DAR) FLAGS
+TCBDARP  EQUOVR ,,b,TCBDAR
+TCBDARS  EQUOVR ,,b,TCBDAR
+TCBDARD  EQUOVR ,,b,TCBDAR
+TCBDARC  EQUOVR ,,b,TCBDAR
+TCBDARMC EQUOVR ,,b,TCBDAR
+TCBDARO  EQUOVR ,,b,TCBDAR
+TCBDARWT EQUOVR ,,b,TCBDAR
+TCBDARMS EQUOVR ,,b,TCBDAR
+TCBEXSVC EQUOVR ,,b,TCBDAR
+.*
+.* TCBNSSP - NORMAL STACK SAVE AREA POINTER.
+TCBNSSQA EQUOVR ,,b,TCBNSSP
+.*
+.* TCBTID - TASK ID NUMBER
+TCBTID   DSOVR HL1
+TCBPAGID EQUOVR ,,v,TCBTID
+TCBSYERR EQUOVR ,,v,TCBTID
+TCBCOMM  EQUOVR ,,v,TCBTID
+TCBIORMS EQUOVR ,,v,TCBTID
+TCBMASTR EQUOVR ,,v,TCBTID
+TCBJES   EQUOVR ,,v,TCBTID
+TCBDSSID EQUOVR ,,v,TCBTID
+TCBLOGID EQUOVR ,,v,TCBTID
+.*
+.* TCBFLGS8 - GUPI FLAG BYTE FIELD
+TCBDYING EQUOVR ,,b,TCBFLGS8
+.*
+.* TCBXSCT1 - FLAG BYTE
+TCBACTIV EQUOVR ,,b,TCBXSCT1
+TCBS3A   EQUOVR ,,b,TCBXSCT1
+TCBLLREQ EQUOVR ,,b,TCBXSCT1
+TCBTDORM EQUOVR ,,b,TCBXSCT1
+.*
+.* TCBXSCT2 - FLAG BYTE
+TCBCMLF  EQUOVR ,,b,TCBXSCT2
+TCBLLNEW EQUOVR ,,b,TCBXSCT2
+.*
+.* TCBESTRM - ESTAE TERM OPTIONS
+TCBETERM EQUOVR ,,b,TCBESTRM
+TCBSTAFX EQUOVR ,,b,TCBESTRM
+.*
+.* TCBFBYT1 - FLAG BYTE.
+TCBEOTFM EQUOVR ,,b,TCBFBYT1
+TCBRTM1E EQUOVR ,,b,TCBFBYT1
+TCBNDIOS EQUOVR ,,b,TCBFBYT1
+TCBPGNLY EQUOVR ,,b,TCBFBYT1
+TCBRTM2  EQUOVR ,,b,TCBFBYT1
+TCBEOT   EQUOVR ,,b,TCBFBYT1
+TCBSATTN EQUOVR ,,b,TCBFBYT1
+TCBLLH   EQUOVR ,,b,TCBFBYT1
+.*
+.* TCBFBYT2 - FLAG BYTE.
+TCBCNCB  EQUOVR ,,b,TCBFBYT2
+TCBFMW   EQUOVR ,,b,TCBFBYT2
+TCBFDW   EQUOVR ,,b,TCBFBYT2
+TCBFPRAP EQUOVR ,,b,TCBFBYT2
+TCBRT1NR EQUOVR ,,b,TCBFBYT2
+TCBECBNV EQUOVR ,,b,TCBFBYT2
+TCBSSPC  EQUOVR ,,b,TCBFBYT2
+TCBRTM1C EQUOVR ,,b,TCBFBYT2
+.*
+.* TCBFBYT3 - FLAG BYTE
+TCBEXP   EQUOVR ,,b,TCBFBYT3
+TCBNCTL  EQUOVR ,,b,TCBFBYT3
+TCBRTMDE EQUOVR ,,b,TCBFBYT3
+.*
+.* TCBFBYT4 - FLAG BYTE.
+TCBPMC   EQUOVR ,,b,TCBFBYT4
+TCBNOJLB EQUOVR ,,b,TCBFBYT4
+.*
+.* TCBRBYT1 - RTM Flag byte
+TCBPVICT EQUOVR ,,b,TCBRBYT1
+TCBPKING EQUOVR ,,b,TCBRBYT1
+TCBPCAND EQUOVR ,,b,TCBRBYT1
+TCBPTOP  EQUOVR ,,b,TCBRBYT1
+.*
+.* TCBLEVEL - LEVEL NUMBER OF TCB
+TCBVS02A EQUOVR ,,v,TCBLEVEL
+TCBVS02B EQUOVR ,,v,TCBLEVEL
+TCBVS03  EQUOVR ,,v,TCBLEVEL
+TCBVERS  EQUOVR ,,v,TCBLEVEL
+.*
+.* TCBTFLG - GTF FLAG BYTE
+TCBASYNC EQUOVR ,,b,TCBTFLG
+TCBERRTN EQUOVR ,,b,TCBTFLG
+TCBDSPIT EQUOVR ,,b,TCBTFLG
+.*
+.* TCBPERCP - POINTER TO A QUEUE OF SPIS.
+TCBRCVRY EQUOVR ,,b,TCBPERCP
+.*
+         MNOTE *,'Including IKJTCB mapping macro'
+         IKJTCB DSECT=YES,             * Generate TCB                  *
+               LIST=YES                * with unchanged PRINT option
+         EQUOVR *END
+         DSOVR *END
+*
+TCBFIX   DSECT ,                       * Reset to TCB DSECT
+         ORG
+TCBFIX_LEN EQU TCB-TCBFIX              * Length of TCB prefix
+TCB_LEN  EQU *-TCB                     * Length of TCB proper
+*
+TCBXTNT2 DSECT ,                       * Reset to TCB extension
+         ORG
+TCBXTNT2_LEN EQU *-TCBXTNT2            * Length of TCB extension
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

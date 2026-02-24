@@ -1,0 +1,264 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the resOurces manager User Control Block
+.*
+&LABEL   MAPOUCB &DSECT=YES,           * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPOUCB                * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPOUCB        * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'OUCB').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPOUCB).MEND
+&BXA_MAC_MAPOUCB SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_OUCB
+&BXA_CB_OUCB SETC 'OUCB'
+.*
+.* OUCBQFL - SWAPPABILITY TRANSITION FLAGS
+OUCBGOO  EQUOVR ,,b,OUCBQFL
+OUCBGOI  EQUOVR ,,b,OUCBQFL
+OUCBGOB  EQUOVR ,,b,OUCBQFL
+OUCBQSFL EQUOVR ,,b,OUCBQFL
+OUCBOFF  EQUOVR ,,b,OUCBQFL
+OUCBOUT  EQUOVR ,,b,OUCBQFL
+OUCBLSW  EQUOVR ,,b,OUCBQFL
+OUCBDLYB EQUOVR ,,b,OUCBQFL
+.*
+.* OUCBSFL - SWAPOUT CONTINUATION FLAGS
+OUCBNSW  EQUOVR ,,b,OUCBSFL
+OUCBCTI  EQUOVR ,,b,OUCBSFL
+OUCBBIB  EQUOVR ,,b,OUCBSFL
+OUCBINV  EQUOVR ,,b,OUCBSFL
+OUCBNSWI EQUOVR ,,b,OUCBSFL
+OUCBPVL  EQUOVR ,,b,OUCBSFL
+OUCBENQ  EQUOVR ,,b,OUCBSFL
+OUCBSCN  EQUOVR ,,b,OUCBSFL
+.*
+.* OUCBYFL - USER TYPE FLAGS
+OUCBPSTE EQUOVR ,,b,OUCBYFL
+OUCBSTT  EQUOVR ,,b,OUCBYFL
+OUCBLOG  EQUOVR ,,b,OUCBYFL
+OUCBMNT  EQUOVR ,,b,OUCBYFL
+OUCBAXS  EQUOVR ,,b,OUCBYFL
+OUCBDTA  EQUOVR ,,b,OUCBYFL
+OUCBFXS  EQUOVR ,,b,OUCBYFL
+.*
+.* OUCBAFL - ALGORITHM STATUS FLAGS
+OUCBAPG  EQUOVR ,,b,OUCBAFL
+OUCBREPT EQUOVR ,,b,OUCBAFL
+OUCBENQI EQUOVR ,,b,OUCBAFL
+OUCBJSR  EQUOVR ,,b,OUCBAFL
+OUCBNWT  EQUOVR ,,b,OUCBAFL
+OUCBASW  EQUOVR ,,b,OUCBAFL
+.*
+.* OUCBTFL - TRANSACTION STATUS FLAGS
+OUCBATR  EQUOVR ,,b,OUCBTFL
+OUCBSTR  EQUOVR ,,b,OUCBTFL
+OUCBNTR  EQUOVR ,,b,OUCBTFL
+OUCBRTR  EQUOVR ,,b,OUCBTFL
+OUCBPCH  EQUOVR ,,b,OUCBTFL
+OUCBMAR  EQUOVR ,,b,OUCBTFL
+OUCBINP  EQUOVR ,,b,OUCBTFL
+OUCBINC  EQUOVR ,,b,OUCBTFL
+.*
+.* OUCBEFL - EVENT STATUS FALGS
+OUCBLWT  EQUOVR ,,b,OUCBEFL
+.* OUCBNQF  EQUOVR ,,b,OUCBEFL         * Last seen in OS/390 V2R6
+OUCBQSC  EQUOVR ,,b,OUCBEFL
+OUCBMWT  EQUOVR ,,b,OUCBEFL
+.*
+.* OUCBUFL - USER TYPE FLAGS
+OUCBJSFS EQUOVR ,,b,OUCBUFL
+OUCBJSAS EQUOVR ,,b,OUCBUFL
+OUCBRSWP EQUOVR ,,b,OUCBUFL
+OUCBTSWP EQUOVR ,,b,OUCBUFL
+OUCBTSWC EQUOVR ,,b,OUCBUFL
+OUCBSI   EQUOVR ,,b,OUCBUFL
+OUCBENQR EQUOVR ,,b,OUCBUFL
+OUCBSIFX EQUOVR ,,b,OUCBUFL
+.*
+.* OUCBLFL - ALGORITHM STATUS FLAGS
+OUCBEAS  EQUOVR ,,b,OUCBLFL
+OUCBQSRV EQUOVR ,,b,OUCBLFL
+OUCBRQSC EQUOVR ,,b,OUCBLFL
+OUCBFWA  EQUOVR ,,b,OUCBLFL
+OUCBTET  EQUOVR ,,b,OUCBLFL
+OUCBREDP EQUOVR ,,b,OUCBLFL
+OUCBPRF  EQUOVR ,,b,OUCBLFL
+OUCBSTGI EQUOVR ,,b,OUCBLFL
+.*
+.* OUCBRFL - MORE USER FLAGS
+OUCBCSFS EQUOVR ,,b,OUCBRFL
+OUCBCSFM EQUOVR ,,b,OUCBRFL
+OUCBEASI EQUOVR ,,b,OUCBRFL
+OUCBHIDP EQUOVR ,,b,OUCBRFL
+OUCBBJOB EQUOVR ,,b,OUCBRFL
+OUCBSTFX EQUOVR ,,b,OUCBRFL
+OUCBDFSW EQUOVR ,,b,OUCBRFL
+OUCBLLSW EQUOVR ,,b,OUCBRFL
+.*
+.* OUCBMFL - MISCELLANEOUS FLAGS
+OUCBSBT  EQUOVR ,,b,OUCBMFL
+OUCBAFAP EQUOVR ,,b,OUCBMFL
+OUCBDFS2 EQUOVR ,,b,OUCBMFL
+OUCBMGSW EQUOVR ,,b,OUCBMFL
+OUCBDISC EQUOVR ,,b,OUCBMFL
+OUCBASAP EQUOVR ,,b,OUCBMFL
+OUCBMPUR EQUOVR ,,b,OUCBMFL
+OUCBACNT EQUOVR ,,b,OUCBMFL
+.*
+.* OUCBMFL2 - More miscellaneous flags.
+OUCBVFMG EQUOVR ,,b,OUCBMFL2
+OUCBMGIN EQUOVR ,,b,OUCBMFL2
+OUCBAFPD EQUOVR ,,b,OUCBMFL2
+OUCBDFDR EQUOVR ,,b,OUCBMFL2
+OUCBDFDE EQUOVR ,,b,OUCBMFL2
+OUCBMIGP EQUOVR ,,b,OUCBMFL2
+OUCBRPT1 EQUOVR ,,b,OUCBMFL2
+OUCBERST EQUOVR ,,b,OUCBMFL2
+.*
+.* OUCBMFL3 - More miscellaneous flags
+OUCBAPPC EQUOVR ,,b,OUCBMFL3
+OUCBPMON EQUOVR ,,b,OUCBMFL3
+OUCBVALV EQUOVR ,,b,OUCBMFL3
+OUCBOMVS EQUOVR ,,b,OUCBMFL3
+OUCBTBMN EQUOVR ,,b,OUCBMFL3
+OUCBSTTA EQUOVR ,,b,OUCBMFL3
+OUCBGWRK EQUOVR ,,b,OUCBMFL3
+OUCBINIT EQUOVR ,,b,OUCBMFL3
+.*
+.* OUCBCFL - MULTIPROCESS CONDITION FLAGS
+OUCBRDY  EQUOVR ,,b,OUCBCFL
+OUCBRSM  EQUOVR ,,b,OUCBCFL
+OUCBESSS EQUOVR ,,b,OUCBCFL
+OUCBESSW EQUOVR ,,b,OUCBCFL
+OUCBASSW EQUOVR ,,b,OUCBCFL
+OUCBCSMF EQUOVR ,,b,OUCBCFL
+OUCBSHBN EQUOVR ,,b,OUCBCFL
+OUCBHITR EQUOVR ,,b,OUCBCFL
+.*
+.* OUCBCSBT - Compare and swap bits
+OUCBTRM  EQUOVR ,,b,OUCBCSBT
+OUCBOWT  EQUOVR ,,b,OUCBCSBT
+OUCBCIM  EQUOVR ,,b,OUCBCSBT
+OUCBPSTR EQUOVR ,,b,OUCBCSBT
+OUCBSTA  EQUOVR ,,b,OUCBCSBT
+OUCBQSS  EQUOVR ,,b,OUCBCSBT
+OUCBOIW  EQUOVR ,,b,OUCBCSBT
+OUCBOOW  EQUOVR ,,b,OUCBCSBT
+.*
+.* OUCBPFL - Processing flags
+OUCBFTDN EQUOVR ,,b,OUCBPFL
+OUCBPSD  EQUOVR ,,b,OUCBPFL
+OUCBDPSW EQUOVR ,,b,OUCBPFL
+OUCBSRP  EQUOVR ,,b,OUCBPFL
+OUCBPTDN EQUOVR ,,b,OUCBPFL
+.*
+.* OUCBDSPC - CURRENT DISPATCHING CONTROL
+OUCBMTW  EQUOVR ,,b,OUCBDSPC
+OUCBTS   EQUOVR ,,b,OUCBDSPC
+OUCBTSC3 EQUOVR ,,b,OUCBDSPC
+OUCBTSC4 EQUOVR ,,b,OUCBDSPC
+OUCBTSC5 EQUOVR ,,b,OUCBDSPC
+OUCBTSC6 EQUOVR ,,b,OUCBDSPC
+OUCBTSC7 EQUOVR ,,b,OUCBDSPC
+.*
+.* OUCBDSPN - NEW DISPATCHING CONTROL
+OUCBNMTW EQUOVR ,,b,OUCBDSPN
+OUCBNTS  EQUOVR ,,b,OUCBDSPN
+OUCBTSN3 EQUOVR ,,b,OUCBDSPN
+OUCBTSN4 EQUOVR ,,b,OUCBDSPN
+OUCBTSN5 EQUOVR ,,b,OUCBDSPN
+OUCBTSN6 EQUOVR ,,b,OUCBDSPN
+OUCBTSN7 EQUOVR ,,b,OUCBDSPN
+.*
+         MNOTE *,'Including IRAOUCB mapping macro'
+         IRAOUCB ,
+         EQUOVR *END
+*
+OUCB     DSECT ,                       * Resume OUCB DSECT
+         ORG
+OUCB_LEN EQU   *-OUCB                  * Length of OUCB
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

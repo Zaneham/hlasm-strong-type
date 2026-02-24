@@ -1,0 +1,143 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* Structured programming macro: CASE
+.* Combines with ELSE and ENDCASE to conditionally execute code-blocks
+.*
+&LABEL   CASE  &NEST=NO                * YES to force nesting
+.*                                     * Condition in &SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC CASE                   * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLA  &BXA_STK                * Index to last valid
+         GBLC  &BXA_STK_OP(5)          * Opcodes
+         GBLC  &BXA_STK_LBL(5)         * Labels
+         GBLA  &BXA_STK_LVL(5)         * Levels
+         LCLC  &OP                     * Last opcode on stack
+         LCLC  &LBL                    * Last label on stack
+         LCLA  &LVL                    * Next level on stack
+         LCLC  &LAB                    * End-of-else label
+         LCLC  &ARGS                   * SYSLIST as a string
+         LCLA  &I                      * Stack pointer
+.*
+.* Check number of parameters
+         AIF   (N'&SYSLIST EQ 0).ERR1
+         AIF   (K'&SYSLIST(1) EQ 0).ERR1
+         AGO   .NOERR1
+.ERR1    MNOTE 8,'No condition specified'
+         MEXIT
+.NOERR1  ANOP
+.*
+.* Check NEST parameter
+         AIF   ('&NEST' EQ 'NO').NOERR2
+         AIF   ('&NEST' EQ 'YES').NOERR2
+.ERR2    MNOTE 8,'NEST parameter must be either YES or NO'
+         MEXIT
+.NOERR2  ANOP
+.*
+.* If this is not the first CASE of the current level, then we
+.* must first generate a branch to the ENDCASE-statement to
+.* terminate the currently running CASE.
+         AIF   ('&NEST' EQ 'YES').NOBRANCH * Nesting a new level
+&I       SETA  &BXA_STK                * Point current stack entry
+         AIF   (&I EQ 0).NOBRANCH      * Stack is empty: we're first
+         AIF   ('&BXA_STK_OP(&I)' NE 'CASE').NOBRANCH
+.* Ok: preceding structure is another CASE at the same level
+         B     _EC_&SYSNDX             * Terminate: branch to ENDCASE
+*
+&BXA_STK_LBL(&I) LABEL ,               * Preceding CASEs all false
+&BXA_STK_LBL(&I) SETC '_EC_&SYSNDX'    * Label for ENDCASE
+.NOBRANCH ANOP
+.*
+.* Build ARGS from &SYSLIST
+&I       SETA  0                       * I indexes &SYSLIST
+.LOOP1   ANOP  ,                       * For all entries in SYSLIST
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&ARGS    SETC  '&ARGS'.','.'&SYSLIST(&I)' * Add entry to ARGS
+         AGO   .LOOP1                  * And go process next entry
+.LOOP1OK ANOP
+&ARGS    SETC  '('.'&ARGS'(2,*).')'    * Parenthesize and remove lead ,
+.*
+.* Generate embedded IF statement
+&I       SETA  &BXA_STK                * Copy current stack pointer
+&LABEL   IF    &ARGS
+         AIF   (&I EQ &BXA_STK).MEND   * No new stack entry!
+.*
+.* Determine nesting level for this CASE statement
+&I       SETA  &BXA_STK-1              * Point to previous stack entry
+         AIF   (&I EQ 0).LVL1          * Stack empty?
+&LVL     SETA  &BXA_STK_LVL(&I)        * Copy existing level
+         AIF   ('&BXA_STK_OP(&I)' NE 'CASE').LVLUP
+.* Preceding entry was a case: nest if NEST=YES
+         AIF   ('&NEST' EQ 'NO').LVLOK * No: no change in level
+.LVLUP   ANOP  ,
+&LVL     SETA  &LVL+1                  * Increase nesting level
+         AGO   .LVLOK
+.LVL1    ANOP  ,
+&LVL     SETA  1                       * First level
+.LVLOK   ANOP  ,
+.*
+.* Modify stack to reflect CASE in stead of IF
+&I       SETA  &BXA_STK                * Point to current stack entry
+&BXA_STK_OP(&I) SETC 'CASE'            * Change IF into CASE
+&BXA_STK_LVL(&I) SETA &LVL             * Modify nesting level
+.*
+.MEND    MEND

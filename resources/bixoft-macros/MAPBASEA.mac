@@ -1,0 +1,195 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro maps the Master Scheduler Resident Data Area
+.*
+&LABEL   MAPBASEA &DSECT=YES,          * YES or NO                     *
+               &CB=,                   * Control block to generate     *
+               &PRFX=                  * Prefix to use
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC MAPBASEA               * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_MAC_MAPBASEA       * Map has been generated?
+.*
+.* Check parameters
+&LABEL   CHKMAP DSECT=&DSECT,          *                               *
+               CB=&CB,                 *                               *
+               PRFX=&PRFX              *
+         AIF   (&BXA_RC GT 4).MEND
+.*
+.* Check the CB parameter
+         AIF   ('&DSECT' EQ 'YES').DSECT
+         AIF   ('&CB' EQ 'BASEA').EMBED
+         AIF   ('&CB' EQ 'BASEX').EMBED
+.ERR5    MNOTE 8,'&CB control block not supported'
+         MEXIT
+.*
+.* Generate embedded definition
+.EMBED   ANOP
+&LABEL   NESTCB &CB,X,&PRFX
+         MEXIT
+.*
+.DSECT   ANOP
+         AIF   (&BXA_MAC_MAPBASEA).MEND
+&BXA_MAC_MAPBASEA SETB 1
+.* Set up translation from control block to macro for DCL
+         GBLC  &BXA_CB_BASEA
+         GBLC  &BXA_CB_BASEX
+&BXA_CB_BASEA SETC 'BASEA'
+&BXA_CB_BASEX SETC 'BASEA'
+.*
+.* BASFL -
+BAIN     EQUOVR ,,b,BASFL
+BAINTSET EQUOVR ,,b,BASFL
+BAFSTOR  EQUOVR ,,b,BASFL
+.*
+.* BAVERN - VERSION LEVEL
+BASP13   EQUOVR ,,v,BAVERN
+BASP410  EQUOVR ,,v,BAVERN
+BAVERNID EQUOVR ,,v,BAVERN
+.*
+.* MSLOGST - LOG STATUS
+MSLOGENQ EQUOVR ,,b,MSLOGST
+MSLOGTHD EQUOVR ,,b,MSLOGST
+MSLOGCOM EQUOVR ,,b,MSLOGST
+MSLOGDAR EQUOVR ,,b,MSLOGST
+MSLOGIPL EQUOVR ,,b,MSLOGST
+MSLOGSTA EQUOVR ,,b,MSLOGST
+MSLOGCHN EQUOVR ,,b,MSLOGST
+MSLOGTND EQUOVR ,,b,MSLOGST
+.*
+.* BASPBYTE - MSTR SCH INIT CPL
+BAMSSTAR EQUOVR ,,b,BASPBYTE
+BAMASCH  EQUOVR ,,b,BASPBYTE
+BAMSINIT EQUOVR ,,b,BASPBYTE
+BAOKDUMP EQUOVR ,,b,BASPBYTE
+.*
+.* BAMONITR - MONITOR FLAGS (TERMINALS-TJB CHAIN)
+BADSN    EQUOVR ,,b,BAMONITR
+BASPACE  EQUOVR ,,b,BAMONITR
+.*
+.* BACHFLGS - CSCB FLAGS
+BACSCBA  EQUOVR ,,b,BACHFLGS
+BACSCXB  EQUOVR ,,b,BACHFLGS
+.*
+.* MSCLOSSW - ECB WAIT/POST FIELD
+MSCLOSW  EQUOVR ,,b,MSCLOSSW
+MSCLOSP  EQUOVR ,,b,MSCLOSSW
+.*
+.* MSWLOGSW - ECB WAIT/POST FIELD
+MSWLOGW  EQUOVR ,,b,MSWLOGSW
+MSWLOGP  EQUOVR ,,b,MSWLOGSW
+.*
+.* MSWTRSW - ECB WAIT/POST FIELD
+MSWTRW   EQUOVR ,,b,MSWTRSW
+MSWTRP   EQUOVR ,,b,MSWTRSW
+.*
+.* MSLGSTRT - LOG RE-ACTIVATION ECB
+MSSTRTW  EQUOVR ,,b,MSLGSTRT
+MSSTRTP  EQUOVR ,,b,MSLGSTRT
+.*
+.* MSSSB - MONITOR TIME NOTE BYTE
+MSTN     EQUOVR ,,b,MSSSB
+.*
+.* MSECBFL - SCHEDULER FLAGBYTE
+BAMSJOBS EQUOVR ,,b,MSECBFL
+MSWTL    EQUOVR ,,b,MSECBFL
+MSSUM    EQUOVR ,,b,MSECBFL
+.*
+.* BAMTCNTL - MASTER TRACE CONTROL FLAG
+BAMT808  EQUOVR ,,b,BAMTCNTL
+BAMT809  EQUOVR ,,b,BAMTCNTL
+BAMT816  EQUOVR ,,b,BAMTCNTL
+BAMTRTRY EQUOVR ,,b,BAMTCNTL
+BAMTTSWP EQUOVR ,,b,BAMTCNTL
+BAMTTENT EQUOVR ,,b,BAMTCNTL
+.*
+.* BAMTRECF - MASTER TRACE ERROR RECURSION FLAG
+BAMTR808 EQUOVR ,,b,BAMTRECF
+BAMTR809 EQUOVR ,,b,BAMTRECF
+BAMTR816 EQUOVR ,,b,BAMTRECF
+BAMTRUNK EQUOVR ,,b,BAMTRECF
+.*
+.* BAMTITFL - INTERNAL PROCESSING FLAG USED BY MASTER TRACE FACILITY
+BAMTITAB EQUOVR ,,b,BAMTITFL
+BAMTSFRR EQUOVR ,,b,BAMTITFL
+BAMTFRRR EQUOVR ,,b,BAMTITFL
+.*
+.* BAMTDSW - ECB WAIT/POST FIELD
+BAMTDW   EQUOVR ,,b,BAMTDSW
+BAMTDP   EQUOVR ,,b,BAMTDSW
+.*
+         MNOTE *,'Including IEEBASEA mapping macro'
+         IEEBASEA ,
+         EQUOVR *END
+*
+BASE     DSECT ,                       * Resume BASE DSECT
+BASEA    EQU   BASE                    * Label for USINGs
+         ORG
+BASEA_LEN EQU  *-BASEA                 * Length of BASEA
+*
+BASEX    DSECT ,                       * Resume BASE-extension
+         ORG
+BASEX_LEN EQU  *-BASEX                 * Length of BASEX
+.*
+.* Return to our original CSECT name
+&SYSECT  &SYSSTYP
+.*
+.MEND    MEND

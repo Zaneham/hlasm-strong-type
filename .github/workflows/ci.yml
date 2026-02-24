@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: '5.1'
+
+      - name: Install OCaml dependencies
+        run: opam install . --deps-only --yes
+
+      - name: Build language server
+        run: opam exec -- dune build
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build extension
+        working-directory: vscode
+        run: |
+          npm ci
+          npm run compile

@@ -1,0 +1,128 @@
+.*
+.* This macro is free software; you can redistribute it and/or modify
+.* it under the terms of the GNU General Public License as published by
+.* the Free Software Foundation; either version 2 of the License
+.* or (at your option) any later version.
+.* The license text is available at the following internet addresses:
+.* - http://www.bixoft.com/english/gpl.htm
+.* - http://fsf.org
+.* - http://opensource.org
+.*
+.* This macro is distributed in the hope that it will be useful,
+.* but WITHOUT ANY WARRANTY; without even the implied warranty of
+.* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+.* See the GNU General Public License for more details.
+.*
+.* You should have received a copy of the GNU General Public License
+.* along with this program; if not, write to either of the following:
+.* the Free Software Foundation, Inc.      B.V. Bixoft
+.* 59 Temple Place, Suite 330              Rogge 9
+.* Boston, MA 02111-1307                   7261 JA Ruurlo
+.* United States of America                The Netherlands
+.*
+.*                                         e-mail: bixoft@bixoft.nl
+.*                                         phone : +31-6-22755401
+.*
+.**********************************************************************
+.*
+.* Bixoft eXtended Assembly language
+.* Licensed material - Property of B.V. Bixoft
+.*
+.* This macro can be licensed or used on an as-is basis.
+.* No warranty, neither implicit nor explicit, is given.
+.* It remains your own responsibility to ensure the correct
+.* working of any program using this macro.
+.*
+.* Suggestions for improvement are always welcome at
+.* http://www.bixoft.com  or mail to  bixoft@bixoft.nl
+.*
+.* (C) Copyright B.V. Bixoft, 1999
+.**********************************************************************
+         MACRO
+.*
+.* This macro replaces the assembler's POP statement
+.*
+&LABEL   POP   ,                       * Arguments in SYSLIST
+.**********************************************************************
+.*
+.*       IMPORTANT NOTICE
+.*       ========= ======
+.*
+.* Code below checks whether 'USER' accepted the terms and conditions
+.* of the license for the BXA macro library. This code is to be treated
+.* as part of the Copyright Notice and therefore may not be changed
+.* or disabled in any way.
+.*
+.**********************************************************************
+         GBLA  &BXA_RC                 * Returncode from CHKLIC
+         CHKLIC POP                    * Check license acceptance
+         AIF   (&BXA_RC NE 0).MEND
+.**********************************************************************
+.*
+.* End of special code that is part of the Copyright Notice
+.*
+.**********************************************************************
+.*
+.* Declare variables
+         GBLB  &BXA_USED_REGS(16)      * Use status of regs R0-R15
+         GBLB  &SP_SHOWALL             * SHOWALL option
+         GBLC  &BXA_USELBL(50)         * Using labels ...
+         GBLA  &BXA_USEREG(50)         *   and their register indexes
+         GBLC  &BXA_USEFLD(50)         *   and associated base fields
+         GBLA  &BXA_USENDX0(5)         * Low valid pointers BXA_USE...
+         GBLA  &BXA_USENDX1(5)         * High valid pointers BXA_USE...
+         GBLA  &BXA_USENDX             * Index into &BXA_USENDX0/1
+         LCLA  &N                      * Index for BXA_USE...
+         LCLA  &I                      * Index into &SYSLIST
+         LCLA  &R                      * Index into &BXA_USED_REGS
+         LCLC  &ARG                    * 1 argument from SYSLIST
+         LCLC  &ARGS                   * Arguments from SYSLIST
+         LCLB  &POPUSE                 * USING status is to be popped
+.*
+.* Build ARGS from &SYSLIST
+&I       SETA  0                       * I indexes &SYSLIST
+.LOOP1   ANOP  ,                       * For all entries in SYSLIST
+&I       SETA  &I+1                    * Point next entry
+         AIF   (&I GT N'&SYSLIST).LOOP1OK * At end: quit loop
+&ARG     SETC  '&SYSLIST(&I)'          * Extract 1 argument
+&ARGS    SETC  '&ARGS'.','.'&SYSLIST(&I)' * Add entry to ARGS
+         AIF   ('&ARG' NE 'USING').LOOP1 * Not USING: get next arguemnt
+&POPUSE  SETB  1                       * Indicate USING is popped
+         AGO   .LOOP1                  * And go process next entry
+.LOOP1OK ANOP
+         AIF   (K'&ARGS LT 2).ARGSOK
+&ARGS    SETC  '&ARGS'(2,*)            * Remove leading comma
+.ARGSOK  ANOP
+.*
+.* If Using status is being popped:
+.* pop the table of active usings and rebuild &BXA_USED_REGS
+         AIF   (NOT &POPUSE).NOTUSE
+         AIF   (&BXA_USENDX LE 0).ERR2A
+&BXA_USENDX SETA &BXA_USENDX-1         * Pop table of active usings
+.*
+.* Rebuild BXA_USED_REGS from BXA_USEREG table
+.* Skip any USINGs for PSA,R0
+&BXA_USED_REGS(1) SETB 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+&N       SETA  &BXA_USENDX0(&BXA_USENDX) * Search tables to mark
+.LOOP4   ANOP  ,                       *    all used registers
+&N       SETA  &N+1                    *    unavailable.
+         AIF   (&N GT &BXA_USENDX1(&BXA_USENDX)).LOOP4OK * At end: done
+&R       SETA  &BXA_USEREG(&N)         * Obtain index
+         AIF   (&R EQ 1 AND '&BXA_USEFLD(&N)' EQ 'PSA').LOOP4
+&BXA_USED_REGS(&R) SETB 1              * Set designated register in use
+         AGO   .LOOP4
+.LOOP4OK ANOP
+         AGO   .NOTUSE                 * Skip error messages
+.*
+.ERR2A   MNOTE 8,'You''re POPping an unPUSHed USING status'
+.NOTUSE  ANOP
+.*
+.* Generate _POP statement
+&LABEL   _POP  &ARGS
+.*
+.* Report current USING status
+         AIF   (NOT &SP_SHOWALL).MEND * Only if SHOWALL requested
+         AIF   (NOT &POPUSE).MEND      * And only if USING was popped
+         USEDREGS
+.*
+.MEND    MEND
