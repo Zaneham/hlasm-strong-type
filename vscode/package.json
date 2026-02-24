@@ -6,9 +6,9 @@
   "publisher": "ZaneHam",
   "license": "GPL-2.0-or-later",
   "icon": "icon.png",
-  "homepage": "https://github.com/hlasm-tooling/hlasm-strong-type",
+  "homepage": "https://github.com/Zaneham/hlasm-strong-type",
   "bugs": {
-    "url": "https://github.com/hlasm-tooling/hlasm-strong-type/issues"
+    "url": "https://github.com/Zaneham/hlasm-strong-type/issues"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -129,6 +129,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hlasm-tooling/hlasm-strong-type"
+    "url": "https://github.com/Zaneham/hlasm-strong-type"
   }
 }
